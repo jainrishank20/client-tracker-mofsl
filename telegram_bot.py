@@ -437,7 +437,7 @@ def answer_stock_detail(trades, client, stock) -> str:
             avg  = wavg_buy(open_lots)
             days = holding_days(min(t["entry_date"] for t in open_lots))
             lines.append(f"🟢 *Open:* {qty:.0f} sh @ avg {fmt_inr(avg)} | "
-                         f"Invested {fmt_inr(qty*avg):.0f} | {days} days")
+                         f"Invested {fmt_inr(round(qty*avg,2))} | {days} days")
         else:
             lines.append("🟢 *Open:* None")
         if closed_lots:
@@ -671,7 +671,7 @@ def answer_compare_clients(trades, client1, client2) -> str:
         inv       = sum(t["buy_price"] * t["buy_qty"] for t in open_t)
         pnl       = sum(compute_net_pnl(t) for t in closed_t)
         wins      = sum(1 for t in closed_t if compute_net_pnl(t) > 0)
-        win_rate  = round(wins / len(closed_t) * 100) if closed_t else 0
+        win_rate  = int(round(wins / len(closed_t) * 100)) if closed_t else 0
         best_t    = max(closed_t, key=lambda t: compute_net_pnl(t), default=None)
         rows.append((CLIENT_NAMES.get(c,c), len(open_t), len(closed_t), inv, pnl, win_rate, best_t))
     for name, n_open, n_closed, inv, pnl, wr, best_t in rows:
@@ -695,7 +695,7 @@ def answer_client_summary(trades, client) -> str:
     invested    = sum(t["buy_price"] * t["buy_qty"] for t in open_lots)
     booked_pnl  = sum(compute_net_pnl(t) for t in closed_lots)
     wins        = sum(1 for t in closed_lots if compute_net_pnl(t) > 0)
-    win_rate    = round(wins / len(closed_lots) * 100) if closed_lots else 0
+    win_rate    = int(round(wins / len(closed_lots) * 100)) if closed_lots else 0
     best        = max(closed_lots, key=lambda t: compute_net_pnl(t), default=None)
     worst       = min(closed_lots, key=lambda t: compute_net_pnl(t), default=None)
     avg_hold    = round(sum(holding_days(t["entry_date"]) for t in open_lots) / len(open_lots)) if open_lots else 0
@@ -893,10 +893,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         reply = f"⚠️ Error: {e}"
 
-    if len(reply) > 4000:
-        reply = reply[:3990] + "\n\n_...truncated_"
+    chunks = []
+    while len(reply) > 4000:
+        split_at = reply.rfind("\n", 0, 4000)
+        if split_at == -1:
+            split_at = 4000
+        chunks.append(reply[:split_at])
+        reply = reply[split_at:].lstrip("\n")
+    chunks.append(reply)
 
-    await update.message.reply_text(reply, parse_mode="Markdown")
+    for chunk in chunks:
+        await update.message.reply_text(chunk, parse_mode="Markdown")
 
 
 def main():
