@@ -9,6 +9,7 @@ from pathlib import Path
 from collections import defaultdict
 from datetime import date, timedelta
 
+import yfinance as yf
 from groq import Groq
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -46,6 +47,136 @@ TICKER_ALIAS = {
     "VARUN": "VARUN BEVERAGES", "ANGEL": "ANGEL ONE",
 }
 
+SYMBOL_MAP = {
+    "ALKYL AMINES":"ALKYLAMINE","BHARAT COKING COAL":"BHARATCOAL","BHARAT ELECTRONICS":"BEL",
+    "CAMS":"CAMS","CENTURY PLYBOARDS":"CENTURYPLY","COFORGE":"COFORGE",
+    "DATA PATTERNS":"DATAPATTNS","DIXON TECHNOLOGIES":"DIXON","EMMVEE PHOTOVOLTAIC":"EMMVEE",
+    "EQUITAS SMALL FIN BANK":"EQUITASBNK","EQUITAS SMALL FIN BNK":"EQUITASBNK",
+    "EXIDE INDUSTRIES":"EXIDEIND","FORTIS HEALTHCARE":"FORTIS","GMR AIRPORTS":"GMRAIRPORT",
+    "GMR AIRPORTS LIMITED":"GMRAIRPORT","GODREJ INDUSTRIES":"GODREJIND",
+    "GODREJ PROPERTIES":"GODREJPROP","HIMADRI SPECIALITY CHEM":"HSCL",
+    "HINDUSTAN COPPER":"HINDCOPPER","HINDUSTAN ZINC":"HINDZINC","IDBI BANK":"IDBI",
+    "IFCI":"IFCI","IIFL FINANCE":"IIFL","INFOSYS":"INFY","INTELLECT DESIGN ARENA":"INTELLECT",
+    "INTERGLOBE AVIATION":"INDIGO","INOX WIND":"INOXWIND","ITC":"ITC",
+    "JAIN RESOURCE RECYCLING LIMITE":"JAINRES","JBM AUTO":"JBMA","JM FINANCIAL":"JMFINANCIL",
+    "KALPATARU":"KALPATARU","KALPATARU PROJECTS":"KPIL","KAYNES TECHNOLOGY IND LTD":"KAYNES",
+    "LARSEN & TOUBRO LTD.":"LT","LAURUS LABS":"LAURUSLABS","M&M FINANCE":"M&MFIN",
+    "MAX HEALTHCARE INS LTD":"MAXHEALTH","MIRAE ENERGY ETF":"MAFANG","MMTC":"MMTC",
+    "MOSCHIP TECHNOLOGIES":"MOSCHIP","MRPL":"MRPL","NATCO PHARMA":"NATCOPHARM",
+    "NETWEB TECHNOLOGIES":"NETWEB","NIIT LIMITED":"NIIT","NMDC":"NMDC",
+    "NIPPON LIFE AMC":"NAM-INDIA","NIPPON ETF LIQUID BEES":"LIQUIDBEES","NTPC":"NTPC",
+    "ORACLE FINANCIAL SERVICES":"OFSS","PARADEEP PHOSPHATES":"PARADEEP",
+    "PG ELECTROPLAST":"PGEL","PI INDUSTRIES":"PIIND","POONAWALLA FINCORP":"POONAWALLA",
+    "REC":"RECLTD","REC LIMITED":"RECLTD","REDINGTON":"REDINGTON","SAGILITY LIMITED":"SAGILITY",
+    "SAMVARDHANA MOTHERSON":"MOTHERSON","SHAILY ENGINEERING":"SHAILY",
+    "SUZLON ENERGY":"SUZLON","TCS":"TCS","TEJAS NETWORKS":"TEJASNET",
+    "TRANSPORT CORP OF INDIA":"TCI","TRANSPORT CORPN OF INDIA":"TCI",
+    "VARUN BEVERAGES":"VBL","VST INDUSTRIES":"VSTIND","WIPRO":"WIPRO",
+    "WOCKHARDT":"WOCKPHARMA","ZEN TECHNOLOGIES":"ZENTEC","ZYDUS LIFESCIENCES":"ZYDUSLIFE",
+    "ANGEL ONE":"ANGELONE","BANK OF INDIA":"BANKINDIA","BLUE JET HEALTHCARE":"BLUEJET",
+    "GRAPHITE INDIA":"GRAPHITE","GRINDWELL NORTON":"GRINDWELL","CANARA BANK":"CANBK",
+    "BHARAT ELECTRONICS":"BEL","STATE BANK OF INDIA":"SBIN","MSTC":"MSTCLTD",
+    "NEWGEN SOFTWARE":"NEWGEN","ALEMBIC PHARMA":"APLLTD","ASHAPURA MINECHEM":"ASHAPURMIN",
+    "GUJARAT NARMADA FERT":"GNFC","AVENUE SUPERMARTS LIMITED":"DMART",
+    "BSE LIMITED":"BSE","JUPITER WAGONS LIMITED":"JWL","ELGI EQUIPMENTS LTD":"ELGIEQUIP",
+    "IRB INFRA DEV LTD.":"IRB","K.P.R.MILL LIMITED":"KPRMILL","PREMIER ENERGIES LIMITED":"PREMIERENE",
+    "DELHIVERY":"DELHIVERY","POWER FIN CORP LTD.":"PFC",
+}
+
+
+def script_to_yf(script: str) -> str:
+    sym = SYMBOL_MAP.get(script)
+    if not sym:
+        # fallback: strip spaces/dots
+        sym = script.replace(" ", "").replace(".", "").replace("&", "").upper()
+    return sym + ".NS"
+
+
+def fetch_prices(scripts: list) -> dict[str, dict]:
+    """Returns {script: {cmp, prev_close, change_pct}} for each script."""
+    results = {s: {"cmp": None, "prev_close": None, "change_pct": None} for s in scripts}
+    if not scripts:
+        return results
+    t2s = {script_to_yf(s): s for s in scripts}
+    try:
+        data = yf.download(
+            " ".join(t2s.keys()), period="2d", interval="1d",
+            progress=False, auto_adjust=True, threads=True
+        )
+        if not data.empty:
+            close = data["Close"] if "Close" in data.columns else data.get("close")
+            if close is None:
+                raise ValueError("no close column")
+            # Handle single vs multi ticker
+            if hasattr(close, "columns"):
+                for ticker, script in t2s.items():
+                    col = close[ticker].dropna() if ticker in close.columns else None
+                    if col is not None and len(col) >= 1:
+                        cmp  = round(float(col.iloc[-1]), 2)
+                        prev = round(float(col.iloc[-2]), 2) if len(col) >= 2 else cmp
+                        results[script] = {
+                            "cmp": cmp, "prev_close": prev,
+                            "change_pct": round((cmp - prev) / prev * 100, 2) if prev else None
+                        }
+            else:
+                # single ticker
+                script = list(t2s.values())[0]
+                col    = close.dropna()
+                if len(col) >= 1:
+                    cmp  = round(float(col.iloc[-1]), 2)
+                    prev = round(float(col.iloc[-2]), 2) if len(col) >= 2 else cmp
+                    results[script] = {
+                        "cmp": cmp, "prev_close": prev,
+                        "change_pct": round((cmp - prev) / prev * 100, 2) if prev else None
+                    }
+    except Exception:
+        pass
+    return results
+
+
+def answer_movers(trades, client, threshold_pct: float, direction: str) -> str:
+    """direction: 'up', 'down', or 'any'"""
+    pool      = [t for t in trades if (not client or t["client"] == client)
+                 and not t.get("exit_date")]
+    if not pool:
+        return "No open positions found."
+
+    # Unique scripts
+    scripts = list({t["script"] for t in pool})
+    prices  = fetch_prices(scripts)
+
+    results = []
+    for scr, px in prices.items():
+        pct = px.get("change_pct")
+        if pct is None:
+            continue
+        if direction == "up"   and pct < threshold_pct:
+            continue
+        if direction == "down" and pct > -threshold_pct:
+            continue
+        if direction == "any"  and abs(pct) < threshold_pct:
+            continue
+        # which clients hold this
+        holders = list({t["client"] for t in pool if t["script"] == scr})
+        holder_names = ", ".join(CLIENT_NAMES.get(c, c) for c in sorted(holders))
+        results.append((pct, scr, px["cmp"], px["prev_close"], holder_names))
+
+    if not results:
+        dir_label = {"up": f"+{threshold_pct}%+ up", "down": f"-{threshold_pct}%+ down", "any": f"{threshold_pct}%+ move"}[direction]
+        name = CLIENT_NAMES.get(client, client) if client else "open portfolio"
+        return f"No stocks in {name} with {dir_label} move today."
+
+    results.sort(key=lambda x: x[0], reverse=(direction != "down"))
+    name  = CLIENT_NAMES.get(client, client) if client else "Open Portfolio"
+    label = {"up": "📈 Stocks Up Today", "down": "📉 Stocks Down Today", "any": "📊 Movers Today"}[direction]
+    lines = [f"*{name} — {label}*\n"]
+    for pct, scr, cmp, prev, holders in results:
+        arrow = "🟢" if pct >= 0 else "🔴"
+        lines.append(f"{arrow} *{scr}*: {fmt_inr(cmp)} ({pct:+.1f}%) | {holders}")
+    lines.append(f"\n_Prev close → today's price_")
+    return "\n".join(lines)
+
+
 PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {today}. Extract from the user message:
 - client: RIMK code (map names: Sathyavrath→RIMK1209, Kalpana→RIMK1220, Iranna→RIMK1238, Udayakumar→RIMK1248, Sundareshwari→RIMK1249, Savitha→RIMK1252). null if not mentioned.
 - stock: stock name or ticker. null if not mentioned.
@@ -62,8 +193,11 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     top_trades      → best or worst trades
     concentration   → what % of portfolio is one stock
     compare_clients → compare two clients side by side
+    movers_up       → stocks up today / up by X% today
+    movers_down     → stocks down today / down by X% today
+    movers_any      → any big movers today (no direction specified)
     client_summary  → overall summary for one client
-    all_summary     → all clients overview
+    all_summary     → all clients overall
 - filter: "open", "closed", "best", "worst", or "all"
 - date_from: ISO YYYY-MM-DD. null if not mentioned.
 - date_to: ISO YYYY-MM-DD. null if not mentioned.
@@ -80,6 +214,10 @@ Respond ONLY with valid compact JSON, no explanation. Examples:
 {{"client":"RIMK1209","stock":null,"intent":"monthly_pnl","filter":"closed","date_from":null,"date_to":null,"extra":null,"client2":null}}
 {{"client":"RIMK1209","stock":null,"intent":"compare_clients","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":"RIMK1220"}}
 {{"client":null,"stock":null,"intent":"recent_activity","filter":"all","date_from":"2026-06-03","date_to":"2026-06-10","extra":null,"client2":null}}
+{{"client":"RIMK1209","stock":null,"intent":"movers_up","filter":"open","date_from":null,"date_to":null,"extra":0,"client2":null}}
+{{"client":null,"stock":null,"intent":"movers_up","filter":"open","date_from":null,"date_to":null,"extra":5,"client2":null}}
+{{"client":null,"stock":null,"intent":"movers_down","filter":"open","date_from":null,"date_to":null,"extra":5,"client2":null}}
+{{"client":null,"stock":null,"intent":"movers_any","filter":"open","date_from":null,"date_to":null,"extra":3,"client2":null}}
 {{"client":null,"stock":null,"intent":"all_summary","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":null}}"""
 
 
@@ -652,6 +790,10 @@ def answer(trades, parsed) -> str:
         return answer_concentration(trades, client, stock)
     if intent == "compare_clients":
         return answer_compare_clients(trades, client, client2)
+    if intent in ("movers_up", "movers_down", "movers_any"):
+        direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
+        threshold = float(extra or 0)
+        return answer_movers(trades, client, threshold, direction)
     if intent == "open_positions" or filt == "open":
         return answer_open_positions(trades, client)
     if intent == "closed_trades" or filt == "closed":

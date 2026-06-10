@@ -1,2 +1,3 @@
 python-telegram-bot==22.7
 groq==1.4.0
+yfinance>=0.2.40
