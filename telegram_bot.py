@@ -196,7 +196,7 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     movers_up       → stocks up today / up by X% today
     movers_down     → stocks down today / down by X% today
     movers_any      → any big movers today (no direction specified)
-    brokerage       → brokerage/charges/fees paid (by client, by month, or date range)
+    brokerage       → brokerage/charges/fees paid (by client, by month, or date range); set filter to the specific charge asked: "brokerage" | "stt" | "gst" | "stamp" | "txn" | "all" (default "brokerage")
     client_summary  → overall summary for one client
     all_summary     → all clients overall
 - filter: "open", "closed", "best", "worst", or "all"
@@ -220,7 +220,9 @@ Respond ONLY with valid compact JSON, no explanation. Examples:
 {{"client":null,"stock":null,"intent":"movers_down","filter":"open","date_from":null,"date_to":null,"extra":5,"client2":null}}
 {{"client":null,"stock":null,"intent":"movers_any","filter":"open","date_from":null,"date_to":null,"extra":3,"client2":null}}
 {{"client":null,"stock":null,"intent":"all_summary","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":null}}
-{{"client":null,"stock":null,"intent":"brokerage","filter":"all","date_from":"2026-06-01","date_to":"2026-06-30","extra":null,"client2":null}}"""
+{{"client":null,"stock":null,"intent":"brokerage","filter":"brokerage","date_from":"2026-06-01","date_to":"2026-06-30","extra":null,"client2":null}}
+{{"client":"RIMK1209","stock":null,"intent":"brokerage","filter":"stt","date_from":"2026-06-01","date_to":"2026-06-30","extra":null,"client2":null}}
+{{"client":null,"stock":null,"intent":"brokerage","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":null}}"""
 
 
 # ── Config / data loading ──────────────────────────────────────────────────────
@@ -759,7 +761,16 @@ def answer_today(trades) -> str:
     return "\n".join(lines)
 
 
-def answer_brokerage(trades, client, date_from, date_to) -> str:
+CHARGE_LABELS = {
+    "brokerage": "Brokerage",
+    "stt":       "STT",
+    "gst":       "GST",
+    "stamp":     "Stamp Duty",
+    "txn":       "Txn Charges",
+    "all":       "Total Charges",
+}
+
+def answer_brokerage(trades, client, date_from, date_to, charge_type="brokerage") -> str:
     pool = [t for t in trades if not client or t["client"] == client]
     lo = date_from or "0000"
     hi = date_to   or "9999"
@@ -782,17 +793,21 @@ def answer_brokerage(trades, client, date_from, date_to) -> str:
         by_c[c]["stamp"]     += (t.get("buy_stamp",0)      if buy_in  else 0) + (t.get("sell_stamp",0)     if sell_in else 0)
         by_c[c]["txn"]       += (t.get("buy_txn_chrg",0)  if buy_in  else 0) + (t.get("sell_txn_chrg",0)  if sell_in else 0)
         by_c[c]["trades"]    += 1
+    ct     = charge_type if charge_type in CHARGE_LABELS else "brokerage"
+    label  = CHARGE_LABELS[ct]
     period = f" ({date_from} to {date_to})" if date_from or date_to else ""
     name   = CLIENT_NAMES.get(client, client) if client else "All Clients"
-    lines  = [f"*{name} — Brokerage & Charges{period}*\n"]
+    lines  = [f"*{name} — {label}{period}*\n"]
     grand  = 0
     for c in sorted(by_c.keys()):
-        d          = by_c[c]
-        total_chrg = d["brokerage"] + d["stt"] + d["gst"] + d["stamp"] + d["txn"]
-        lines.append(f"  *{c}* ({CLIENT_NAMES.get(c,c)}): {fmt_inr(d['brokerage'])} "
-                     f"_(+{fmt_inr(total_chrg - d['brokerage'])} taxes/levies)_ — {d['trades']} trades")
-        grand += total_chrg
-    lines.append(f"\n💸 *Grand Total charges: {fmt_inr(grand)}*")
+        d = by_c[c]
+        if ct == "all":
+            val = d["brokerage"] + d["stt"] + d["gst"] + d["stamp"] + d["txn"]
+        else:
+            val = d[ct]
+        lines.append(f"  *{c}* ({CLIENT_NAMES.get(c,c)}): {fmt_inr(val)} — {d['trades']} trades")
+        grand += val
+    lines.append(f"\n💸 *Grand Total: {fmt_inr(grand)}*")
     return "\n".join(lines)
 
 
@@ -833,7 +848,7 @@ def answer(trades, parsed) -> str:
     if intent == "compare_clients":
         return answer_compare_clients(trades, client, client2)
     if intent == "brokerage":
-        return answer_brokerage(trades, client, date_from, date_to)
+        return answer_brokerage(trades, client, date_from, date_to, charge_type=filt)
     if intent in ("movers_up", "movers_down", "movers_any"):
         direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
         threshold = float(extra or 0)
