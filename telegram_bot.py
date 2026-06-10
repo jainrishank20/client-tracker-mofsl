@@ -196,6 +196,7 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     movers_up       → stocks up today / up by X% today
     movers_down     → stocks down today / down by X% today
     movers_any      → any big movers today (no direction specified)
+    brokerage       → brokerage/charges/fees paid (by client, by month, or date range)
     client_summary  → overall summary for one client
     all_summary     → all clients overall
 - filter: "open", "closed", "best", "worst", or "all"
@@ -218,7 +219,8 @@ Respond ONLY with valid compact JSON, no explanation. Examples:
 {{"client":null,"stock":null,"intent":"movers_up","filter":"open","date_from":null,"date_to":null,"extra":5,"client2":null}}
 {{"client":null,"stock":null,"intent":"movers_down","filter":"open","date_from":null,"date_to":null,"extra":5,"client2":null}}
 {{"client":null,"stock":null,"intent":"movers_any","filter":"open","date_from":null,"date_to":null,"extra":3,"client2":null}}
-{{"client":null,"stock":null,"intent":"all_summary","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":null}}"""
+{{"client":null,"stock":null,"intent":"all_summary","filter":"all","date_from":null,"date_to":null,"extra":null,"client2":null}}
+{{"client":null,"stock":null,"intent":"brokerage","filter":"all","date_from":"2026-06-01","date_to":"2026-06-30","extra":null,"client2":null}}"""
 
 
 # ── Config / data loading ──────────────────────────────────────────────────────
@@ -757,6 +759,43 @@ def answer_today(trades) -> str:
     return "\n".join(lines)
 
 
+def answer_brokerage(trades, client, date_from, date_to) -> str:
+    pool = [t for t in trades if not client or t["client"] == client]
+    if date_from or date_to:
+        pool = [t for t in pool
+                if (not date_from or str(t.get("entry_date",""))[:10] >= date_from)
+                and (not date_to   or str(t.get("entry_date",""))[:10] <= date_to)]
+    if not pool:
+        return "No trades found for that filter."
+    by_c = defaultdict(lambda: {"brokerage":0,"stt":0,"gst":0,"stamp":0,"txn":0,"total":0,"trades":0})
+    for t in pool:
+        c = t["client"]
+        by_c[c]["brokerage"] += t.get("buy_brokerage",0) + t.get("sell_brokerage",0)
+        by_c[c]["stt"]       += t.get("buy_stt",0)       + t.get("sell_stt",0)
+        by_c[c]["gst"]       += t.get("buy_gst",0)       + t.get("sell_gst",0)
+        by_c[c]["stamp"]     += t.get("buy_stamp",0)      + t.get("sell_stamp",0)
+        by_c[c]["txn"]       += t.get("buy_txn_chrg",0)  + t.get("sell_txn_chrg",0)
+        by_c[c]["total"]     += t.get("total_charges",0)
+        by_c[c]["trades"]    += 1
+    period = f" ({date_from} to {date_to})" if date_from or date_to else ""
+    name   = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    lines  = [f"*{name} — Brokerage & Charges{period}*\n"]
+    grand  = 0
+    for c in sorted(by_c.keys()):
+        d = by_c[c]
+        lines.append(f"*{c}* ({CLIENT_NAMES.get(c,c)}) — {d['trades']} trades")
+        lines.append(f"  Brokerage : {fmt_inr(d['brokerage'])}")
+        lines.append(f"  STT       : {fmt_inr(d['stt'])}")
+        lines.append(f"  GST       : {fmt_inr(d['gst'])}")
+        lines.append(f"  Stamp     : {fmt_inr(d['stamp'])}")
+        lines.append(f"  Txn chrg  : {fmt_inr(d['txn'])}")
+        lines.append(f"  *Total    : {fmt_inr(d['total'])}*\n")
+        grand += d["total"]
+    if not client:
+        lines.append(f"💸 *Grand Total: {fmt_inr(grand)}*")
+    return "\n".join(lines)
+
+
 # ── Main dispatcher ────────────────────────────────────────────────────────────
 
 def answer(trades, parsed) -> str:
@@ -793,6 +832,8 @@ def answer(trades, parsed) -> str:
         return answer_concentration(trades, client, stock)
     if intent == "compare_clients":
         return answer_compare_clients(trades, client, client2)
+    if intent == "brokerage":
+        return answer_brokerage(trades, client, date_from, date_to)
     if intent in ("movers_up", "movers_down", "movers_any"):
         direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
         threshold = float(extra or 0)
