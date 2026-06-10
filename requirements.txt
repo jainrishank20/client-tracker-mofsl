@@ -1,0 +1,2 @@
+python-telegram-bot==22.7
+groq==1.4.0
