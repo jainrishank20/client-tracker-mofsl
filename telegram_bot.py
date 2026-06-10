@@ -306,9 +306,10 @@ def compute_net_pnl(t) -> float:
     return round(gross - charges, 2)
 
 
-def holding_days(entry_date_str) -> int:
+def holding_days(entry_date_str, exit_date_str=None) -> int:
     try:
-        return (date.today() - date.fromisoformat(entry_date_str[:10])).days
+        end = date.fromisoformat(exit_date_str[:10]) if exit_date_str else date.today()
+        return (end - date.fromisoformat(entry_date_str[:10])).days
     except Exception:
         return 0
 
@@ -530,8 +531,10 @@ def answer_pnl_on_date(trades, client, date_from, date_to) -> str:
             sp  = wavg_sell(slts)
             pnl = sum(compute_net_pnl(t) for t in slts)
             sub += pnl
+            days = max(holding_days(t["entry_date"], t["exit_date"]) for t in slts)
+            trade_type = "Intraday" if days == 0 else f"Delivery, {days}d"
             lines.append(f"  • *{scr}*: {qty:.0f} sh | {fmt_inr(bp)} → {fmt_inr(sp)} | "
-                         f"{pnl_str(pnl)} ({ret_pct(bp,qty,pnl)})")
+                         f"{pnl_str(pnl)} ({ret_pct(bp,qty,pnl)}) _{trade_type}_")
         if not client:
             lines.append(f"  _Subtotal: {pnl_str(sub)}_\n")
         total_pnl += sub
