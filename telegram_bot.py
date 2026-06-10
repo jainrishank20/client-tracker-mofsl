@@ -608,7 +608,7 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
             by_date[t["entry_date"][:10]].append(t)
         for d in sorted(by_date.keys()):
             for t in by_date[d]:
-                cname = "" if client else f" ({CLIENT_NAMES.get(t['client'],t['client'])})"
+                cname = "" if client else f" ({t['client']})"
                 lines.append(f"  {d} — *{t['script']}*{cname}: "
                              f"{t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
     if sells:
@@ -619,7 +619,7 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
         for d in sorted(by_date.keys()):
             for t in by_date[d]:
                 pnl   = compute_net_pnl(t)
-                cname = "" if client else f" ({CLIENT_NAMES.get(t['client'],t['client'])})"
+                cname = "" if client else f" ({t['client']})"
                 lines.append(f"  {d} — *{t['script']}*{cname}: "
                              f"{t['buy_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
     return "\n".join(lines)
