@@ -196,7 +196,7 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     movers_up       → stocks up today / up by X% today
     movers_down     → stocks down today / down by X% today
     movers_any      → any big movers today (no direction specified)
-    brokerage       → brokerage/charges/fees paid; filter MUST be one of: "brokerage" (default, use when user says brokerage/commission/fees) | "stt" | "gst" | "stamp" | "txn" | "all" (only when user explicitly asks for all charges/total charges)
+    brokerage       → brokerage/charges/fees paid; filter MUST be exactly: "brokerage" when user says brokerage/commission/fees, "stt" for STT, "gst" for GST, "stamp" for stamp duty, "txn" for transaction charges. NEVER use "all" or "open" or "closed" for this intent.
     client_summary  → overall summary for one client
     all_summary     → all clients overall
 - filter: "open", "closed", "best", "worst", or "all"
@@ -848,7 +848,8 @@ def answer(trades, parsed) -> str:
     if intent == "compare_clients":
         return answer_compare_clients(trades, client, client2)
     if intent == "brokerage":
-        return answer_brokerage(trades, client, date_from, date_to, charge_type=filt)
+        ct = filt if filt in ("brokerage", "stt", "gst", "stamp", "txn") else "brokerage"
+        return answer_brokerage(trades, client, date_from, date_to, charge_type=ct)
     if intent in ("movers_up", "movers_down", "movers_any"):
         direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
         threshold = float(extra or 0)
