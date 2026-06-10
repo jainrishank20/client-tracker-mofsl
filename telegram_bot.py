@@ -761,23 +761,26 @@ def answer_today(trades) -> str:
 
 def answer_brokerage(trades, client, date_from, date_to) -> str:
     pool = [t for t in trades if not client or t["client"] == client]
-    if date_from or date_to:
-        def in_range(t):
-            ed  = str(t.get("entry_date", ""))[:10]
-            exd = str(t.get("exit_date",  ""))[:10] if t.get("exit_date") else ""
-            lo, hi = date_from or "0000", date_to or "9999"
-            return (ed >= lo and ed <= hi) or (exd and exd >= lo and exd <= hi)
-        pool = [t for t in pool if in_range(t)]
+    lo = date_from or "0000"
+    hi = date_to   or "9999"
+    # Only include trades where at least one leg falls in range
+    pool = [t for t in pool if
+            (str(t.get("entry_date",""))[:10] >= lo and str(t.get("entry_date",""))[:10] <= hi)
+            or (t.get("exit_date") and str(t["exit_date"])[:10] >= lo and str(t["exit_date"])[:10] <= hi)]
     if not pool:
         return "No trades found for that filter."
     by_c = defaultdict(lambda: {"brokerage":0,"stt":0,"gst":0,"stamp":0,"txn":0,"trades":0})
     for t in pool:
-        c = t["client"]
-        by_c[c]["brokerage"] += t.get("buy_brokerage",0) + t.get("sell_brokerage",0)
-        by_c[c]["stt"]       += t.get("buy_stt",0)       + t.get("sell_stt",0)
-        by_c[c]["gst"]       += t.get("buy_gst",0)       + t.get("sell_gst",0)
-        by_c[c]["stamp"]     += t.get("buy_stamp",0)      + t.get("sell_stamp",0)
-        by_c[c]["txn"]       += t.get("buy_txn_chrg",0)  + t.get("sell_txn_chrg",0)
+        c   = t["client"]
+        ed  = str(t.get("entry_date",""))[:10]
+        exd = str(t.get("exit_date", ""))[:10] if t.get("exit_date") else ""
+        buy_in  = ed  >= lo and ed  <= hi
+        sell_in = bool(exd and exd >= lo and exd <= hi)
+        by_c[c]["brokerage"] += (t.get("buy_brokerage",0) if buy_in  else 0) + (t.get("sell_brokerage",0) if sell_in else 0)
+        by_c[c]["stt"]       += (t.get("buy_stt",0)       if buy_in  else 0) + (t.get("sell_stt",0)       if sell_in else 0)
+        by_c[c]["gst"]       += (t.get("buy_gst",0)       if buy_in  else 0) + (t.get("sell_gst",0)       if sell_in else 0)
+        by_c[c]["stamp"]     += (t.get("buy_stamp",0)      if buy_in  else 0) + (t.get("sell_stamp",0)     if sell_in else 0)
+        by_c[c]["txn"]       += (t.get("buy_txn_chrg",0)  if buy_in  else 0) + (t.get("sell_txn_chrg",0)  if sell_in else 0)
         by_c[c]["trades"]    += 1
     period = f" ({date_from} to {date_to})" if date_from or date_to else ""
     name   = CLIENT_NAMES.get(client, client) if client else "All Clients"
