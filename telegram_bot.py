@@ -787,18 +787,12 @@ def answer_brokerage(trades, client, date_from, date_to) -> str:
     lines  = [f"*{name} — Brokerage & Charges{period}*\n"]
     grand  = 0
     for c in sorted(by_c.keys()):
-        d     = by_c[c]
-        total = d["brokerage"] + d["stt"] + d["gst"] + d["stamp"] + d["txn"]
-        lines.append(f"*{c}* ({CLIENT_NAMES.get(c,c)}) — {d['trades']} trades")
-        lines.append(f"  Brokerage : {fmt_inr(d['brokerage'])}")
-        lines.append(f"  STT       : {fmt_inr(d['stt'])}")
-        lines.append(f"  GST       : {fmt_inr(d['gst'])}")
-        lines.append(f"  Stamp     : {fmt_inr(d['stamp'])}")
-        lines.append(f"  Txn chrg  : {fmt_inr(d['txn'])}")
-        lines.append(f"  *Total    : {fmt_inr(total)}*\n")
-        grand += total
-    if not client:
-        lines.append(f"💸 *Grand Total: {fmt_inr(grand)}*")
+        d          = by_c[c]
+        total_chrg = d["brokerage"] + d["stt"] + d["gst"] + d["stamp"] + d["txn"]
+        lines.append(f"  *{c}* ({CLIENT_NAMES.get(c,c)}): {fmt_inr(d['brokerage'])} "
+                     f"_(+{fmt_inr(total_chrg - d['brokerage'])} taxes/levies)_ — {d['trades']} trades")
+        grand += total_chrg
+    lines.append(f"\n💸 *Grand Total charges: {fmt_inr(grand)}*")
     return "\n".join(lines)
 
 
