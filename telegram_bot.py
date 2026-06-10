@@ -243,9 +243,17 @@ def load_config() -> dict:
 
 
 def load_trades() -> list:
-    if TRADES_FILE.exists():
-        return json.loads(TRADES_FILE.read_text(encoding="utf-8"))
-    return []
+    if not TRADES_FILE.exists():
+        return []
+    trades = json.loads(TRADES_FILE.read_text(encoding="utf-8"))
+    # Sanitize: replace float NaN exit_date (from pandas export) with None
+    import math
+    for t in trades:
+        for field in ("exit_date", "entry_date", "sell_price", "sell_qty"):
+            v = t.get(field)
+            if isinstance(v, float) and math.isnan(v):
+                t[field] = None
+    return trades
 
 
 def is_allowed(update: Update, cfg: dict) -> bool:
