@@ -467,7 +467,7 @@ def answer_open_positions(trades, client) -> str:
         for t in open_lots:
             by_c[t["client"]].append(t)
         for c, lots in sorted(by_c.items()):
-            lines.append(f"*{CLIENT_NAMES.get(c,c)}:*")
+            lines.append(f"*{c}:*")
             lines += build_open_section(lots, prices)
             lines.append("")
     else:
@@ -487,7 +487,7 @@ def answer_closed_trades(trades, client) -> str:
         for t in closed_lots:
             by_c[t["client"]].append(t)
         for c, lots in sorted(by_c.items()):
-            lines.append(f"*{CLIENT_NAMES.get(c,c)}:*")
+            lines.append(f"*{c}:*")
             lines += build_closed_section(lots)
             lines.append("")
     else:
@@ -510,7 +510,7 @@ def answer_stock_detail(trades, client, stock) -> str:
     for (c, scr), lots in sorted(by_cs.items()):
         open_lots   = [t for t in lots if not t.get("exit_date")]
         closed_lots = [t for t in lots if t.get("exit_date")]
-        lines.append(f"*{scr}* — {CLIENT_NAMES.get(c,c)}\n")
+        lines.append(f"*{scr}* — {c}\n")
         if open_lots:
             qty  = sum(t["buy_qty"] for t in open_lots)
             avg  = wavg_buy(open_lots)
@@ -568,7 +568,7 @@ def answer_entry_date(trades, client, stock) -> str:
     for t in pool:
         by_cs[(t["client"], t["script"])].append(t)
     for (c, scr), lots in sorted(by_cs.items()):
-        lines.append(f"*{scr}* — {CLIENT_NAMES.get(c,c)}\n")
+        lines.append(f"*{scr}* — {c}\n")
         for t in sorted(lots, key=lambda x: x["entry_date"]):
             if not t.get("exit_date"):
                 days = holding_days(t["entry_date"])
@@ -598,7 +598,7 @@ def answer_pnl_on_date(trades, client, date_from, date_to) -> str:
     total_pnl = 0
     for c, lots in sorted(by_c.items()):
         if not client:
-            lines.append(f"*{CLIENT_NAMES.get(c,c)}:*")
+            lines.append(f"*{c}:*")
         by_s = defaultdict(list)
         for t in lots:
             by_s[t["script"]].append(t)
@@ -796,7 +796,7 @@ def answer_compare_clients(trades, client1, client2) -> str:
         wins      = sum(1 for t in closed_t if compute_net_pnl(t) > 0)
         win_rate  = int(round(wins / len(closed_t) * 100)) if closed_t else 0
         best_t    = max(closed_t, key=lambda t: compute_net_pnl(t), default=None)
-        rows.append((CLIENT_NAMES.get(c,c), len(open_t), len(closed_t), inv, pnl, win_rate, best_t))
+        rows.append((c, len(open_t), len(closed_t), inv, pnl, win_rate, best_t))
     for name, n_open, n_closed, inv, pnl, wr, best_t in rows:
         lines.append(f"*{name}*")
         lines.append(f"  Open: {n_open} stocks | Deployed: {fmt_inr(inv)}")
@@ -869,7 +869,7 @@ def answer_today(trades) -> str:
     lines = [f"📅 *Today — {today_str}*\n"]
     if buys:
         lines.append(f"📥 *Buys ({len(buys)}):*")
-        for t in buys:
+        for t in sorted(buys, key=lambda x: x['client']):
             lines.append(f"  • *{t['script']}* ({t['client']}): {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
     if sells:
         lines.append(f"\n📤 *Sells ({len(sells)}):*")
@@ -984,6 +984,12 @@ def answer(trades, parsed) -> str:
         threshold = float(extra or 0)
         return answer_movers(trades, client, threshold, direction)
     if intent == "open_positions" or filt == "open":
+        q = str(parsed.get("_raw_question", "")).upper()
+        if "MTF" in q or "MARGIN" in q:
+            return ("ℹ️ *MTF data not available.*\n\n"
+                    "MTF (Margin Trading Facility) positions are tracked separately by Motilal Oswal "
+                    "and are not included in the trade CSVs imported here.\n\n"
+                    "To see MTF positions, check the MO app directly or export MTF statements and import them.")
         return answer_open_positions(trades, client)
     if intent == "closed_trades" or filt == "closed":
         return answer_closed_trades(trades, client)
@@ -1089,6 +1095,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         groq_client = Groq(api_key=api_key)
         parsed      = parse_intent(groq_client, question)
+        parsed["_raw_question"] = question
         reply       = answer(trades, parsed)
     except Exception as e:
         reply = f"⚠️ Error: {e}"
