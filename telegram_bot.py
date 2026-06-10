@@ -196,7 +196,7 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     movers_up       → stocks up today / up by X% today
     movers_down     → stocks down today / down by X% today
     movers_any      → any big movers today (no direction specified)
-    brokerage       → brokerage/charges/fees paid (by client, by month, or date range); set filter to the specific charge asked: "brokerage" | "stt" | "gst" | "stamp" | "txn" | "all" (default "brokerage")
+    brokerage       → brokerage/charges/fees paid; filter MUST be one of: "brokerage" (default, use when user says brokerage/commission/fees) | "stt" | "gst" | "stamp" | "txn" | "all" (only when user explicitly asks for all charges/total charges)
     client_summary  → overall summary for one client
     all_summary     → all clients overall
 - filter: "open", "closed", "best", "worst", or "all"
@@ -805,7 +805,7 @@ def answer_brokerage(trades, client, date_from, date_to, charge_type="brokerage"
             val = d["brokerage"] + d["stt"] + d["gst"] + d["stamp"] + d["txn"]
         else:
             val = d[ct]
-        lines.append(f"  *{c}* ({CLIENT_NAMES.get(c,c)}): {fmt_inr(val)} — {d['trades']} trades")
+        lines.append(f"  *{c}*: {fmt_inr(val)} — {d['trades']} trades")
         grand += val
     lines.append(f"\n💸 *Grand Total: {fmt_inr(grand)}*")
     return "\n".join(lines)
