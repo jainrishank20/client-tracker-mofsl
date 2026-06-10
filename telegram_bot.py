@@ -280,8 +280,10 @@ def resolve_stock(raw: str) -> str:
 
 
 def match_stock(script: str, su: str) -> bool:
-    s = (script or "").upper()
-    return su in s or s in su
+    s  = (script or "").upper()
+    sn = s.replace(" ", "").replace("-", "")   # "NATCO PHARMA" → "NATCOPHARMA"
+    un = su.replace(" ", "").replace("-", "")  # "NATCOPHARMA"  → "NATCOPHARMA"
+    return su in s or s in su or un in sn or sn in un
 
 
 # ── Maths helpers ──────────────────────────────────────────────────────────────
