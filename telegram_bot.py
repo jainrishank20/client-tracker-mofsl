@@ -607,35 +607,46 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
     today_str = date.today().isoformat()
     df = date_from or (date.today() - timedelta(days=7)).isoformat()
     dt = date_to   or today_str
-    pool = [t for t in trades if not client or t["client"] == client]
+    single_day = df == dt
+    pool  = [t for t in trades if not client or t["client"] == client]
     buys  = [t for t in pool if t["entry_date"][:10] >= df and t["entry_date"][:10] <= dt]
     sells = [t for t in pool if t.get("exit_date") and
              t["exit_date"][:10] >= df and t["exit_date"][:10] <= dt]
     if not buys and not sells:
-        return f"No activity from {df} to {dt}."
+        period = df if single_day else f"{df} to {dt}"
+        return f"No activity on {period}." if single_day else f"No activity from {df} to {dt}."
     name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
-    lines = [f"*{name} — Activity {df} to {dt}*\n"]
+    title = f"*{name} — {df}*" if single_day else f"*{name} — {df} to {dt}*"
+    lines = [title + "\n"]
+
     if buys:
-        lines.append("📥 *Buys:*")
+        lines.append(f"📥 *Buys ({len(buys)}):*")
         by_date = defaultdict(list)
         for t in buys:
             by_date[t["entry_date"][:10]].append(t)
         for d in sorted(by_date.keys()):
+            if not single_day:
+                lines.append(f"_{d}_")
             for t in by_date[d]:
                 cname = "" if client else f" ({t['client']})"
-                lines.append(f"  {d} — *{t['script']}*{cname}: "
-                             f"{t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
+                lines.append(f"  • *{t['script']}*{cname}: {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
+
     if sells:
-        lines.append("\n📤 *Sells:*")
+        lines.append(f"\n📤 *Sells ({len(sells)}):*")
         by_date = defaultdict(list)
         for t in sells:
             by_date[t["exit_date"][:10]].append(t)
         for d in sorted(by_date.keys()):
+            if not single_day:
+                lines.append(f"_{d}_")
             for t in by_date[d]:
                 pnl   = compute_net_pnl(t)
                 cname = "" if client else f" ({t['client']})"
-                lines.append(f"  {d} — *{t['script']}*{cname}: "
-                             f"{t['buy_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
+                lines.append(f"  • *{t['script']}*{cname}: {t['sell_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
+
+    total_pnl = sum(compute_net_pnl(t) for t in sells)
+    if sells:
+        lines.append(f"\n💰 *Booked P&L: {pnl_str(total_pnl)}*")
     return "\n".join(lines)
 
 
