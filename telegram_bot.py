@@ -177,6 +177,49 @@ def answer_movers(trades, client, threshold_pct: float, direction: str) -> str:
     return "\n".join(lines)
 
 
+def answer_unrealized_filter(trades, client, threshold_pct: float, direction: str) -> str:
+    """Show open positions with unrealized gain/loss vs buy price beyond threshold."""
+    pool = [t for t in trades if (not client or t["client"] == client) and not t.get("exit_date")]
+    if not pool:
+        return "No open positions found."
+    scripts = list({t["script"] for t in pool})
+    prices  = fetch_prices(scripts)
+    results = []
+    by_cs = defaultdict(list)
+    for t in pool:
+        by_cs[(t["client"], t["script"])].append(t)
+    for (c, scr), lots in by_cs.items():
+        px = prices.get(scr, {})
+        cmp = px.get("cmp")
+        if not cmp:
+            continue
+        avg = wavg_buy(lots)
+        qty = sum(t["buy_qty"] for t in lots)
+        unreal_pct = (cmp - avg) / avg * 100 if avg else 0
+        unreal_pnl = (cmp - avg) * qty
+        if direction == "loss" and unreal_pct > -threshold_pct:
+            continue
+        if direction == "gain" and unreal_pct < threshold_pct:
+            continue
+        results.append((unreal_pct, scr, c, qty, avg, cmp, unreal_pnl))
+
+    if not results:
+        name = CLIENT_NAMES.get(client, client) if client else "portfolio"
+        dir_label = f"loss > {threshold_pct}%" if direction == "loss" else f"gain > {threshold_pct}%"
+        return f"No open positions in {name} with unrealized {dir_label}."
+
+    results.sort(key=lambda x: x[0])  # worst loss first
+    name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    label = f"📉 Unrealized Loss > {threshold_pct}%" if direction == "loss" else f"📈 Unrealized Gain > {threshold_pct}%"
+    lines = [f"*{name} — {label}*\n"]
+    for unreal_pct, scr, c, qty, avg, cmp, unreal_pnl in results:
+        arrow = "🔴" if unreal_pct < 0 else "🟢"
+        lines.append(f"{arrow} *{scr}* ({c}): {qty:.0f} sh | Avg {fmt_inr(avg)} → CMP {fmt_inr(cmp)} | "
+                     f"*{unreal_pct:+.1f}%* ({pnl_str(unreal_pnl)})")
+    lines.append("\n_Unrealized P&L vs avg buy price_")
+    return "\n".join(lines)
+
+
 PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {today}. Extract from the user message:
 - client: RIMK code (map names: Sathyavrath→RIMK1209, Kalpana→RIMK1220, Iranna→RIMK1238, Udayakumar→RIMK1248, Sundareshwari→RIMK1249, Savitha→RIMK1252). null if not mentioned.
 - stock: stock name or ticker. null if not mentioned.
@@ -196,6 +239,8 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     movers_up       → stocks up today / up by X% today
     movers_down     → stocks down today / down by X% today
     movers_any      → any big movers today (no direction specified)
+    unrealized_loss → open positions with unrealized loss > X% vs buy price (e.g. "stocks at a loss of 10%", "down more than 5% from buy")
+    unrealized_gain → open positions with unrealized gain > X% vs buy price (e.g. "stocks up 20% from buy", "profit of more than 15%")
     brokerage       → brokerage/charges/fees paid; filter MUST be exactly: "brokerage" when user says brokerage/commission/fees, "stt" for STT, "gst" for GST, "stamp" for stamp duty, "txn" for transaction charges. NEVER use "all" or "open" or "closed" for this intent.
     client_summary  → overall summary for one client
     all_summary     → all clients overall
@@ -871,6 +916,9 @@ def answer(trades, parsed) -> str:
     if intent == "brokerage":
         ct = filt if filt in ("brokerage", "stt", "gst", "stamp", "txn") else "brokerage"
         return answer_brokerage(trades, client, date_from, date_to, charge_type=ct)
+    if intent in ("unrealized_loss", "unrealized_gain"):
+        direction = "loss" if intent == "unrealized_loss" else "gain"
+        return answer_unrealized_filter(trades, client, float(extra or 10), direction)
     if intent in ("movers_up", "movers_down", "movers_any"):
         direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
         threshold = float(extra or 0)
