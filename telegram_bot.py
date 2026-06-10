@@ -66,7 +66,7 @@ TICKER_ALIAS = {
     "INTELLECT": "INTELLECT DESIGN", "SIB": "SOUTH INDIAN BANK",
 }
 
-PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Extract from the user message:
+PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {today}. Extract from the user message:
 - client: RIMK code (map names too: Sathyavrath→RIMK1209, Kalpana→RIMK1220, Iranna→RIMK1238, Udayakumar→RIMK1248, Sundareshwari→RIMK1249, Savitha→RIMK1252). null if not mentioned.
 - stock: stock name or ticker (use full name where possible). null if not mentioned.
 - intent: one of:
@@ -75,17 +75,22 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Extract from
     all_positions   → asking about all trades (open + closed)
     stock_detail    → asking about a specific stock (price, qty, p&l, status)
     entry_date      → asking when they bought / entry date for a stock
+    pnl_on_date     → asking about profit/trades booked on a specific date or date range
     client_summary  → asking for overall summary/p&l of a client
     all_summary     → asking about all clients overall
 - filter: "open", "closed", or "all" (default "all")
+- date_from: ISO date YYYY-MM-DD if a specific date or start of range is mentioned. null otherwise.
+- date_to: ISO date YYYY-MM-DD if an end of range is mentioned. Same as date_from for single-day queries. null otherwise.
+
+Resolve relative dates using today ({today}): "today"→today, "yesterday"→yesterday, "this week"→Mon to today, "last week"→previous Mon-Sun.
 
 Respond ONLY with valid JSON. Examples:
-{"client":"RIMK1238","stock":null,"intent":"open_positions","filter":"open"}
-{"client":"RIMK1209","stock":"BHARAT ELECTRONICS","intent":"stock_detail","filter":"all"}
-{"client":null,"stock":"SUZLON ENERGY","intent":"stock_detail","filter":"all"}
-{"client":"RIMK1209","stock":"INTELLECT DESIGN","intent":"entry_date","filter":"all"}
-{"client":"RIMK1209","stock":null,"intent":"client_summary","filter":"all"}
-{"client":null,"stock":null,"intent":"all_summary","filter":"all"}"""
+{{"client":"RIMK1238","stock":null,"intent":"open_positions","filter":"open","date_from":null,"date_to":null}}
+{{"client":"RIMK1209","stock":null,"intent":"pnl_on_date","filter":"closed","date_from":"2026-06-08","date_to":"2026-06-08"}}
+{{"client":"RIMK1209","stock":null,"intent":"pnl_on_date","filter":"closed","date_from":"2026-06-01","date_to":"2026-06-08"}}
+{{"client":"RIMK1209","stock":"BHARAT ELECTRONICS","intent":"stock_detail","filter":"all","date_from":null,"date_to":null}}
+{{"client":"RIMK1209","stock":null,"intent":"client_summary","filter":"all","date_from":null,"date_to":null}}
+{{"client":null,"stock":null,"intent":"all_summary","filter":"all","date_from":null,"date_to":null}}"""
 
 
 def load_config() -> dict:
@@ -366,6 +371,59 @@ def answer_entry_date(trades, client, stock) -> str:
     return "\n".join(lines).strip()
 
 
+def answer_pnl_on_date(trades, client, date_from, date_to) -> str:
+    pool = [t for t in trades
+            if (not client or t["client"] == client)
+            and t.get("exit_date")
+            and (not date_from or t["exit_date"][:10] >= date_from)
+            and (not date_to   or t["exit_date"][:10] <= date_to)]
+
+    if not pool:
+        label = CLIENT_NAMES.get(client, client) if client else "any client"
+        period = date_from if date_from == date_to else f"{date_from} → {date_to}"
+        return f"No trades closed between {period} for {label}."
+
+    # label the period nicely
+    if date_from and date_from == date_to:
+        period_label = f"on {date_from}"
+    elif date_from and date_to:
+        period_label = f"{date_from} to {date_to}"
+    else:
+        period_label = "in selected period"
+
+    name = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    lines = [f"*{name} — Trades closed {period_label}*\n"]
+
+    by_client = defaultdict(list)
+    for t in pool:
+        by_client[t["client"]].append(t)
+
+    total_pnl = 0
+    for c, lots in sorted(by_client.items()):
+        cname = CLIENT_NAMES.get(c, c)
+        if not client:
+            lines.append(f"*{cname}:*")
+        by_script = defaultdict(list)
+        for t in lots:
+            by_script[t["script"]].append(t)
+        client_pnl = 0
+        for scr, slts in sorted(by_script.items()):
+            qty  = sum(t["buy_qty"] for t in slts)
+            bp   = wavg_buy(slts)
+            sp   = wavg_sell(slts)
+            pnl  = sum(compute_net_pnl(t) for t in slts)
+            pct  = ret_pct(bp, qty, pnl)
+            client_pnl += pnl
+            lines.append(f"  • *{scr}*: {qty:.0f} sh | "
+                         f"{fmt_inr(bp)} → {fmt_inr(sp)} | {pnl_str(pnl)} ({pct})")
+        if not client:
+            lines.append(f"  _Subtotal: {pnl_str(client_pnl)}_\n")
+        total_pnl += client_pnl
+
+    lines.append(f"\n💰 *Total booked P&L: {pnl_str(total_pnl)}*")
+    return "\n".join(lines)
+
+
 def answer_all_summary(trades) -> str:
     lines = ["📊 *Portfolio Overview*\n"]
     total_invested = total_pnl = 0
@@ -384,11 +442,15 @@ def answer_all_summary(trades) -> str:
 
 
 def answer(trades, parsed) -> str:
-    client = resolve_client(parsed.get("client") or "")
-    stock  = parsed.get("stock")
-    intent = parsed.get("intent", "all_positions")
-    filt   = parsed.get("filter", "all")
+    client    = resolve_client(parsed.get("client") or "")
+    stock     = parsed.get("stock")
+    intent    = parsed.get("intent", "all_positions")
+    filt      = parsed.get("filter", "all")
+    date_from = parsed.get("date_from")
+    date_to   = parsed.get("date_to")
 
+    if intent == "pnl_on_date" or (date_from and intent in ("client_summary", "all_summary")):
+        return answer_pnl_on_date(trades, client, date_from, date_to)
     if intent == "all_summary":
         return answer_all_summary(trades)
     if intent == "client_summary":
@@ -408,21 +470,24 @@ def answer(trades, parsed) -> str:
 
 
 def parse_intent(groq_client, question: str) -> dict:
+    today_str = date.today().isoformat()
+    prompt = PARSE_PROMPT.format(today=today_str)
     try:
         resp = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": PARSE_PROMPT},
+                {"role": "system", "content": prompt},
                 {"role": "user",   "content": question}
             ],
-            max_tokens=80,
+            max_tokens=120,
             temperature=0
         )
         raw = resp.choices[0].message.content.strip()
         start, end = raw.find("{"), raw.rfind("}") + 1
         return json.loads(raw[start:end])
     except Exception:
-        return {"client": None, "stock": None, "intent": "all_summary", "filter": "all"}
+        return {"client": None, "stock": None, "intent": "all_summary",
+                "filter": "all", "date_from": None, "date_to": None}
 
 
 # ── Telegram handlers ─────────────────────────────────────────────────────────
