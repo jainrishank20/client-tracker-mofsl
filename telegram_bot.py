@@ -399,12 +399,14 @@ def period_label(date_from, date_to) -> str:
 
 # ── Answer builders ────────────────────────────────────────────────────────────
 
-def build_open_section(open_lots: list) -> list:
-    lines = ["🟢 *Open Positions:*"]
+def build_open_section(open_lots: list, prices: dict = None) -> list:
     by_script = defaultdict(list)
     for t in open_lots:
         by_script[t["script"]].append(t)
     total_invested = 0
+    total_unreal   = 0
+    in_profit = in_loss = 0
+    rows = []
     for scr, lots in sorted(by_script.items()):
         qty      = sum(t["buy_qty"] for t in lots)
         avg      = wavg_buy(lots)
@@ -412,10 +414,23 @@ def build_open_section(open_lots: list) -> list:
         total_invested += invested
         earliest = min(t["entry_date"] for t in lots)[:10]
         days     = holding_days(earliest)
-        lines.append(f"  • *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | "
-                     f"{fmt_inr(invested)} | {days}d (since {earliest})")
-    lines.append(f"  _Total deployed: {fmt_inr(total_invested)}_")
-    return lines
+        cmp      = (prices or {}).get(scr, {}).get("cmp")
+        if cmp:
+            unreal_pnl = round((cmp - avg) * qty, 2)
+            unreal_pct = round((cmp - avg) / avg * 100, 1) if avg else 0
+            total_unreal += unreal_pnl
+            if unreal_pnl >= 0: in_profit += 1
+            else: in_loss += 1
+            pnl_tag = f" | {pnl_str(unreal_pnl)} ({unreal_pct:+.1f}%)"
+        else:
+            pnl_tag = ""
+        rows.append(f"  • *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | {days}d{pnl_tag}")
+    # Header summary
+    header = f"🟢 *Open ({len(by_script)} stocks | Deployed {fmt_inr(total_invested)}"
+    if prices:
+        header += f" | Unrealized {pnl_str(total_unreal)} | {in_profit}▲ {in_loss}▼"
+    header += ")*"
+    return [header] + rows
 
 
 def build_closed_section(closed_lots: list) -> list:
@@ -443,18 +458,20 @@ def answer_open_positions(trades, client) -> str:
     open_lots = [t for t in pool if not t.get("exit_date")]
     if not open_lots:
         return f"No open positions for {CLIENT_NAMES.get(client, client) if client else 'anyone'}."
-    name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
-    lines = [f"*{name} — Open Positions*\n"]
+    name    = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    scripts = list({t["script"] for t in open_lots})
+    prices  = fetch_prices(scripts)
+    lines   = [f"*{name} — Open Positions*\n"]
     if not client:
         by_c = defaultdict(list)
         for t in open_lots:
             by_c[t["client"]].append(t)
         for c, lots in sorted(by_c.items()):
             lines.append(f"*{CLIENT_NAMES.get(c,c)}:*")
-            lines += build_open_section(lots)
+            lines += build_open_section(lots, prices)
             lines.append("")
     else:
-        lines += build_open_section(open_lots)
+        lines += build_open_section(open_lots, prices)
     return "\n".join(lines)
 
 
@@ -483,7 +500,9 @@ def answer_stock_detail(trades, client, stock) -> str:
     pool = [t for t in trades
             if (not client or t["client"] == client) and match_stock(t.get("script"), su)]
     if not pool:
-        return f"No trades found for {stock}" + (f" in {CLIENT_NAMES.get(client,client)}" if client else "") + "."
+        suggestion = suggest_stock(stock, trades)
+        hint = f" Did you mean *{suggestion}*?" if suggestion else ""
+        return f"No trades found for *{stock}*" + (f" in {CLIENT_NAMES.get(client,client)}" if client else "") + f".{hint}"
     lines = []
     by_cs = defaultdict(list)
     for t in pool:
@@ -648,6 +667,34 @@ def answer_long_positions(trades, client, min_days: int = 60) -> str:
     return "\n".join(lines)
 
 
+WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+
+def is_market_holiday(d: str) -> str | None:
+    """Returns reason string if date is weekend, else None."""
+    try:
+        wd = date.fromisoformat(d).weekday()
+        if wd == 5: return "Saturday"
+        if wd == 6: return "Sunday"
+    except Exception:
+        pass
+    return None
+
+
+def suggest_stock(query: str, trades: list) -> str:
+    """Return closest stock name from trades data."""
+    all_scripts = list({t["script"] for t in trades})
+    qu = query.upper().replace(" ", "")
+    best, best_score = None, 0
+    for scr in all_scripts:
+        sn = scr.replace(" ", "")
+        common = sum(1 for a, b in zip(qu, sn) if a == b)
+        if qu in sn or sn in qu:
+            common += 5
+        if common > best_score:
+            best, best_score = scr, common
+    return best or ""
+
+
 def answer_recent_activity(trades, client, date_from, date_to) -> str:
     today_str = date.today().isoformat()
     df = date_from or (date.today() - timedelta(days=7)).isoformat()
@@ -658,8 +705,11 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
     sells = [t for t in pool if t.get("exit_date") and
              t["exit_date"][:10] >= df and t["exit_date"][:10] <= dt]
     if not buys and not sells:
-        period = df if single_day else f"{df} to {dt}"
-        return f"No activity on {period}." if single_day else f"No activity from {df} to {dt}."
+        if single_day:
+            why = is_market_holiday(df)
+            if why:
+                return f"No trades on {df} — that was a *{why}* (market closed)."
+        return f"No activity from {df} to {dt}."
     name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
     title = f"*{name} — {df}*" if single_day else f"*{name} — {df} to {dt}*"
     lines = [title + "\n"]
@@ -805,25 +855,35 @@ def answer_all_summary(trades) -> str:
 
 def answer_today(trades) -> str:
     today_str = date.today().isoformat()
+    why = is_market_holiday(today_str)
     buys  = [t for t in trades if t["entry_date"][:10] == today_str]
     sells = [t for t in trades if t.get("exit_date") and t["exit_date"][:10] == today_str]
     if not buys and not sells:
-        return f"No trades recorded for today ({today_str})."
-    lines = [f"📅 *Today's Activity — {today_str}*\n"]
+        suffix = f" — *{why}*, market closed." if why else "."
+        # show last active day
+        all_dates = sorted({t["entry_date"][:10] for t in trades} |
+                           {t["exit_date"][:10] for t in trades if t.get("exit_date")}, reverse=True)
+        last = next((d for d in all_dates if d < today_str), None)
+        hint = f"\n_Last activity: {last}_" if last else ""
+        return f"No trades recorded for today ({today_str}){suffix}{hint}"
+    lines = [f"📅 *Today — {today_str}*\n"]
     if buys:
-        lines.append("📥 *Buys:*")
+        lines.append(f"📥 *Buys ({len(buys)}):*")
         for t in buys:
-            lines.append(f"  • {CLIENT_NAMES.get(t['client'],t['client'])} — "
-                         f"*{t['script']}*: {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
+            lines.append(f"  • *{t['script']}* ({t['client']}): {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
     if sells:
-        lines.append("\n📤 *Sells:*")
+        lines.append(f"\n📤 *Sells ({len(sells)}):*")
+        by_c_pnl = defaultdict(float)
         total = 0
         for t in sells:
             pnl = compute_net_pnl(t)
             total += pnl
-            lines.append(f"  • {CLIENT_NAMES.get(t['client'],t['client'])} — "
-                         f"*{t['script']}*: {t['buy_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
-        lines.append(f"\n💰 *Today's booked P&L: {pnl_str(total)}*")
+            by_c_pnl[t["client"]] += pnl
+            lines.append(f"  • *{t['script']}* ({t['client']}): {t['sell_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
+        lines.append(f"\n💰 *Total booked P&L: {pnl_str(total)}*")
+        if len(by_c_pnl) > 1:
+            for c in sorted(by_c_pnl):
+                lines.append(f"  {c}: {pnl_str(by_c_pnl[c])}")
     return "\n".join(lines)
 
 
@@ -927,7 +987,18 @@ def answer(trades, parsed) -> str:
         return answer_open_positions(trades, client)
     if intent == "closed_trades" or filt == "closed":
         return answer_closed_trades(trades, client)
-    return answer_open_positions(trades, client) + "\n\n" + answer_closed_trades(trades, client)
+    if client:
+        return answer_client_summary(trades, client)
+    return ("❓ I didn't quite understand that.\n\n"
+            "Try asking:\n"
+            "• _RIMK1209 open positions_\n"
+            "• _Trades today_\n"
+            "• _P&L for Kalpana on 2026-06-08_\n"
+            "• _Monthly P&L for Sathyavrath_\n"
+            "• _Who holds Suzlon?_\n"
+            "• _Stocks at a loss of 10%_\n"
+            "• _Brokerage this month_\n\n"
+            "Or type /help for the full list.")
 
 
 # ── Intent parsing ─────────────────────────────────────────────────────────────
