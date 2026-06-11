@@ -47,6 +47,8 @@ RAW = {
     'IFCI LTD.':                          'IFCI',
     'IFCI LTD':                           'IFCI',
     'INDIAN ENERGY EXC LTD':              'INDIAN ENERGY EXCHANGE',
+    'INDIAN ENERGY EXCHANGE LIMITED':     'INDIAN ENERGY EXCHANGE',
+    'Indian Energy Exchange Limited':     'INDIAN ENERGY EXCHANGE',
     'COMPUTER AGE MNGT SER LTD':          'CAMS',
     'GRINDWELL NORTON LIMITED':           'GRINDWELL NORTON',
     'HIMADRI SPECIALITY CHEM L':          'HIMADRI SPECIALITY CHEM',
