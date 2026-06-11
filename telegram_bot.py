@@ -695,6 +695,24 @@ def suggest_stock(query: str, trades: list) -> str:
     return best or ""
 
 
+def _merge_legs(legs, side):
+    """Merge multiple FIFO lots of the same stock into one display line."""
+    merged = {}
+    for t in legs:
+        key = (t["script"], t["client"]) if side == "buy" else (t["script"], t["client"])
+        if key not in merged:
+            merged[key] = {"qty": 0, "value": 0, "pnl": 0, "price": 0, "client": t["client"], "script": t["script"]}
+        q = t["buy_qty"] if side == "buy" else t["sell_qty"]
+        p = t["buy_price"] if side == "buy" else t["sell_price"]
+        merged[key]["qty"]   += q
+        merged[key]["value"] += q * p
+        if side == "sell":
+            merged[key]["pnl"] += compute_net_pnl(t)
+    for v in merged.values():
+        v["price"] = v["value"] / v["qty"] if v["qty"] else 0
+    return list(merged.values())
+
+
 def answer_recent_activity(trades, client, date_from, date_to) -> str:
     today_str = date.today().isoformat()
     df = date_from or (date.today() - timedelta(days=7)).isoformat()
@@ -710,38 +728,43 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
             if why:
                 return f"No trades on {df} — that was a *{why}* (market closed)."
         return f"No activity from {df} to {dt}."
-    name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    name  = client if client else "All Clients"
     title = f"*{name} — {df}*" if single_day else f"*{name} — {df} to {dt}*"
     lines = [title + "\n"]
 
     if buys:
-        lines.append(f"📥 *Buys ({len(buys)}):*")
         by_date = defaultdict(list)
         for t in buys:
             by_date[t["entry_date"][:10]].append(t)
+        total_buy_legs = sum(len(_merge_legs(v, "buy")) for v in by_date.values())
+        lines.append(f"📥 *Buys ({total_buy_legs}):*")
         for d in sorted(by_date.keys()):
             if not single_day:
                 lines.append(f"_{d}_")
-            for t in by_date[d]:
-                cname = "" if client else f" ({t['client']})"
-                lines.append(f"  • *{t['script']}*{cname}: {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
+            for m in _merge_legs(by_date[d], "buy"):
+                cname = "" if client else f" ({m['client']})"
+                invested = m["qty"] * m["price"]
+                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])}  _{fmt_inr(invested)}_")
 
     if sells:
-        lines.append(f"\n📤 *Sells ({len(sells)}):*")
         by_date = defaultdict(list)
         for t in sells:
             by_date[t["exit_date"][:10]].append(t)
+        total_sell_legs = sum(len(_merge_legs(v, "sell")) for v in by_date.values())
+        lines.append(f"\n📤 *Sells ({total_sell_legs}):*")
         for d in sorted(by_date.keys()):
             if not single_day:
                 lines.append(f"_{d}_")
-            for t in by_date[d]:
-                pnl   = compute_net_pnl(t)
-                cname = "" if client else f" ({t['client']})"
-                lines.append(f"  • *{t['script']}*{cname}: {t['sell_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
+            for m in _merge_legs(by_date[d], "sell"):
+                cname = "" if client else f" ({m['client']})"
+                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])} | {pnl_str(m['pnl'])}")
 
     total_pnl = sum(compute_net_pnl(t) for t in sells)
+    total_deployed = sum(t["buy_qty"] * t["buy_price"] for t in buys)
+    if buys:
+        lines.append(f"\n📊 *Total deployed: {fmt_inr(total_deployed)}*")
     if sells:
-        lines.append(f"\n💰 *Booked P&L: {pnl_str(total_pnl)}*")
+        lines.append(f"💰 *Booked P&L: {pnl_str(total_pnl)}*")
     return "\n".join(lines)
 
 
@@ -868,18 +891,19 @@ def answer_today(trades) -> str:
         return f"No trades recorded for today ({today_str}){suffix}{hint}"
     lines = [f"📅 *Today — {today_str}*\n"]
     if buys:
-        lines.append(f"📥 *Buys ({len(buys)}):*")
-        for t in sorted(buys, key=lambda x: x['client']):
-            lines.append(f"  • *{t['script']}* ({t['client']}): {t['buy_qty']:.0f} sh @ {fmt_inr(t['buy_price'])}")
+        merged_buys = _merge_legs(sorted(buys, key=lambda x: x['client']), "buy")
+        lines.append(f"📥 *Buys ({len(merged_buys)}):*")
+        for m in merged_buys:
+            invested = m["qty"] * m["price"]
+            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])}  _{fmt_inr(invested)}_")
     if sells:
-        lines.append(f"\n📤 *Sells ({len(sells)}):*")
+        merged_sells = _merge_legs(sells, "sell")
+        lines.append(f"\n📤 *Sells ({len(merged_sells)}):*")
         by_c_pnl = defaultdict(float)
-        total = 0
-        for t in sells:
-            pnl = compute_net_pnl(t)
-            total += pnl
-            by_c_pnl[t["client"]] += pnl
-            lines.append(f"  • *{t['script']}* ({t['client']}): {t['sell_qty']:.0f} sh @ {fmt_inr(t['sell_price'])} | {pnl_str(pnl)}")
+        total = sum(m["pnl"] for m in merged_sells)
+        for m in merged_sells:
+            by_c_pnl[m["client"]] += m["pnl"]
+            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])} | {pnl_str(m['pnl'])}")
         lines.append(f"\n💰 *Total booked P&L: {pnl_str(total)}*")
         if len(by_c_pnl) > 1:
             for c in sorted(by_c_pnl):
