@@ -1,3 +1,4 @@
+.env
 bot_config.json
 gsheet_key.json
 raw_csvs/
