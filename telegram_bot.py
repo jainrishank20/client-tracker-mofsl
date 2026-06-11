@@ -743,8 +743,7 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
                 lines.append(f"_{d}_")
             for m in _merge_legs(by_date[d], "buy"):
                 cname = "" if client else f" ({m['client']})"
-                invested = m["qty"] * m["price"]
-                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])}  _{fmt_inr(invested)}_")
+                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])}")
 
     if sells:
         by_date = defaultdict(list)
@@ -760,11 +759,8 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
                 lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])} | {pnl_str(m['pnl'])}")
 
     total_pnl = sum(compute_net_pnl(t) for t in sells)
-    total_deployed = sum(t["buy_qty"] * t["buy_price"] for t in buys)
-    if buys:
-        lines.append(f"\n📊 *Total deployed: {fmt_inr(total_deployed)}*")
     if sells:
-        lines.append(f"💰 *Booked P&L: {pnl_str(total_pnl)}*")
+        lines.append(f"\n💰 *Booked P&L: {pnl_str(total_pnl)}*")
     return "\n".join(lines)
 
 
@@ -894,8 +890,7 @@ def answer_today(trades) -> str:
         merged_buys = _merge_legs(sorted(buys, key=lambda x: x['client']), "buy")
         lines.append(f"📥 *Buys ({len(merged_buys)}):*")
         for m in merged_buys:
-            invested = m["qty"] * m["price"]
-            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])}  _{fmt_inr(invested)}_")
+            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])}")
     if sells:
         merged_sells = _merge_legs(sells, "sell")
         lines.append(f"\n📤 *Sells ({len(merged_sells)}):*")
