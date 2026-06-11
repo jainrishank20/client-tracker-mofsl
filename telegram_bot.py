@@ -374,12 +374,22 @@ def holding_days(entry_date_str, exit_date_str=None) -> int:
 
 
 def fmt_inr(n: float) -> str:
-    return f"₹{n:,.2f}"
+    """Format in Indian scale: K / L / Cr with 2 sig-figs after decimal."""
+    a = abs(n)
+    if a >= 1_00_00_000:
+        s = f"₹{n/1_00_00_000:.2f}Cr"
+    elif a >= 1_00_000:
+        s = f"₹{n/1_00_000:.2f}L"
+    elif a >= 1_000:
+        s = f"₹{n/1_000:.2f}K"
+    else:
+        s = f"₹{n:.2f}"
+    return s
 
 
 def pnl_str(pnl: float) -> str:
-    sign = "+" if pnl >= 0 else ""
-    return f"{sign}{fmt_inr(pnl)}"
+    arrow = "▲" if pnl >= 0 else "▼"
+    return f"{arrow} {fmt_inr(abs(pnl))}"
 
 
 def ret_pct(buy_price, qty, pnl) -> str:
@@ -387,6 +397,9 @@ def ret_pct(buy_price, qty, pnl) -> str:
     if not invested:
         return ""
     return f"{pnl/invested*100:+.1f}%"
+
+
+DIV = "─" * 20
 
 
 def period_label(date_from, date_to) -> str:
@@ -421,20 +434,22 @@ def build_open_section(open_lots: list, prices: dict = None) -> list:
             total_unreal += unreal_pnl
             if unreal_pnl >= 0: in_profit += 1
             else: in_loss += 1
-            pnl_tag = f" | {pnl_str(unreal_pnl)} ({unreal_pct:+.1f}%)"
+            arrow = "▲" if unreal_pnl >= 0 else "▼"
+            pnl_tag = f" | {arrow} {fmt_inr(abs(unreal_pnl))} ({unreal_pct:+.1f}%)"
         else:
             pnl_tag = ""
         rows.append(f"  • *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | {days}d{pnl_tag}")
     # Header summary
-    header = f"🟢 *Open ({len(by_script)} stocks | Deployed {fmt_inr(total_invested)}"
+    unreal_arrow = "▲" if total_unreal >= 0 else "▼"
+    header = f"🟢 *Open — {len(by_script)} stocks | {fmt_inr(total_invested)} deployed"
     if prices:
-        header += f" | Unrealized {pnl_str(total_unreal)} | {in_profit}▲ {in_loss}▼"
-    header += ")*"
-    return [header] + rows
+        header += f" | {unreal_arrow} {fmt_inr(abs(total_unreal))} unrealized | {in_profit}▲ {in_loss}▼"
+    header += "*"
+    return [header, DIV] + rows
 
 
 def build_closed_section(closed_lots: list) -> list:
-    lines = ["🔴 *Closed Trades:*"]
+    lines = ["🔴 *Closed Trades:*", DIV]
     by_script = defaultdict(list)
     for t in closed_lots:
         by_script[t["script"]].append(t)
@@ -590,8 +605,8 @@ def answer_pnl_on_date(trades, client, date_from, date_to) -> str:
     if not pool:
         return f"No trades closed {period_label(date_from, date_to)} for " \
                f"{CLIENT_NAMES.get(client, client) if client else 'any client'}."
-    name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
-    lines = [f"*{name} — Trades closed {period_label(date_from, date_to)}*\n"]
+    name  = client if client else "All Clients"
+    lines = [f"*{name} — Trades closed {period_label(date_from, date_to)}*", DIV]
     by_c  = defaultdict(list)
     for t in pool:
         by_c[t["client"]].append(t)
@@ -625,21 +640,29 @@ def answer_monthly_pnl(trades, client) -> str:
             if (not client or t["client"] == client) and t.get("exit_date")]
     if not pool:
         return "No closed trades found."
-    name  = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    name  = client if client else "All Clients"
     lines = [f"*{name} — Monthly P&L*\n"]
     by_month = defaultdict(list)
     for t in pool:
-        month = t["exit_date"][:7]  # YYYY-MM
-        by_month[month].append(t)
-    grand = 0
+        by_month[t["exit_date"][:7]].append(t)
+    monthly = []
     for month in sorted(by_month.keys()):
         lots = by_month[month]
         pnl  = sum(compute_net_pnl(t) for t in lots)
+        wins = sum(1 for t in lots if compute_net_pnl(t) >= 0)
+        monthly.append((month, pnl, len(lots), wins))
+    max_abs = max(abs(p) for _, p, _, _ in monthly) or 1
+    grand = 0
+    for month, pnl, n_trades, wins in monthly:
         grand += pnl
-        bar = "█" * min(int(abs(pnl) / 5000), 10)
+        bar_len = round(abs(pnl) / max_abs * 8)
+        bar  = ("▓" if pnl >= 0 else "░") * bar_len
         sign = "🟢" if pnl >= 0 else "🔴"
-        lines.append(f"{sign} *{month}*: {pnl_str(pnl)} ({len(lots)} trades) {bar}")
-    lines.append(f"\n_Cumulative: {pnl_str(grand)}_")
+        losses = n_trades - wins
+        lines.append(f"{sign} *{month}*: {pnl_str(pnl)}  {bar}  _{wins}W {losses}L_")
+    lines.append(f"\n{DIV}")
+    cum_arrow = "▲" if grand >= 0 else "▼"
+    lines.append(f"*Cumulative: {cum_arrow} {fmt_inr(abs(grand))}*")
     return "\n".join(lines)
 
 
@@ -730,7 +753,7 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
         return f"No activity from {df} to {dt}."
     name  = client if client else "All Clients"
     title = f"*{name} — {df}*" if single_day else f"*{name} — {df} to {dt}*"
-    lines = [title + "\n"]
+    lines = [title, DIV]
 
     if buys:
         by_date = defaultdict(list)
@@ -750,7 +773,7 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
         for t in sells:
             by_date[t["exit_date"][:10]].append(t)
         total_sell_legs = sum(len(_merge_legs(v, "sell")) for v in by_date.values())
-        lines.append(f"\n📤 *Sells ({total_sell_legs}):*")
+        lines.append(f"\n{DIV}\n📤 *Sells ({total_sell_legs}):*")
         for d in sorted(by_date.keys()):
             if not single_day:
                 lines.append(f"_{d}_")
@@ -885,7 +908,7 @@ def answer_today(trades) -> str:
         last = next((d for d in all_dates if d < today_str), None)
         hint = f"\n_Last activity: {last}_" if last else ""
         return f"No trades recorded for today ({today_str}){suffix}{hint}"
-    lines = [f"📅 *Today — {today_str}*\n"]
+    lines = [f"📅 *Today — {today_str}*", DIV]
     if buys:
         merged_buys = _merge_legs(sorted(buys, key=lambda x: x['client']), "buy")
         lines.append(f"📥 *Buys ({len(merged_buys)}):*")
