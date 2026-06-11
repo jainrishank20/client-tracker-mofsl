@@ -402,6 +402,25 @@ def ret_pct(buy_price, qty, pnl) -> str:
 DIV = "─" * 20
 
 
+def age_icon(days: int) -> str:
+    if days <= 3:   return "🌱"
+    if days <= 14:  return "🌿"
+    if days <= 60:  return "🌲"
+    return "🌳"
+
+
+def heat_bar(pct: float, width: int = 5) -> str:
+    """Filled blocks proportional to |pct|, capped at width. Green or red."""
+    filled = min(round(abs(pct) / 4), width)
+    char   = "▲" if pct >= 0 else "▼"
+    return char * filled + "·" * (width - filled)
+
+
+def win_bar(win_rate: int, width: int = 10) -> str:
+    filled = round(win_rate / 100 * width)
+    return "█" * filled + "░" * (width - filled)
+
+
 def period_label(date_from, date_to) -> str:
     if date_from and date_from == date_to:
         return f"on {date_from}"
@@ -428,17 +447,19 @@ def build_open_section(open_lots: list, prices: dict = None) -> list:
         earliest = min(t["entry_date"] for t in lots)[:10]
         days     = holding_days(earliest)
         cmp      = (prices or {}).get(scr, {}).get("cmp")
+        icon = age_icon(days)
         if cmp:
             unreal_pnl = round((cmp - avg) * qty, 2)
             unreal_pct = round((cmp - avg) / avg * 100, 1) if avg else 0
             total_unreal += unreal_pnl
             if unreal_pnl >= 0: in_profit += 1
             else: in_loss += 1
+            bar   = heat_bar(unreal_pct)
             arrow = "▲" if unreal_pnl >= 0 else "▼"
-            pnl_tag = f" | {arrow} {fmt_inr(abs(unreal_pnl))} ({unreal_pct:+.1f}%)"
+            pnl_tag = f"  `{bar}` {arrow} {fmt_inr(abs(unreal_pnl))} ({unreal_pct:+.1f}%)"
         else:
             pnl_tag = ""
-        rows.append(f"  • *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | {days}d{pnl_tag}")
+        rows.append(f"  {icon} *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | {days}d{pnl_tag}")
     # Header summary
     unreal_arrow = "▲" if total_unreal >= 0 else "▼"
     header = f"🟢 *Open — {len(by_script)} stocks | {fmt_inr(total_invested)} deployed"
@@ -653,13 +674,16 @@ def answer_monthly_pnl(trades, client) -> str:
         monthly.append((month, pnl, len(lots), wins))
     max_abs = max(abs(p) for _, p, _, _ in monthly) or 1
     grand = 0
+    prev_pnl = None
     for month, pnl, n_trades, wins in monthly:
         grand += pnl
         bar_len = round(abs(pnl) / max_abs * 8)
-        bar  = ("▓" if pnl >= 0 else "░") * bar_len
-        sign = "🟢" if pnl >= 0 else "🔴"
-        losses = n_trades - wins
-        lines.append(f"{sign} *{month}*: {pnl_str(pnl)}  {bar}  _{wins}W {losses}L_")
+        bar     = ("▓" if pnl >= 0 else "░") * bar_len
+        sign    = "🟢" if pnl >= 0 else "🔴"
+        losses  = n_trades - wins
+        trend   = ("↗" if pnl > prev_pnl else "↘") if prev_pnl is not None else "  "
+        lines.append(f"{sign} *{month}*: {pnl_str(pnl)} {trend}  {bar}  _{wins}W {losses}L_")
+        prev_pnl = pnl
     lines.append(f"\n{DIV}")
     cum_arrow = "▲" if grand >= 0 else "▼"
     lines.append(f"*Cumulative: {cum_arrow} {fmt_inr(abs(grand))}*")
@@ -864,17 +888,18 @@ def answer_client_summary(trades, client) -> str:
     best        = max(closed_lots, key=lambda t: compute_net_pnl(t), default=None)
     worst       = min(closed_lots, key=lambda t: compute_net_pnl(t), default=None)
     avg_hold    = round(sum(holding_days(t["entry_date"]) for t in open_lots) / len(open_lots)) if open_lots else 0
+    bar = win_bar(win_rate)
     lines = [
-        f"*{name} — Summary*\n",
-        f"📂 Open: {len({t['script'] for t in open_lots})} stocks | Deployed: {fmt_inr(invested)}",
-        f"   Avg holding: {avg_hold} days",
-        f"✅ Closed: {len(closed_lots)} trades | Booked P&L: {pnl_str(booked_pnl)}",
-        f"🎯 Win rate: {win_rate}% ({wins}/{len(closed_lots)})",
+        f"*{name} — Summary*",
+        DIV,
+        f"📂 *Open:* {len({t['script'] for t in open_lots})} stocks | {fmt_inr(invested)} deployed | avg {avg_hold}d held",
+        f"✅ *Closed:* {len(closed_lots)} trades | {pnl_str(booked_pnl)} booked",
+        f"🎯 *Win rate:* {win_rate}%  `{bar}`  _{wins}W {len(closed_lots)-wins}L_",
     ]
     if best:
-        lines.append(f"🏆 Best: {best['script']} → {pnl_str(compute_net_pnl(best))}")
+        lines.append(f"🏆 *Best:*  {best['script']} → {pnl_str(compute_net_pnl(best))}")
     if worst:
-        lines.append(f"📉 Worst: {worst['script']} → {pnl_str(compute_net_pnl(worst))}")
+        lines.append(f"📉 *Worst:* {worst['script']} → {pnl_str(compute_net_pnl(worst))}")
     return "\n".join(lines)
 
 
