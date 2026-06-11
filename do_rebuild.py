@@ -66,7 +66,10 @@ def parse_csvs(files):
     ).reset_index()
     orders['_sort'] = pd.to_numeric(
         orders['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce').fillna(0)
-    orders = orders.sort_values(['TRADE DATE', '_sort']).drop(columns=['_sort'])
+    # Within same date, sort buys (B=0) before sells (S=1) so intraday sells always
+    # find their matching buy even when sell ORDER NOs happen to be numerically lower.
+    orders['_side_sort'] = (orders['SELL/BUY'] == 'S').astype(int)
+    orders = orders.sort_values(['TRADE DATE', '_side_sort', '_sort']).drop(columns=['_sort', '_side_sort'])
     return orders, set(df['_order_key'].tolist())
 
 
