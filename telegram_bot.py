@@ -308,7 +308,7 @@ def is_allowed(update: Update, cfg: dict) -> bool:
 
 # ── Client / stock helpers ─────────────────────────────────────────────────────
 
-def resolve_client(raw: str) -> str | None:
+def resolve_client(raw: str) -> "str | None":
     if not raw:
         return None
     up = raw.strip().upper()
@@ -716,7 +716,7 @@ def answer_long_positions(trades, client, min_days: int = 60) -> str:
 
 WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 
-def is_market_holiday(d: str) -> str | None:
+def is_market_holiday(d: str) -> "str | None":
     """Returns reason string if date is weekend, else None."""
     try:
         wd = date.fromisoformat(d).weekday()
