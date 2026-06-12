@@ -21,6 +21,19 @@ def sync_to_gsheet(trades: list):
     )
 
     import time as _time
+    from gspread.exceptions import APIError as _GAPIError
+
+    def _retry(fn, *args, **kwargs):
+        for attempt in range(5):
+            try:
+                return fn(*args, **kwargs)
+            except _GAPIError as e:
+                if e.response.status_code == 429:
+                    _time.sleep(2 ** attempt)
+                else:
+                    raise
+        return fn(*args, **kwargs)
+
     gc = gspread.service_account(filename=GSHEET_KEY)
     sh = gc.open_by_key(GSHEET_ID)
 
@@ -71,9 +84,10 @@ def sync_to_gsheet(trades: list):
         return s
 
     def upsert_ws(name, rows=200, cols=20):
+        _time.sleep(1)
         try:
             ws = sh.worksheet(name)
-            ws.clear()
+            _retry(ws.clear)
             # Resize existing sheet if data exceeds current grid
             if ws.row_count < rows or ws.col_count < cols:
                 ws.resize(rows=max(rows, ws.row_count), cols=max(cols, ws.col_count))
@@ -102,7 +116,8 @@ def sync_to_gsheet(trades: list):
             try: return float(v) if '.' in v else int(v)
             except: return v
         data = [df2.columns.tolist()] + [[try_num(v) for v in r] for r in df2.values.tolist()]
-        ws.update(data, value_input_option='USER_ENTERED')
+        _retry(ws.update, data, value_input_option='USER_ENTERED')
+        _time.sleep(0.5)
 
     def apply_header_fmt(ws, ncols):
         fmt_range = f"A1:{col_letter(ncols)}1"
