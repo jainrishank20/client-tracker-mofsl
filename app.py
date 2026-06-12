@@ -785,9 +785,12 @@ def color_pnl(val):
 
 def styled(df_show, pnl_cols):
     try:
-        return df_show.style.map(color_pnl, subset=pnl_cols)      # pandas >= 2.1
-    except AttributeError:
-        return df_show.style.applymap(color_pnl, subset=pnl_cols)  # pandas < 2.1
+        try:
+            return df_show.style.map(color_pnl, subset=pnl_cols)      # pandas >= 2.1
+        except AttributeError:
+            return df_show.style.applymap(color_pnl, subset=pnl_cols)  # pandas < 2.1
+    except Exception:
+        return df_show  # fallback: no styling if jinja2 missing
 
 # ── NSE Symbol Map (script name → Yahoo Finance ticker) ──────────────────────
 SYMBOL_MAP = {
