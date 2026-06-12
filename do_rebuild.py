@@ -7,8 +7,8 @@ import import_all as mod
 import pandas as pd
 from collections import deque
 
-DATA_FILE = r'C:\Users\jainr\Desktop\raghava_tracker\trades.json'
-PROCESSED_FILE = r'C:\Users\jainr\Desktop\raghava_tracker\processed_orders.json'
+DATA_FILE      = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trades.json')
+PROCESSED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed_orders.json')
 RAW_CSV_DIR = 'raw_csvs'
 CLIENTS_WITH_CSV = ['RIMK1209', 'RIMK1220', 'RIMK1238', 'RIMK1248', 'RIMK1249', 'RIMK1252']
 CHARGE_K = ['brokerage', 'stt', 'gst', 'stamp', 'txn_chrg']

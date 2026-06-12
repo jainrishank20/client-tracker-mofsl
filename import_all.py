@@ -353,7 +353,7 @@ if __name__ == '__main__':
         k  = sum(t['buy_qty']*t['buy_price'] for t in op)
         print(f'  {c}: {len(op)} open, {len(cl)} closed | P&L Rs {p:>10,.0f} | Capital Rs {k:>12,.0f}')
 
-    out = r'C:\Users\jainr\Desktop\raghava_tracker\trades.json'
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trades.json')
     with open(out, 'w') as f:
         json.dump(all_trades, f, indent=2)
     print(f'\nSaved to {out}')

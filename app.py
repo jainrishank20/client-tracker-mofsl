@@ -2454,7 +2454,7 @@ elif page == "Settings":
                         for c in CLIENTS:
                             paths = saved_csvs_for(c)
                             if paths:
-                                full_map[c] = [_io2.BytesIO(open(p,'rb').read()) for p in paths]
+                                full_map[c] = [_io2.BytesIO(open(p,'rb').read()) for p in paths]  # noqa: SIM115
                         new_trades = _run_import_from_uploads(full_map)
                         clients_updated = list(full_map.keys())
                         append_stats = {}

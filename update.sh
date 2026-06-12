@@ -2,7 +2,7 @@
 # Pull latest code and restart bot — run this after every GitHub push
 set -e
 
-cd ~/raghava-tracker-bot
+cd ~/client-tracker-mofsl
 git pull
 
 # Restart the screen session
@@ -11,7 +11,7 @@ sleep 1
 
 set -a; source .env; set +a
 screen -dmS bot bash -c '
-  cd ~/raghava-tracker-bot
+  cd ~/client-tracker-mofsl
   while true; do
     echo "[$(date)] Starting bot..."
     set -a; source .env; set +a
