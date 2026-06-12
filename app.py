@@ -270,7 +270,15 @@ def sync_to_gsheet(trades: list):
                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held']].copy()
         show_op.columns = ['Client','Client Name','Script','Qty','Avg Buy Price',
                            'Invested (₹)','CMP','First Entry','Last Entry','Days Held']
-        show_op = show_op.sort_values(['Client','Script']).reset_index(drop=True)
+        # compute % return for sorting (uses python CMP); falls back to Client+Script
+        def _pct(row):
+            cmp = cmp_map.get(row['Script'])
+            try:
+                return (float(cmp) - float(row['Avg Buy Price'])) / float(row['Avg Buy Price']) * 100
+            except Exception:
+                return float('-inf')
+        show_op['_sort_pct'] = show_op.apply(_pct, axis=1)
+        show_op = show_op.sort_values('_sort_pct', ascending=False).drop(columns='_sort_pct').reset_index(drop=True)
     else:
         show_op = pd.DataFrame(columns=['Client','Client Name','Script','Qty','Avg Buy Price',
                                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held'])
