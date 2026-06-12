@@ -1962,7 +1962,7 @@ elif page == "Brokerage":
         fig = px.pie(names=list(tot.keys()), values=list(tot.values()),
                      hole=0.5, color_discrete_sequence=[ACC_COL,"#a78bfa",UP_COL,"#fb923c",DN_COL],
                      height=280)
-        fig.update_layout(**{k:v for k,v in CHART_THEME.items() if k not in ("xaxis","yaxis")},
+        fig.update_layout(**{k:v for k,v in CHART_THEME.items() if k not in ("xaxis","yaxis","margin")},
                           margin=dict(t=10,b=0))
         fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: ₹%{value:,.0f}<extra></extra>")
         st.plotly_chart(fig, use_container_width=True)
