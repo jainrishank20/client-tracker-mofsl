@@ -1,5 +1,5 @@
 """
-Raghava Tracker — Telegram Bot
+Client Tracker MOFSL — Telegram Bot
 Python computes answers directly; LLM only parses intent.
 """
 
@@ -1102,7 +1102,7 @@ def parse_intent(groq_client, question: str) -> dict:
 
 # ── Telegram handlers ──────────────────────────────────────────────────────────
 
-HELP_TEXT = """👋 *Raghava Tracker Bot*
+HELP_TEXT = """👋 *Client Tracker MOFSL*
 
 *Commands:*
 /summary — all clients overview

@@ -1,5 +1,5 @@
 @echo off
-echo Starting Raghava Portfolio Tracker...
+echo Starting Client Tracker MOFSL...
 echo Dashboard will open in your browser automatically.
 echo Press Ctrl+C to stop.
 echo.

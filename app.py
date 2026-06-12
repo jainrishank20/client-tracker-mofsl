@@ -473,7 +473,7 @@ CLIENT_NAMES = {"RIMK1209":"Sathyavrath","RIMK1220":"Kalpana",
 TELEGRAM_TOKEN = ""
 TELEGRAM_CHAT  = ""
 
-st.set_page_config(page_title="Raghava Tracker", page_icon="📈",
+st.set_page_config(page_title="Client Tracker MOFSL", page_icon="📈",
                    layout="wide", initial_sidebar_state="collapsed")
 
 
@@ -1186,7 +1186,7 @@ st.markdown("""
 .nav-brand-title em { color:#818cf8; font-style:normal; }
 </style>
 <div class="nav-brand-bar">
-  <div class="nav-brand-title">📈 Raghava <em>Tracker</em></div>
+  <div class="nav-brand-title">📈 Client <em>Tracker MOFSL</em></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -2508,7 +2508,7 @@ echo Import done at %date% %time% >> import_log.txt
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Step 1** — Open Task Scheduler (search in Start Menu)")
-        st.markdown("**Step 2** — Create Basic Task → name it `Raghava Import`")
+        st.markdown("**Step 2** — Create Basic Task → name it `Client Tracker Import`")
         st.markdown("**Step 3** — Trigger: Daily at 8:00 AM")
         st.markdown(f"**Step 4** — Action: Start a program → `{bat_path}`")
         st.markdown("**Step 5** — Finish. Done forever.")
