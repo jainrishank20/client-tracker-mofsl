@@ -4,7 +4,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import json, os, io, requests
 from datetime import datetime, date
-from functools import lru_cache
 from pathlib import Path
 
 # ── Google Sheets config ────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-python-telegram-bot==22.7
-groq==1.4.0
+python-telegram-bot==22.5
+groq
 yfinance>=0.2.40
 streamlit>=1.35.0
 pandas>=2.0.0
