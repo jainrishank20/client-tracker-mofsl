@@ -2558,9 +2558,9 @@ echo Import done at %date% %time% >> import_log.txt
 
     st.markdown("---")
 
-    # ── Push trades.json to GitHub → Railway redeploys bot ────────────────────
+    # ── Push trades.json to GitHub → VM bot picks up fresh data ───────────────
     st.markdown("### 🤖 Sync Telegram Bot Data")
-    st.caption("Commits trades.json to GitHub. Railway auto-redeploys the bot with fresh data (~30 sec).")
+    st.caption("Commits trades.json to GitHub so the Telegram bot always has fresh data.")
     col_bot1, col_bot2 = st.columns([1, 3])
     with col_bot1:
         if st.button("🚀 Push to Bot", type="primary"):
@@ -2584,42 +2584,13 @@ echo Import done at %date% %time% >> import_log.txt
                         subprocess.run([git, "commit", "-m", msg], cwd=repo, check=True, capture_output=True)
                         push = subprocess.run([git, "push"], cwd=repo, capture_output=True, text=True)
                         if push.returncode == 0:
-                            st.success("✅ Pushed to GitHub — bot will redeploy in ~30 seconds.")
+                            st.success("✅ Pushed to GitHub — bot data updated.")
                         else:
                             st.error(f"❌ Push failed: {push.stderr}")
                 except subprocess.CalledProcessError as e:
                     st.error(f"❌ Git error: {e.stderr.decode() if isinstance(e.stderr, bytes) else e.stderr}")
     with col_bot2:
-        st.caption("Run this after importing new CSVs or rebuilding trades.\nRailway detects the push and restarts the bot automatically.")
-
-    st.markdown("#### 🔄 Restart Bot on Railway")
-    st.caption("Use this if the bot stops responding or shows a conflict error.")
-    railway_token   = st.text_input("Railway API Token", type="password", key="railway_token",
-                                    help="Get from Railway → Account Settings → Tokens")
-    railway_service = st.text_input("Service ID", key="railway_service_id",
-                                    help="Found in Railway URL: /project/.../service/SERVICE_ID/...")
-    if st.button("🔄 Restart Bot", type="secondary"):
-        if not railway_token or not railway_service:
-            st.warning("Enter both Railway API Token and Service ID.")
-        else:
-            import urllib.request, json as _json
-            query = """mutation { serviceInstanceRedeploy(serviceId: "%s") }""" % railway_service
-            payload = _json.dumps({"query": query}).encode()
-            req = urllib.request.Request(
-                "https://backboard.railway.app/graphql/v2",
-                data=payload,
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {railway_token}"},
-                method="POST"
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    result = _json.loads(resp.read())
-                if result.get("data", {}).get("serviceInstanceRedeploy"):
-                    st.success("✅ Bot restarted on Railway!")
-                else:
-                    st.error(f"❌ Railway response: {result}")
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
+        st.caption("Run this after importing new CSVs or rebuilding trades. The Oracle VM bot reads fresh data on next restart.")
 
     st.markdown("---")
 
