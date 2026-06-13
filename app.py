@@ -2155,10 +2155,17 @@ elif page == "Settings":
             if col not in df.columns: df[col] = 0
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
+        # Normalise PRODUCT: treat any non-DELIVERY product as intraday
+        if 'PRODUCT' not in df.columns:
+            df['PRODUCT'] = 'DELIVERY'
+        else:
+            df['PRODUCT'] = df['PRODUCT'].str.strip().fillna('DELIVERY')
+            df['PRODUCT'] = df['PRODUCT'].apply(lambda p: 'DELIVERY' if p.upper() == 'DELIVERY' else 'INTRADAY')
+
         if df.empty:
             return pd.DataFrame(), new_keys
 
-        orders = df.groupby(['TRADE DATE','SCRIP','SELL/BUY','ORDER NO']).apply(
+        orders = df.groupby(['TRADE DATE','SCRIP','SELL/BUY','ORDER NO','PRODUCT']).apply(
             lambda g: pd.Series({
                 'qty':       g['TRADE QTY'].sum(),
                 'price':     round((g['MARKET PRICE']*g['TRADE QTY']).sum()/g['TRADE QTY'].sum(),2),
@@ -2177,18 +2184,27 @@ elif page == "Settings":
         return orders, new_keys
 
     def _fifo_from_queue(client, orders, buy_queue_init, trade_id_start):
-        """Run FIFO matching. buy_queue_init: {script: deque of buy dicts}"""
+        """Run FIFO matching. buy_queue_init: {(script,product): deque of buy dicts}
+        DELIVERY and INTRADAY orders are kept in separate queues so they never mix."""
         from collections import deque
         CHARGE_K = ['brokerage','stt','gst','stamp','txn_chrg']
         all_trades, trade_id = [], trade_id_start
-        buy_queues = {s: deque(list(q)) for s, q in buy_queue_init.items()}
+        # support old-style {script: deque} init from append mode (pre-PRODUCT)
+        buy_queues = {}
+        for k, q in buy_queue_init.items():
+            key = k if isinstance(k, tuple) else (k, 'DELIVERY')
+            buy_queues[key] = deque(list(q))
+
+        prod_col = 'PRODUCT' if 'PRODUCT' in orders.columns else None
 
         for scrip in sorted(orders['SCRIP'].unique()):
             s = orders[orders['SCRIP']==scrip]
-            if scrip not in buy_queues:
-                buy_queues[scrip] = deque()
-            bq = buy_queues[scrip]
             for _, row in s.iterrows():
+                prod = row[prod_col] if prod_col else 'DELIVERY'
+                qkey = (scrip, prod)
+                if qkey not in buy_queues:
+                    buy_queues[qkey] = deque()
+                bq = buy_queues[qkey]
                 if row['SELL/BUY'] == 'B':
                     bq.append({k: row[k] for k in ['TRADE DATE','qty','price','net_rate']+CHARGE_K})
                 else:
@@ -2217,8 +2233,10 @@ elif page == "Settings":
                         buy['qty'] -= qty; sell_rem -= qty
                         if buy['qty'] <= 0: bq.popleft()
 
-        # remaining open positions
-        for scrip, bq in buy_queues.items():
+        # remaining open positions (only DELIVERY carries over; INTRADAY leftovers are MO's problem)
+        for (scrip, prod), bq in buy_queues.items():
+            if prod == 'INTRADAY':
+                continue
             for buy in bq:
                 t = {
                     'id': trade_id, 'client': client, 'script': scrip, 'type': 'Long',
