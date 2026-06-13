@@ -33,7 +33,8 @@ def parse_files(files):
         df["PRODUCT"] = "DELIVERY"
     else:
         df["PRODUCT"] = df["PRODUCT"].str.strip().fillna("DELIVERY")
-        df["PRODUCT"] = df["PRODUCT"].apply(lambda p: "DELIVERY" if str(p).upper() == "DELIVERY" else "INTRADAY")
+        _INTRADAY = {"VALUE PLUS", "MIS", "INTRADAY", "CO", "BO"}
+        df["PRODUCT"] = df["PRODUCT"].apply(lambda p: "INTRADAY" if str(p).strip().upper() in _INTRADAY else "DELIVERY")
     orders = df.groupby(["TRADE DATE","SCRIP","SELL/BUY","ORDER NO","PRODUCT"]).apply(
         lambda g: pd.Series({
             "qty":      g["TRADE QTY"].sum(),

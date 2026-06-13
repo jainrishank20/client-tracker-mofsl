@@ -2198,7 +2198,9 @@ elif page == "Settings":
             df['PRODUCT'] = 'DELIVERY'
         else:
             df['PRODUCT'] = df['PRODUCT'].str.strip().fillna('DELIVERY')
-            df['PRODUCT'] = df['PRODUCT'].apply(lambda p: 'DELIVERY' if p.upper() == 'DELIVERY' else 'INTRADAY')
+            # Only VALUE PLUS (MO intraday) is truly intraday — MTF, NORMAL, DELIVERY all carry over
+            _INTRADAY = {'VALUE PLUS', 'MIS', 'INTRADAY', 'CO', 'BO'}
+            df['PRODUCT'] = df['PRODUCT'].apply(lambda p: 'INTRADAY' if str(p).strip().upper() in _INTRADAY else 'DELIVERY')
 
         # ISIN conflict check — same ISIN resolving to different norm() names means a mapping gap
         isin_conflicts = _check_isin_conflicts(df)
