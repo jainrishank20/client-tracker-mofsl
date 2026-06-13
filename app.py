@@ -964,6 +964,8 @@ SYMBOL_MAP = {
     "POWER FIN CORP LTD.":        "PFC",
     "PREMIER ENERGIES LIMITED":   "PREMIERENE",
     "TCS":                        "TCS",
+    "CEMINDIA PROJECTS LIMITED":  "CEMPRO",
+    "JAIN RESOURCE RECYCLING LIMITE": "JAINREC",
 }
 
 # ── Ticker overrides (user-editable, stored in ticker_overrides.json) ────────
