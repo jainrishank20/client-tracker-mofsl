@@ -270,10 +270,11 @@ def sync_to_gsheet(trades: list):
                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held']].copy()
         show_op.columns = ['Client','Client Name','Script','Qty','Avg Buy Price',
                            'Invested (₹)','CMP','First Entry','Last Entry','Days Held']
-        # compute % return for sorting using CMP already in the row
+        # compute % return for sorting using Python-fetched CMP (cmp_map has real numbers; CMP col has formulas)
         def _pct(row):
+            cmp = cmp_map.get(row['Script'])
             try:
-                return (float(row['CMP']) - float(row['Avg Buy Price'])) / float(row['Avg Buy Price']) * 100
+                return (float(cmp) - float(row['Avg Buy Price'])) / float(row['Avg Buy Price']) * 100
             except Exception:
                 return float('-inf')
         show_op['_sort_pct'] = show_op.apply(_pct, axis=1)
