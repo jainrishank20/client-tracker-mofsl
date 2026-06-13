@@ -2510,7 +2510,7 @@ echo Import done at %date% %time% >> import_log.txt
         st.markdown("**Step 1** — Open Task Scheduler (search in Start Menu)")
         st.markdown("**Step 2** — Create Basic Task → name it `Client Tracker Import`")
         st.markdown("**Step 3** — Trigger: Daily at 8:00 AM")
-        st.markdown(f"**Step 4** — Action: Start a program → `{bat_path}`")
+        st.markdown("**Step 4** — Action: Start a program → point to `auto_import.bat` in your project folder")
         st.markdown("**Step 5** — Finish. Done forever.")
     with col2:
         st.code(bat_content, language="bat")
