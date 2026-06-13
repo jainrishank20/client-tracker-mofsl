@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import json, os, io, requests
+import json, os, io
 from datetime import datetime, date
 from pathlib import Path
 
@@ -720,9 +720,11 @@ def save(t):
         df_m = pd.DataFrame(t)
         if not df_m.empty:
             for c, grp in df_m.groupby('client'):
-                dates = pd.to_datetime(
-                    grp[['entry_date','exit_date']].stack().dropna(), errors='coerce'
-                ).dropna()
+                raw = []
+                for col in ['entry_date', 'exit_date']:
+                    if col in grp.columns:
+                        raw.extend(grp[col].dropna().tolist())
+                dates = pd.to_datetime(raw, errors='coerce').dropna()
                 if not dates.empty:
                     latest = dates.max().strftime('%d %b %Y')
                     # only overwrite if not already set by manual upload
@@ -876,8 +878,6 @@ SYMBOL_MAP = {
     "GRINDWELL NORTON":           "GRINDWELL",
     "IIFL FINANCE":               "IIFL",
     "IFCI":                       "IFCI",
-    "INDIAN ENERGY EXCHANGE":     "IEX",
-    "INTERGLOBE AVIATION":        "INDIGO",
     "NMDC":                       "NMDC",
     "NTPC":                       "NTPC",
     "PARADEEP PHOSPHATES":        "PARADEEP",
@@ -900,7 +900,6 @@ SYMBOL_MAP = {
     "SPANDANA SPHOORTY FINANCIAL": "SPANDANA",
     "GRINDWELL NORTON LTD":       "GRINDWELL",
     "WOCKHARDT LTD":              "WOCKPHARMA",
-    "WOCKHARDT":                  "WOCKPHARMA",
     "NETWEB TECHNOLOGIES INDIA":  "NETWEB",
     "INDHOTEL":                   "INDHOTEL",
     "TEJAS NETWORKS LTD":         "TEJASNET",
@@ -1020,14 +1019,6 @@ def fetch_cmp(scripts: tuple):
             pass
 
     return results
-
-def send_telegram(msg):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT: return False
-    try:
-        r = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={"chat_id":TELEGRAM_CHAT,"text":msg,"parse_mode":"Markdown"},timeout=5)
-        return r.ok
-    except: return False
 
 def to_excel(df_dict):
     """Export one or more DataFrames to a formatted Excel workbook."""
@@ -2507,15 +2498,12 @@ elif page == "Settings":
     st.markdown("### 🗓️ Daily Auto-import (Windows Task Scheduler)")
     st.markdown("Set this up once — it watches your Downloads folder and re-imports whenever new CSVs appear:")
 
-    bat_path = os.path.join(os.path.dirname(DATA_FILE), "auto_import.bat")
-    bat_content = f"""@echo off
+    bat_content = """@echo off
 REM Auto-import: runs every morning at 8am via Task Scheduler
-cd /d "{os.path.dirname(DATA_FILE)}"
+cd /d "%~dp0"
 python import_all.py >> import_log.txt 2>&1
 echo Import done at %date% %time% >> import_log.txt
 """
-    with open(bat_path, "w") as f:
-        f.write(bat_content)
 
     col1, col2 = st.columns(2)
     with col1:
