@@ -2109,10 +2109,48 @@ elif page == "Settings":
         spec.loader.exec_module(mod)
         return mod
 
+    def _check_isin_conflicts(df):
+        """Return warning strings for ISINs that resolve to more than one normalised scrip name.
+        Catches cases like 'NIPPON L I A M LTD' and 'NIPPON LIFE INDIA ASSET MANAGE' mapping
+        to different norm() results for the same underlying stock."""
+        warnings = []
+        if 'ISIN' not in df.columns:
+            return warnings
+        isin_map = df.groupby('ISIN')['SCRIP'].apply(set).to_dict()
+        for isin, scrips in isin_map.items():
+            if len(scrips) > 1:
+                warnings.append(
+                    f"⚠️ ISIN `{isin}` maps to multiple normalised names: "
+                    f"`{'`, `'.join(sorted(scrips))}` — add the missing raw name to import_all.py RAW dict")
+        return warnings
+
+    def _validate_fifo_balance(client, orders, client_trades):
+        """After FIFO, verify: raw DELIVERY buy/sell qty == FIFO output qty.
+        Catches any bug where buys and sells don't correctly cancel each other.
+        Returns list of error strings (empty = all good)."""
+        errors = []
+        deliv = orders[orders['PRODUCT'] == 'DELIVERY'] if 'PRODUCT' in orders.columns else orders
+        for scrip in sorted(deliv['SCRIP'].unique()):
+            sp = deliv[deliv['SCRIP'] == scrip]
+            raw_buy  = round(float(sp[sp['SELL/BUY'] == 'B']['qty'].sum()), 2)
+            raw_sell = round(float(sp[sp['SELL/BUY'] == 'S']['qty'].sum()), 2)
+            ct = [t for t in client_trades if t['script'] == scrip]
+            fifo_buy  = round(sum(t['buy_qty']  for t in ct), 2)
+            fifo_sell = round(sum(t['sell_qty'] for t in ct), 2)
+            if abs(fifo_buy - raw_buy) > 0.01:
+                errors.append(
+                    f"❌ `{client}` / **{scrip}**: BUY qty mismatch — "
+                    f"CSV={raw_buy:.0f} units, FIFO={fifo_buy:.0f} units (diff {fifo_buy-raw_buy:+.0f})")
+            if abs(fifo_sell - raw_sell) > 0.01:
+                errors.append(
+                    f"❌ `{client}` / **{scrip}**: SELL qty mismatch — "
+                    f"CSV={raw_sell:.0f} units, FIFO={fifo_sell:.0f} units (diff {fifo_sell-raw_sell:+.0f})")
+        return errors
+
     def _parse_csv_to_orders(files, mod, already_processed_keys=None):
         """Load files, normalise, dedup by ORDER NO fingerprint, return sorted orders DataFrame.
         already_processed_keys: set of order keys already in the system — these rows are skipped.
-        Returns (orders_df, new_keys_set)
+        Returns (orders_df, new_keys_set, isin_conflict_warnings)
         """
         import pandas as pd
         already_processed_keys = already_processed_keys or set()
@@ -2127,7 +2165,7 @@ elif page == "Settings":
             df_raw['SCRIP']      = df_raw['SCRIP NAME'].apply(mod.norm)
             frames.append(df_raw)
         if not frames:
-            return pd.DataFrame(), set()
+            return pd.DataFrame(), set(), []
         df = pd.concat(frames, ignore_index=True)
 
         # Step 1: row-level dedup within this upload (same file uploaded twice)
@@ -2162,8 +2200,11 @@ elif page == "Settings":
             df['PRODUCT'] = df['PRODUCT'].str.strip().fillna('DELIVERY')
             df['PRODUCT'] = df['PRODUCT'].apply(lambda p: 'DELIVERY' if p.upper() == 'DELIVERY' else 'INTRADAY')
 
+        # ISIN conflict check — same ISIN resolving to different norm() names means a mapping gap
+        isin_conflicts = _check_isin_conflicts(df)
+
         if df.empty:
-            return pd.DataFrame(), new_keys
+            return pd.DataFrame(), new_keys, isin_conflicts
 
         orders = df.groupby(['TRADE DATE','SCRIP','SELL/BUY','ORDER NO','PRODUCT']).apply(
             lambda g: pd.Series({
@@ -2181,7 +2222,7 @@ elif page == "Settings":
         orders['_sort'] = pd.to_numeric(
             orders['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce').fillna(0)
         orders = orders.sort_values(['TRADE DATE','_sort']).drop(columns=['_sort'])
-        return orders, new_keys
+        return orders, new_keys, isin_conflicts
 
     def _fifo_from_queue(client, orders, buy_queue_init, trade_id_start):
         """Run FIFO matching. buy_queue_init: {(script,product): deque of buy dicts}
@@ -2260,7 +2301,7 @@ elif page == "Settings":
         all_trades, trade_id = [], 1
         new_processed = {}
         for client, files in uploaded_map.items():
-            orders, keys = _parse_csv_to_orders(files, mod)  # no prior keys on full rebuild
+            orders, keys, _ = _parse_csv_to_orders(files, mod)  # no prior keys on full rebuild
             if orders.empty: continue
             new = _fifo_from_queue(client, orders, {}, trade_id)
             all_trades.extend(new)
@@ -2287,7 +2328,7 @@ elif page == "Settings":
 
         for client, files in uploaded_map.items():
             already_keys = processed_orders.get(client, set())
-            orders, new_keys = _parse_csv_to_orders(files, mod, already_keys)
+            orders, new_keys, _ = _parse_csv_to_orders(files, mod, already_keys)
             client_new_keys[client] = new_keys
             stats[client] = {'new': len(new_keys), 'skipped': len(already_keys)}
 
@@ -2490,6 +2531,39 @@ elif page == "Settings":
                         new_trades = _run_import_from_uploads(full_map)
                         clients_updated = list(full_map.keys())
                         append_stats = {}
+
+                    # ── POST-FIFO INTEGRITY VALIDATION ──────────────────────────
+                    # Run BEFORE saving so bad data never reaches trades.json.
+                    # Reloads all saved CSVs for each updated client and checks:
+                    #   1. ISIN conflicts (same ISIN → different norm() names)
+                    #   2. FIFO balance (raw qty must equal FIFO output qty exactly)
+                    val_errors, val_warnings = [], []
+                    try:
+                        import io as _io_val
+                        mod_v = _load_import_mod()
+                        for c_v in clients_updated:
+                            paths_v = saved_csvs_for(c_v)
+                            if not paths_v:
+                                continue
+                            all_files_v = [_io_val.BytesIO(open(p, 'rb').read()) for p in paths_v]
+                            full_orders_v, _, isin_warns_v = _parse_csv_to_orders(all_files_v, mod_v)
+                            val_warnings.extend(isin_warns_v)
+                            c_trades_v = [t for t in new_trades if t.get('client') == c_v]
+                            val_errors.extend(_validate_fifo_balance(c_v, full_orders_v, c_trades_v))
+                    except Exception as _ve:
+                        val_warnings.append(f"⚠️ Validation could not complete: {_ve}")
+
+                    if val_errors:
+                        for _e in val_errors:
+                            st.error(_e)
+                        st.error("⛔ **FIFO balance errors — trades NOT saved.** The numbers above are wrong. "
+                                 "Please share this screen with support before retrying.")
+                        st.stop()
+
+                    if val_warnings:
+                        for _w in val_warnings:
+                            st.warning(_w)
+                    # ── END VALIDATION ───────────────────────────────────────────
 
                     save(new_trades)
                     closed  = [t for t in new_trades if t['exit_date']]
