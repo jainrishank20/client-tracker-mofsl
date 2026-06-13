@@ -2337,9 +2337,11 @@ elif page == "Settings":
             return None
         ct = _all_trades_df[_all_trades_df['client']==client]
         if ct.empty: return None
-        dates = pd.to_datetime(
-            ct[['entry_date','exit_date']].stack().dropna(), errors='coerce'
-        ).dropna()
+        raw = []
+        for col in ['entry_date', 'exit_date']:
+            if col in ct.columns:
+                raw.extend(ct[col].dropna().tolist())
+        dates = pd.to_datetime(raw, errors='coerce').dropna()
         return dates.max().strftime('%d %b %Y') if not dates.empty else None
 
     import_meta = load_import_meta()
