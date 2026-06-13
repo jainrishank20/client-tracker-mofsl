@@ -2142,7 +2142,7 @@ elif page == "Settings":
                 'stamp':     round(g['STAMP DUTY'].sum(),2),
                 'txn_chrg':  round(g['TRANSACTION CHARGES'].sum(),2),
                 '_keys':     '||'.join(g['_order_key'].tolist()),
-            })
+            }), include_groups=False
         ).reset_index()
         orders['_sort'] = pd.to_numeric(
             orders['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce').fillna(0)
@@ -2238,11 +2238,12 @@ elif page == "Settings":
         max_id          = max((t.get('id',0) for t in existing), default=0) + 1
         processed_orders = load_processed_orders()  # {client: set(keys)}
         stats           = {}  # {client: {new, skipped}}
+        client_new_keys = {}  # accumulated per-client new keys from first parse
 
         for client, files in uploaded_map.items():
             already_keys = processed_orders.get(client, set())
             orders, new_keys = _parse_csv_to_orders(files, mod, already_keys)
-            skipped = len(already_keys & (already_keys | new_keys)) - len(already_keys - new_keys)
+            client_new_keys[client] = new_keys
             stats[client] = {'new': len(new_keys), 'skipped': len(already_keys)}
 
             if orders.empty:
@@ -2250,9 +2251,6 @@ elif page == "Settings":
                 if not ex_df.empty and 'client' in ex_df.columns:
                     result.extend(ex_df[ex_df['client']==client].to_dict('records'))
                 continue
-
-            # keep this client's closed trades that are OLDER than the new CSV date range
-            new_min_date = orders['TRADE DATE'].min()
 
             if not ex_df.empty and 'client' in ex_df.columns:
                 c_trades = ex_df[ex_df['client']==client].copy()
@@ -2289,12 +2287,8 @@ elif page == "Settings":
             other = ex_df[~ex_df['client'].isin(updated_clients)].to_dict('records')
             result.extend(other)
 
-        # persist updated processed order keys
-        for client, keys in processed_orders.items():
-            if client not in uploaded_map:
-                pass  # unchanged clients keep their keys
-        for client, files in uploaded_map.items():
-            _, new_keys = _parse_csv_to_orders(files, mod, processed_orders.get(client, set()))
+        # persist updated processed order keys — use keys from first parse, no second pass
+        for client, new_keys in client_new_keys.items():
             processed_orders[client] = processed_orders.get(client, set()) | new_keys
         save_processed_orders(processed_orders)
 
