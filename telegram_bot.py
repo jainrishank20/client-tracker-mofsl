@@ -9,7 +9,6 @@ from pathlib import Path
 from collections import defaultdict
 from datetime import date, timedelta
 
-import yfinance as yf
 from groq import Groq
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -73,6 +72,71 @@ SYMBOL_MAP = {
     "TRANSPORT CORP OF INDIA":"TCI","TRANSPORT CORPN OF INDIA":"TCI",
     "VARUN BEVERAGES":"VBL","VST INDUSTRIES":"VSTIND","WIPRO":"WIPRO",
     "WOCKHARDT":"WOCKPHARMA","ZEN TECHNOLOGIES":"ZENTEC","ZYDUS LIFESCIENCES":"ZYDUSLIFE",
+
+    "ACME SOLAR HOLDINGS LTD":"ACMESOLAR",
+    "AEGIS LOGISTICS LIMITED":"AEGISLOG",
+    "ALOK INDUSTRIES LIMITED":"ALOKINDS",
+    "ARVIND FASHIONS LIMITED":"ARVINDFASN",
+    "BAJAJ HOUSING FINANCE LIMITED":"BAJAJHFL",
+    "BALKRISHNA IND":"BALKRISIND",
+    "BERGER PAINTS (I) LTD":"BERGEPAINT",
+    "BIOCON LIMITED.":"BIOCON",
+    "BOMBAY BURMAH TRADING":"BBTC",
+    "CANARA ROBECO ASSET MANAGEMENT":"CANARAROB",
+    "CEMINDIA PROJECTS LIMITED":"CEMINDIA",
+    "CENTRAL DEPO SER (I) LTD":"CDSL",
+    "CHOLAMANDALAM":"CHOLAFIN",
+    "CLEAN SCIENCE & TECH LTD":"CLEANSCI",
+    "COROMANDEL INTERNTL. LTD":"COROMANDEL",
+    "DEVYANI INTERNATIONAL":"DEVYANI",
+    "DOMS INDUSTRIES":"DOMS",
+    "EDELWEISS FIN SERV LTD":"EDELWEISS",
+    "GARWARE TECH FIBRES":"GARFIBRES",
+    "GLAXOSMITHKLINE PHARMA LT":"GLAXO",
+    "HDFC BANK":"HDFCBANK",
+    "HDFC LIFE INS CO LTD":"HDFCLIFE",
+    "IDFC FIRST BANK":"IDFCFIRSTB",
+    "INDIAN ENERGY EXCHANGE":"IEX",
+    "INDIAN HOTELS":"INDHOTEL",
+    "INDOCO REMEDIES":"INDOCO",
+    "JSW ENERGY":"JSWENERGY",
+    "KIRLOSKAR OIL ENG LTD":"KIRLOSENG",
+    "KNR CONSTRU LTD.":"KNRCON",
+    "KPIT TECHNOLOGIES":"KPITTECH",
+    "KPR MILL LTD.":"KPRMILL",
+    "L&T TECHNOLOGY SERVICES":"LTTS",
+    "LIC":"LICI",
+    "LUPIN":"LUPIN",
+    "MAZAGON DOCK":"MAZDOCK",
+    "MIC ELECTRONICS":"MICEL",
+    "MIRAEAMC MAGOLDETF":"MAGOLDETF",
+    "NCC LIMITED":"NCC",
+    "NELCO":"NELCO",
+    "NIPPON ETF IT":"NETFIT",
+    "NIPPON NETFSILVER":"NETFSILVER",
+    "NOCIL LIMITED":"NOCIL",
+    "OBEROI REALTY":"OBEROIRLTY",
+    "OLECTRA GREENTECH LIMITED":"OLECTRA",
+    "PCBL CHEMICAL LIMITED":"PCBL",
+    "PERSISTENT SYSTEMS":"PERSISTENT",
+    "PHOENIX MILLS":"PHOENIXLTD",
+    "PIRAMAL PHARMA":"PPLPHARMA",
+    "RAILTEL CORP OF IND LTD":"RAILTEL",
+    "RELIANCE INDUSTRIES":"RELIANCE",
+    "SCHAEFFLER INDIA LIMITED":"SCHAEFFLER",
+    "SHIPPING CORP OF INDIA LT":"SCI",
+    "SOUTH INDIAN BANK":"SOUTHBANK",
+    "SPANDANA SPHOORTY":"SPANDANA",
+    "SWAN CORP LIMITED":"SWANCORP",
+    "TANLA PLATFORMS":"TANLA",
+    "TATA MOTORS PASS VEH LTD":"TATAMTRDVR",
+    "TBO TEK LIMITED":"TBOTEK",
+    "THE NEW INDIA ASSU CO LTD":"NIACL",
+    "TRANS & RECTI. LTD":"TRIL",
+    "UCO BANK":"UCOBANK",
+    "WHIRLPOOL INDIA":"WHIRLPOOL",
+    "ZEE ENTERTAINMENT ENT LTD":"ZEEL",
+    "ZENSAR TECHNOLOGIES":"ZENSARTECH",
     "ANGEL ONE":"ANGELONE","BANK OF INDIA":"BANKINDIA","BLUE JET HEALTHCARE":"BLUEJET",
     "GRAPHITE INDIA":"GRAPHITE","GRINDWELL NORTON":"GRINDWELL","CANARA BANK":"CANBK",
     "BHARAT ELECTRONICS":"BEL","STATE BANK OF INDIA":"SBIN","MSTC":"MSTCLTD",
@@ -97,6 +161,7 @@ def fetch_prices(scripts: list) -> dict[str, dict]:
     results = {s: {"cmp": None, "prev_close": None, "change_pct": None} for s in scripts}
     if not scripts:
         return results
+    import yfinance as yf
     t2s = {script_to_yf(s): s for s in scripts}
     try:
         data = yf.download(
@@ -244,6 +309,7 @@ PARSE_PROMPT = """You are a query parser for a stock portfolio bot. Today is {to
     brokerage       → brokerage/charges/fees paid; filter MUST be exactly: "brokerage" when user says brokerage/commission/fees, "stt" for STT, "gst" for GST, "stamp" for stamp duty, "txn" for transaction charges. NEVER use "all" or "open" or "closed" for this intent.
     client_summary  → overall summary for one client
     all_summary     → all clients overall
+    cmp             → live price / CMP for a stock or all open positions (e.g. "CMP of HDFC", "price of Suzlon", "what is Infy trading at", "show live prices")
 - filter: "open", "closed", "best", "worst", or "all"
 - date_from: ISO YYYY-MM-DD. null if not mentioned.
 - date_to: ISO YYYY-MM-DD. null if not mentioned.
@@ -303,7 +369,7 @@ def load_trades() -> list:
 
 def is_allowed(update: Update, cfg: dict) -> bool:
     allowed = cfg.get("allowed_chat_id", "")
-    return not allowed or str(update.effective_chat.id) == str(allowed)
+    allowed_ids = [x.strip() for x in str(allowed).split(",")]; return str(update.effective_chat.id) in allowed_ids
 
 
 # ── Client / stock helpers ─────────────────────────────────────────────────────
@@ -374,7 +440,7 @@ def holding_days(entry_date_str, exit_date_str=None) -> int:
 
 
 def fmt_inr(n: float) -> str:
-    """Format in Indian scale: K / L / Cr with 2 sig-figs after decimal."""
+    """Format in Indian scale: K / L / Cr."""
     a = abs(n)
     if a >= 1_00_00_000:
         s = f"₹{n/1_00_00_000:.2f}Cr"
@@ -385,6 +451,14 @@ def fmt_inr(n: float) -> str:
     else:
         s = f"₹{n:.2f}"
     return s
+
+
+def fmt_price(n: float) -> str:
+    """Format a trade price: ₹42.08 / ₹660 / ₹2,340."""
+    if n >= 1000:
+        return f"₹{n:,.0f}"
+    s = f"{n:.2f}".rstrip("0").rstrip(".")
+    return f"₹{s}"
 
 
 def pnl_str(pnl: float) -> str:
@@ -403,10 +477,10 @@ DIV = "─" * 20
 
 
 def age_icon(days: int) -> str:
-    if days <= 3:   return "🌱"
-    if days <= 14:  return "🌿"
-    if days <= 60:  return "🌲"
-    return "🌳"
+    if days <= 3:   return "🔹"
+    if days <= 14:  return "🔹"
+    if days <= 60:  return "🔹"
+    return "🔹"
 
 
 def heat_bar(pct: float, width: int = 5) -> str:
@@ -439,7 +513,7 @@ def build_open_section(open_lots: list, prices: dict = None) -> list:
     total_unreal   = 0
     in_profit = in_loss = 0
     rows = []
-    for scr, lots in sorted(by_script.items()):
+    for i, (scr, lots) in enumerate(sorted(by_script.items()), 1):
         qty      = sum(t["buy_qty"] for t in lots)
         avg      = wavg_buy(lots)
         invested = round(qty * avg, 2)
@@ -447,7 +521,6 @@ def build_open_section(open_lots: list, prices: dict = None) -> list:
         earliest = min(t["entry_date"] for t in lots)[:10]
         days     = holding_days(earliest)
         cmp      = (prices or {}).get(scr, {}).get("cmp")
-        icon = age_icon(days)
         if cmp:
             unreal_pnl = round((cmp - avg) * qty, 2)
             unreal_pct = round((cmp - avg) / avg * 100, 1) if avg else 0
@@ -459,7 +532,8 @@ def build_open_section(open_lots: list, prices: dict = None) -> list:
             pnl_tag = f"  `{bar}` {arrow} {fmt_inr(abs(unreal_pnl))} ({unreal_pct:+.1f}%)"
         else:
             pnl_tag = ""
-        rows.append(f"  {icon} *{scr}*: {qty:.0f} sh @ {fmt_inr(avg)} | {days}d{pnl_tag}")
+        ticker = SYMBOL_MAP.get(scr, scr)
+        rows.append(f"{i}. *{ticker}* — {int(qty)} sh @ ₹{avg:,.2f} | {days}d{pnl_tag}")
     # Header summary
     unreal_arrow = "▲" if total_unreal >= 0 else "▼"
     header = f"🟢 *Open — {len(by_script)} stocks | {fmt_inr(total_invested)} deployed"
@@ -746,7 +820,7 @@ def _merge_legs(legs, side):
     """Merge multiple FIFO lots of the same stock into one display line."""
     merged = {}
     for t in legs:
-        key = (t["script"], t["client"]) if side == "buy" else (t["script"], t["client"])
+        key = (t["script"], t["client"])
         if key not in merged:
             merged[key] = {"qty": 0, "value": 0, "pnl": 0, "price": 0, "client": t["client"], "script": t["script"]}
         q = t["buy_qty"] if side == "buy" else t["sell_qty"]
@@ -765,49 +839,54 @@ def answer_recent_activity(trades, client, date_from, date_to) -> str:
     df = date_from or (date.today() - timedelta(days=7)).isoformat()
     dt = date_to   or today_str
     single_day = df == dt
+
     pool  = [t for t in trades if not client or t["client"] == client]
     buys  = [t for t in pool if t["entry_date"][:10] >= df and t["entry_date"][:10] <= dt]
     sells = [t for t in pool if t.get("exit_date") and
              t["exit_date"][:10] >= df and t["exit_date"][:10] <= dt]
+
     if not buys and not sells:
         if single_day:
             why = is_market_holiday(df)
             if why:
-                return f"No trades on {df} — that was a *{why}* (market closed)."
+                return f"No trades on {df} — *{why}* (market closed)."
         return f"No activity from {df} to {dt}."
-    name  = client if client else "All Clients"
-    title = f"*{name} — {df}*" if single_day else f"*{name} — {df} to {dt}*"
-    lines = [title, DIV]
 
-    if buys:
-        by_date = defaultdict(list)
-        for t in buys:
-            by_date[t["entry_date"][:10]].append(t)
-        total_buy_legs = sum(len(_merge_legs(v, "buy")) for v in by_date.values())
-        lines.append(f"📥 *Buys ({total_buy_legs}):*")
-        for d in sorted(by_date.keys()):
-            if not single_day:
-                lines.append(f"_{d}_")
-            for m in _merge_legs(by_date[d], "buy"):
-                cname = "" if client else f" ({m['client']})"
-                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])}")
+    name   = CLIENT_NAMES.get(client, client) if client else "All Clients"
+    dt_fmt = date.fromisoformat(df).strftime("%d %b %Y") if single_day else \
+             f"{date.fromisoformat(df).strftime('%d %b')} → {date.fromisoformat(dt).strftime('%d %b %Y')}"
+    lines  = [f"📅 *{dt_fmt}*  _{name}_\n"]
 
-    if sells:
-        by_date = defaultdict(list)
-        for t in sells:
-            by_date[t["exit_date"][:10]].append(t)
-        total_sell_legs = sum(len(_merge_legs(v, "sell")) for v in by_date.values())
-        lines.append(f"\n{DIV}\n📤 *Sells ({total_sell_legs}):*")
-        for d in sorted(by_date.keys()):
-            if not single_day:
-                lines.append(f"_{d}_")
-            for m in _merge_legs(by_date[d], "sell"):
-                cname = "" if client else f" ({m['client']})"
-                lines.append(f"  • *{m['script']}*{cname}: {m['qty']:.0f} sh @ {fmt_inr(m['price'])} | {pnl_str(m['pnl'])}")
-
-    total_pnl = sum(compute_net_pnl(t) for t in sells)
-    if sells:
-        lines.append(f"\n💰 *Booked P&L: {pnl_str(total_pnl)}*")
+    if single_day:
+        day_lines, client_pnl = _day_block(trades, df, client)
+        lines.extend(day_lines)
+        if client_pnl:
+            total = sum(client_pnl.values())
+            lines.append(_CDIV)
+            lines.append(f"💰 *Booked P&L: {pnl_str(total)}*")
+            if len(client_pnl) > 1:
+                parts = "  ".join(
+                    f"{CLIENT_NAMES.get(c,c)} {pnl_str(client_pnl[c])}"
+                    for c in sorted(client_pnl, key=lambda x: -abs(client_pnl[x]))
+                )
+                lines.append(parts)
+    else:
+        # Multi-day: group by date
+        all_days = sorted({t["entry_date"][:10] for t in buys} |
+                          {t["exit_date"][:10]  for t in sells})
+        grand_pnl = 0
+        for d in all_days:
+            d_label = date.fromisoformat(d).strftime("%a %d %b")
+            lines.append(f"*{d_label}*")
+            day_lines, client_pnl = _day_block(trades, d, client)
+            lines.extend(day_lines)
+            if client_pnl:
+                d_pnl = sum(client_pnl.values())
+                grand_pnl += d_pnl
+                lines.append(f"Day P&L: {pnl_str(d_pnl)}\n")
+        if grand_pnl:
+            lines.append(_CDIV)
+            lines.append(f"💰 *Period P&L: {pnl_str(grand_pnl)}*")
     return "\n".join(lines)
 
 
@@ -903,55 +982,176 @@ def answer_client_summary(trades, client) -> str:
     return "\n".join(lines)
 
 
+_CDIV = "─" * 22
+
+def _tc(s: str) -> str:
+    """Title-case a stock name: BAJAJ HOUSING FINANCE LTD → Bajaj Housing Finance Ltd"""
+    return " ".join(w.capitalize() for w in s.split())
+
+
+def _trade_line(m, mode: str) -> str:
+    """Single compact line for a buy or sell trade."""
+    icon  = "📥" if mode == "buy" else "📤"
+    name  = _tc(m["script"])
+    qty   = f"{int(m['qty']):,}"
+    price = fmt_price(m["price"])
+    base  = f"{icon} {name}  {qty} · {price}"
+    if mode == "sell":
+        pnl   = m["pnl"]
+        arrow = "▲" if pnl >= 0 else "▼"
+        base += f"  {arrow} {fmt_inr(abs(pnl))}"
+    return base
+
+
 def answer_all_summary(trades) -> str:
-    lines = ["📊 *Portfolio Overview*\n"]
-    total_inv = total_pnl = 0
+    lines = ["📊 *Portfolio Summary*\n"]
+    total_inv = total_pnl = total_open = total_closed = 0
     for code, name in CLIENT_NAMES.items():
-        ct      = [t for t in trades if t["client"] == code]
-        open_t  = [t for t in ct if not t.get("exit_date")]
+        ct       = [t for t in trades if t["client"] == code]
+        open_t   = [t for t in ct if not t.get("exit_date")]
         closed_t = [t for t in ct if t.get("exit_date")]
+        if not open_t and not closed_t:
+            continue
         inv = sum(t["buy_price"] * t["buy_qty"] for t in open_t)
         pnl = sum(compute_net_pnl(t) for t in closed_t)
-        total_inv += inv
-        total_pnl += pnl
-        lines.append(f"*{name}*: {len(open_t)} open | {len(closed_t)} closed | "
-                     f"Deployed {fmt_inr(inv)} | P&L {pnl_str(pnl)}")
-    lines.append(f"\n_Total deployed: {fmt_inr(total_inv)} | Total P&L: {pnl_str(total_pnl)}_")
+        total_inv    += inv
+        total_pnl    += pnl
+        total_open   += len(open_t)
+        total_closed += len(closed_t)
+        icon = "🟢" if pnl >= 0 else "🔴"
+        lines.append(
+            f"{icon} *{name}*  {len(open_t)} open · {len(closed_t)} closed\n"
+            f"   Deployed {fmt_inr(inv)}   P&L {pnl_str(pnl)}"
+        )
+    lines.append(
+        f"\n{_CDIV}\n"
+        f"📦 {total_open} open · {total_closed} closed\n"
+        f"💵 Deployed: {fmt_inr(total_inv)}   💰 P&L: {pnl_str(total_pnl)}"
+    )
     return "\n".join(lines)
+
+
+def _day_block(trades, day_str: str, client_filter: str = None) -> tuple:
+    """
+    Returns (lines, client_pnl_dict) for a single trading day.
+    One line per trade, grouped by client.
+    """
+    buys  = [t for t in trades
+             if t["entry_date"][:10] == day_str
+             and (not client_filter or t["client"] == client_filter)]
+    sells = [t for t in trades
+             if t.get("exit_date") and t["exit_date"][:10] == day_str
+             and (not client_filter or t["client"] == client_filter)]
+
+    active = sorted({t["client"] for t in buys + sells})
+    lines, client_pnl = [], {}
+
+    for c in active:
+        name    = CLIENT_NAMES.get(c, c)
+        c_buys  = [t for t in buys  if t["client"] == c]
+        c_sells = [t for t in sells if t["client"] == c]
+
+        lines.append(f"*{name}*")
+        for m in _merge_legs(sorted(c_buys,  key=lambda x: x["script"]), "buy"):
+            lines.append(_trade_line(m, "buy"))
+        if c_sells:
+            merged = _merge_legs(sorted(c_sells, key=lambda x: x["script"]), "sell")
+            c_pnl  = sum(m["pnl"] for m in merged)
+            client_pnl[c] = c_pnl
+            for m in merged:
+                lines.append(_trade_line(m, "sell"))
+            lines.append(f"   *Net {pnl_str(c_pnl)}*")
+        lines.append("")
+
+    return lines, client_pnl
 
 
 def answer_today(trades) -> str:
     today_str = date.today().isoformat()
-    why = is_market_holiday(today_str)
-    buys  = [t for t in trades if t["entry_date"][:10] == today_str]
-    sells = [t for t in trades if t.get("exit_date") and t["exit_date"][:10] == today_str]
-    if not buys and not sells:
-        suffix = f" — *{why}*, market closed." if why else "."
-        # show last active day
-        all_dates = sorted({t["entry_date"][:10] for t in trades} |
-                           {t["exit_date"][:10] for t in trades if t.get("exit_date")}, reverse=True)
+    buys_check  = [t for t in trades if t["entry_date"][:10] == today_str]
+    sells_check = [t for t in trades if t.get("exit_date") and t["exit_date"][:10] == today_str]
+
+    target = today_str
+    if not buys_check and not sells_check:
+        all_dates = sorted(
+            {t["entry_date"][:10] for t in trades} |
+            {t["exit_date"][:10] for t in trades if t.get("exit_date")},
+            reverse=True
+        )
         last = next((d for d in all_dates if d < today_str), None)
-        hint = f"\n_Last activity: {last}_" if last else ""
-        return f"No trades recorded for today ({today_str}){suffix}{hint}"
-    lines = [f"📅 *Today — {today_str}*", DIV]
-    if buys:
-        merged_buys = _merge_legs(sorted(buys, key=lambda x: x['client']), "buy")
-        lines.append(f"📥 *Buys ({len(merged_buys)}):*")
-        for m in merged_buys:
-            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])}")
-    if sells:
-        merged_sells = _merge_legs(sells, "sell")
-        lines.append(f"\n📤 *Sells ({len(merged_sells)}):*")
-        by_c_pnl = defaultdict(float)
-        total = sum(m["pnl"] for m in merged_sells)
-        for m in merged_sells:
-            by_c_pnl[m["client"]] += m["pnl"]
-            lines.append(f"  • *{m['script']}* ({m['client']}): {m['qty']:.0f} sh @ {fmt_inr(m['price'])} | {pnl_str(m['pnl'])}")
-        lines.append(f"\n💰 *Total booked P&L: {pnl_str(total)}*")
-        if len(by_c_pnl) > 1:
-            for c in sorted(by_c_pnl):
-                lines.append(f"  {c}: {pnl_str(by_c_pnl[c])}")
+        if not last:
+            return "No trades found."
+        target = last
+
+    dt_fmt = date.fromisoformat(target).strftime("%d %b %Y")
+    label  = "Today" if target == today_str else date.fromisoformat(target).strftime("%a %d %b")
+    lines  = [f"📅 *{label} — {dt_fmt}*\n"]
+
+    day_lines, client_pnl = _day_block(trades, target)
+    lines.extend(day_lines)
+
+    if client_pnl:
+        total = sum(client_pnl.values())
+        lines.append(_CDIV)
+        lines.append(f"💰 *Booked P&L: {pnl_str(total)}*")
+        if len(client_pnl) > 1:
+            parts = "  ".join(
+                f"{CLIENT_NAMES.get(c,c)} {pnl_str(client_pnl[c])}"
+                for c in sorted(client_pnl, key=lambda x: -abs(client_pnl[x]))
+            )
+            lines.append(parts)
+
     return "\n".join(lines)
+
+
+def answer_cmp(trades, stock: str) -> str:
+    """Live CMP for a stock, or all open positions if no stock given."""
+    open_t = [t for t in trades if not t.get("exit_date")]
+    if stock:
+        # match by name substring
+        matched = list({t["script"] for t in open_t if stock.upper() in t["script"].upper()})
+        scripts = matched or [stock.upper()]
+    else:
+        scripts = list({t["script"] for t in open_t})
+
+    if not scripts:
+        return "No open positions found."
+
+    prices = fetch_prices(scripts)
+    lines  = ["📊 *Live Prices*\n"]
+    found  = False
+    for s in sorted(scripts):
+        px  = prices.get(s, {})
+        cmp = px.get("cmp")
+        if not cmp:
+            continue
+        found = True
+        chg     = px.get("change_pct")
+        chg_str = f"  {chg:+.2f}%" if chg is not None else ""
+        icon    = "🟢" if (chg or 0) >= 0 else "🔴"
+        holders = {t["client"] for t in open_t if t["script"] == s}
+        avg_map = {}
+        for t in open_t:
+            if t["script"] == s:
+                avg_map.setdefault(t["client"], []).append(t)
+        detail_parts = []
+        for c in sorted(holders):
+            lots  = avg_map[c]
+            avg   = wavg_buy(lots)
+            qty   = sum(t["buy_qty"] for t in lots)
+            upnl  = (cmp - avg) * qty
+            arrow = "▲" if upnl >= 0 else "▼"
+            detail_parts.append(
+                f"   {CLIENT_NAMES.get(c,c)}  avg {fmt_price(avg)}  {arrow} {fmt_inr(abs(upnl))}"
+            )
+        lines.append(f"{icon} *{_tc(s)}*  {fmt_price(cmp)}{chg_str}")
+        lines.extend(detail_parts)
+
+    if not found:
+        return f"Could not fetch price for {'that stock' if stock else 'any open position'}. Market may be closed."
+    return "\n".join(lines)
+
+
 
 
 CHARGE_LABELS = {
@@ -1050,6 +1250,8 @@ def answer(trades, parsed) -> str:
         direction = {"movers_up": "up", "movers_down": "down", "movers_any": "any"}[intent]
         threshold = float(extra or 0)
         return answer_movers(trades, client, threshold, direction)
+    if intent == "cmp":
+        return answer_cmp(trades, stock)
     if intent == "open_positions" or filt == "open":
         q = str(parsed.get("_raw_question", "")).upper()
         if "MTF" in q or "MARGIN" in q:
@@ -1143,7 +1345,9 @@ async def cmd_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cfg = load_config()
     if not is_allowed(update, cfg):
         return
-    await update.message.reply_text(answer_today(load_trades()), parse_mode="Markdown")
+    trades = load_trades()
+    text = answer_today(trades)
+    await update.message.reply_text(text, parse_mode="Markdown")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1178,6 +1382,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for chunk in chunks:
         await update.message.reply_text(chunk, parse_mode="Markdown")
+
 
 
 def main():

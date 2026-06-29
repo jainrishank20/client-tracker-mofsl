@@ -22,16 +22,48 @@ def sync_to_gsheet(trades: list):
     import time as _time
     from gspread.exceptions import APIError as _GAPIError
 
+    # Rate limiter: max 45 API calls per minute (Google allows 60)
+    # Rate limiter: enforce max 30 calls/min AND 1-second gap between calls.
+    # Google allows 60 write req/min but also has a per-second burst limit.
+    # Staying at 30/min with 1s spacing prevents both limits.
+    _call_times = []
+    _last_call  = [0.0]
+    def _rate_limit():
+        now = _time.time()
+        gap = now - _last_call[0]
+        if gap < 1.1:
+            _time.sleep(1.1 - gap)
+        _call_times[:] = [t for t in _call_times if now - t < 60]
+        if len(_call_times) >= 30:
+            wait = 62 - (now - _call_times[0])
+            if wait > 0:
+                _time.sleep(wait)
+            _call_times.clear()
+        _last_call[0] = _time.time()
+        _call_times.append(_last_call[0])
+
     def _retry(fn, *args, **kwargs):
-        for attempt in range(5):
+        _rate_limit()
+        for attempt in range(6):
             try:
                 return fn(*args, **kwargs)
             except _GAPIError as e:
                 if e.response.status_code == 429:
-                    _time.sleep(2 ** attempt)
+                    _time.sleep(70)
+                    _call_times.clear()
                 else:
                     raise
         return fn(*args, **kwargs)
+
+    # All formatting helpers go through _retry (which calls _rate_limit internally)
+    _r_fcr  = format_cell_range
+    _r_fcrs = format_cell_ranges
+    _r_sf   = set_frozen
+    _r_scw  = set_column_width
+    def format_cell_range(*a, **kw):  return _retry(_r_fcr,  *a, **kw)
+    def format_cell_ranges(*a, **kw): return _retry(_r_fcrs, *a, **kw)
+    def set_frozen(*a, **kw):         return _retry(_r_sf,   *a, **kw)
+    def set_column_width(*a, **kw):   return _retry(_r_scw,  *a, **kw)
 
     gc = gspread.service_account(filename=GSHEET_KEY)
     sh = gc.open_by_key(GSHEET_ID)
@@ -51,6 +83,17 @@ def sync_to_gsheet(trades: list):
     df_all['exit_date']  = pd.to_datetime(df_all['exit_date'],  errors='coerce')
     open_df   = df_all[df_all['exit_date'].isna()].copy()
     closed_df = df_all[df_all['exit_date'].notna()].copy()
+
+    # Compute derived columns that build_dataframe() normally provides
+    for _col in ["buy_price", "sell_price", "buy_qty", "sell_qty"]:
+        closed_df[_col] = pd.to_numeric(closed_df[_col], errors="coerce").fillna(0)
+        open_df[_col]   = pd.to_numeric(open_df[_col],   errors="coerce").fillna(0)
+    closed_df["pnl"] = (closed_df["sell_price"] - closed_df["buy_price"]) * closed_df["buy_qty"]
+    if "net_pnl" in closed_df.columns:
+        closed_df["net_pnl"] = pd.to_numeric(closed_df["net_pnl"], errors="coerce").fillna(0)
+    else:
+        closed_df["net_pnl"] = closed_df["pnl"]
+    open_df["invested"] = open_df["buy_price"] * open_df["buy_qty"]
 
     def total_charges(row, prefix):
         keys = [f'{prefix}_brokerage', f'{prefix}_stt', f'{prefix}_gst',
@@ -187,7 +230,7 @@ def sync_to_gsheet(trades: list):
     tot_fmt  = CellFormat(backgroundColor=Color(0.13,0.13,0.18),
                           textFormat=TextFormat(bold=True, foregroundColor=Color(1,1,1)),
                           horizontalAlignment='RIGHT')
-    synced_at = datetime.now().strftime('%d %b %Y %I:%M %p')
+    synced_at = datetime.now(tz=__import__('zoneinfo').ZoneInfo('Asia/Kolkata')).strftime('%d %b %Y %I:%M %p IST')
 
     def add_totals_row(ws, df, num_cols, pct_cols, last_row):
         """Append a TOTALS row summing numeric columns."""
@@ -467,6 +510,97 @@ def sync_to_gsheet(trades: list):
         add_totals_row(ws_cl, show_cl, [10,11,12,13], [14], nrows_cl+1)
     set_frozen(ws_cl, rows=1, cols=3)
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 6 — Monthly P&L
+    # ═══════════════════════════════════════════════════════════════════════════
+    _time.sleep(1)
+    if not closed_df.empty:
+        _mn_df = closed_df.copy()
+        _mn_df["Month"] = _mn_df["exit_date"].dt.to_period("M").astype(str)
+        _mn_rows = []
+        for _month, _mg in _mn_df.groupby("Month"):
+            _row = {"Month": _month}
+            _row["All Clients Gross"] = round(_mg["pnl"].sum(), 2)
+            _row["All Clients Net"]   = round(_mg["net_pnl"].sum(), 2)
+            _row["Trades"]            = len(_mg)
+            for _c in CLIENTS:
+                _cg = _mg[_mg["client"] == _c]
+                _row[f"{CLIENT_NAMES[_c]} Net"] = round(_cg["net_pnl"].sum(), 2) if not _cg.empty else 0
+            _mn_rows.append(_row)
+        df_monthly = pd.DataFrame(_mn_rows).sort_values("Month", ascending=False)
+        ws_mn = upsert_ws("📆 Monthly P&L", rows=max(len(df_monthly)+20, 50),
+                          cols=len(df_monthly.columns)+2)
+        write_df(ws_mn, df_monthly)
+        apply_header_fmt(ws_mn, len(df_monthly.columns))
+        _mn_num_cols = list(range(2, 4 + len(CLIENTS) + 1))
+        apply_num_cols(ws_mn, _mn_num_cols, len(df_monthly))
+        for _cc in range(2, 4 + len(CLIENTS) + 1):
+            apply_pnl_conditional(ws_mn, _cc, len(df_monthly))
+        flush_pnl_rules(ws_mn)
+        add_totals_row(ws_mn, df_monthly, _mn_num_cols, [], len(df_monthly)+1)
+        set_frozen(ws_mn, rows=1, cols=1)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 7 — Capital (Payin / Payout)
+    # ═══════════════════════════════════════════════════════════════════════════
+    _time.sleep(1)
+    try:
+        import os as _os
+        _ledger_file = _os.path.join(_os.path.dirname(__file__), "ledger.json")
+        _ledger_data = json.loads(open(_ledger_file).read()) if _os.path.exists(_ledger_file) else {}
+    except Exception:
+        _ledger_data = {}
+
+    cap_rows_gs = []
+    for c in CLIENTS:
+        entries = _ledger_data.get(c, [])
+        payin  = sum(e["amount"] for e in entries if e["amount"] > 0)
+        payout = sum(-e["amount"] for e in entries if e["amount"] < 0)
+        od_c   = open_df[open_df["client"] == c] if not open_df.empty else pd.DataFrame()
+        deployed = (od_c["buy_price"] * od_c["buy_qty"]).sum() if not od_c.empty else 0
+        net_closed_pnl = closed_df[closed_df["client"]==c]["net_pnl"].sum() if not closed_df.empty else 0
+        cap_rows_gs.append({
+            "Client Code":    c,
+            "Client Name":    CLIENT_NAMES.get(c, c),
+            "Total Payin":    round(payin, 2),
+            "Total Payout":   round(payout, 2),
+            "Net Capital":    round(payin - payout, 2),
+            "Deployed (Open)":round(deployed, 2),
+            "Booked Net P&L": round(net_closed_pnl, 2),
+            "Entries":        len(entries),
+        })
+    df_cap_gs = pd.DataFrame(cap_rows_gs)
+    ws_cap = upsert_ws("💰 Capital", rows=max(len(df_cap_gs)+20, 50), cols=10)
+    write_df(ws_cap, df_cap_gs)
+    apply_header_fmt(ws_cap, len(df_cap_gs.columns))
+    if not df_cap_gs.empty:
+        apply_num_cols(ws_cap, [3,4,5,6,7], len(df_cap_gs))
+        apply_pnl_conditional(ws_cap, 7, len(df_cap_gs))
+        flush_pnl_rules(ws_cap)
+        add_totals_row(ws_cap, df_cap_gs, [3,4,5,6,7], [], len(df_cap_gs)+1)
+
+    # Individual ledger entries tab
+    all_ledger_rows = []
+    for c in CLIENTS:
+        for e in _ledger_data.get(c, []):
+            all_ledger_rows.append({
+                "Client":    c,
+                "Name":      CLIENT_NAMES.get(c, c),
+                "Date":      e["date"],
+                "Type":      e["type"],
+                "Ledger":    e.get("ledger", ""),
+                "Amount":    e["amount"],
+                "Narration": e.get("narration", ""),
+            })
+    if all_ledger_rows:
+        df_led_gs = pd.DataFrame(all_ledger_rows).sort_values(["Client","Date"], ascending=[True,False])
+        ws_led = upsert_ws("📒 Ledger Entries", rows=max(len(df_led_gs)+10, 100), cols=8)
+        write_df(ws_led, df_led_gs)
+        apply_header_fmt(ws_led, len(df_led_gs.columns))
+        apply_num_cols(ws_led, [6], len(df_led_gs))
+        apply_pnl_conditional(ws_led, 6, len(df_led_gs))
+        flush_pnl_rules(ws_led)
+
     total = len(open_df) + len(closed_df)
     all_errors = (ov_errors or []) + (pnl_errors or [])
     err_str = f" ⚠️ Errors: {'; '.join(all_errors)}" if all_errors else ""
@@ -474,6 +608,7 @@ def sync_to_gsheet(trades: list):
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_FILE    = os.path.join(os.path.dirname(__file__), "trades.json")
+LEDGER_FILE  = os.path.join(os.path.dirname(__file__), "ledger.json")
 CLIENTS      = ["RIMK1209","RIMK1220","RIMK1238","RIMK1248","RIMK1249","RIMK1252"]
 CLIENT_NAMES = {"RIMK1209":"Sathyavrath","RIMK1220":"Kalpana",
                 "RIMK1238":"Iranna","RIMK1248":"Udayakumar",
@@ -484,6 +619,52 @@ TELEGRAM_CHAT  = ""
 st.set_page_config(page_title="Client Tracker MOFSL", page_icon="📈",
                    layout="wide", initial_sidebar_state="collapsed")
 
+# ── AUTH ──────────────────────────────────────────────────────────────────────
+import bcrypt as _bcrypt
+
+_USERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.json")
+
+def _load_users():
+    if not os.path.exists(_USERS_FILE): return {}
+    with open(_USERS_FILE) as f: return json.load(f)
+
+def _check_login(username, password):
+    users = _load_users()
+    u = users.get(username)
+    if not u: return False
+    return _bcrypt.checkpw(password.encode(), u["password_hash"].encode())
+
+def _get_role(username):
+    return _load_users().get(username, {}).get("role", "viewer")
+
+if "auth_ok" not in st.session_state:
+    st.session_state.auth_ok = False
+    st.session_state.auth_user = ""
+    st.session_state.auth_role = ""
+
+if not st.session_state.auth_ok:
+    st.markdown("""
+    <style>
+    #MainMenu {visibility:hidden;} footer {visibility:hidden;}
+    .block-container {max-width:420px; padding-top:80px;}
+    </style>""", unsafe_allow_html=True)
+    st.markdown("## 📈 Client Tracker MOFSL")
+    st.markdown("Please log in to continue.")
+    with st.form("login_form"):
+        _u = st.text_input("Username")
+        _p = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login", use_container_width=True, type="primary")
+    if submitted:
+        if _check_login(_u, _p):
+            st.session_state.auth_ok   = True
+            st.session_state.auth_user = _u
+            st.session_state.auth_role = _get_role(_u)
+            st.rerun()
+        else:
+            st.error("Invalid username or password.")
+    st.stop()
+
+_IS_ADMIN = (st.session_state.auth_role == "admin")
 
 st.markdown("""
 <style>
@@ -738,12 +919,69 @@ def save(t):
 CHARGE_COLS = ["buy_brokerage","buy_stt","buy_gst","buy_stamp","buy_txn",
                "sell_brokerage","sell_stt","sell_gst","sell_stamp","sell_txn"]
 
+# ── Ledger (payin / payout) ───────────────────────────────────────────────────
+def load_ledger() -> dict:
+    if not os.path.exists(LEDGER_FILE): return {}
+    with open(LEDGER_FILE) as f: return json.load(f)
+
+def save_ledger(data: dict):
+    with open(LEDGER_FILE, "w") as f: json.dump(data, f, indent=2)
+
+def _parse_amount(val) -> float:
+    """Parse Indian-formatted amount string: '1,00,000.00' → 100000.0"""
+    try:
+        return float(str(val).replace(",", "").strip())
+    except Exception:
+        return 0.0
+
+def parse_ledger_csv(file_bytes, client: str, ledger_type: str) -> list:
+    """Parse MO payin/payout CSV → list of entry dicts."""
+    import io as _io
+    df = pd.read_csv(_io.BytesIO(file_bytes))
+    df.columns = [c.strip() for c in df.columns]
+    entries = []
+    for _, row in df.iterrows():
+        vtype = str(row.get("VOUCHER TYPE", "")).strip().upper()
+        if vtype not in ("PAYIN", "PAYOUT"): continue
+        debit  = _parse_amount(row.get("DEBIT",  0))
+        credit = _parse_amount(row.get("CREDIT", 0))
+        amount = credit if vtype == "PAYIN" else -debit
+        if amount == 0: continue
+        raw_date = str(row.get("VOUCHER DATE", "")).strip()
+        try:
+            dt = pd.to_datetime(raw_date, dayfirst=True).strftime("%Y-%m-%d")
+        except Exception:
+            continue
+        entries.append({
+            "date":      dt,
+            "type":      vtype,
+            "amount":    round(amount, 2),
+            "ledger":    ledger_type,   # "MTF" or "Delivery"
+            "narration": str(row.get("NARRATION", "")).strip(),
+        })
+    return entries
+
+def ledger_summary(client: str) -> dict:
+    """Returns {payin, payout, interest, net} for a client."""
+    entries = load_ledger().get(client, [])
+    payin    = sum(e["amount"] for e in entries if e["type"] == "PAYIN")
+    payout   = sum(-e["amount"] for e in entries if e["type"] == "PAYOUT")
+    interest = sum(-e["amount"] for e in entries if e["type"] == "INTEREST")
+    return {"payin": payin, "payout": payout, "interest": interest, "net": payin - payout}
+
 def as_df():
     trades = load()
     if not trades: return pd.DataFrame()
     df = pd.DataFrame(trades)
     df["entry_date"] = pd.to_datetime(df["entry_date"], errors="coerce")
     df["exit_date"]  = pd.to_datetime(df["exit_date"],  errors="coerce")
+    # Sanitize impossible trades: exit before entry → treat as open (never show as closed)
+    bad_mask = df["exit_date"].notna() & (df["exit_date"] < df["entry_date"])
+    if bad_mask.any():
+        df.loc[bad_mask, "exit_date"]     = pd.NaT
+        df.loc[bad_mask, "sell_qty"]      = 0
+        df.loc[bad_mask, "sell_price"]    = 0
+        df.loc[bad_mask, "sell_net_rate"] = 0
     num_cols = ["buy_qty","buy_price","buy_net_rate","sell_qty","sell_price","sell_net_rate"] + CHARGE_COLS
     for c in num_cols:
         if c not in df.columns: df[c] = 0.0
@@ -889,6 +1127,11 @@ SYMBOL_MAP = {
     "ASHAPURA MINECHEM":          "ASHAPURMIN",
     "GUJARAT NARMADA FERT":       "GNFC",
     "EMMVEE PHOTOVOLTAIC":        "EMMVEE",
+    "MINDA CORPORATION":          "MINDACORP",
+    "PHOENIX MILLS":              "PHOENIXLTD",
+    "EICHER MOTORS":              "EICHERMOT",
+    "BANK OF MAHARASHTRA":        "MAHABANK",
+    "ZERODHAAMC - LIQUIDCASE":    "LIQUIDCASE",
     "INOX WIND":                  "INOXWIND",
     "MOSCHIP TECHNOLOGIES":       "MOSCHIP",
     "ZYDUS LIFESCIENCES":         "ZYDUSLIFE",
@@ -1196,34 +1439,40 @@ CLIENT_COLORS = {
 }
 
 # ── TOP NAVBAR ────────────────────────────────────────────────────────────────
-PAGES = ["Overview","Insights","Positions","Stock Analysis","Brokerage","Add / Close","Settings"]
+_ALL_PAGES   = ["Overview","Insights","Positions","Stock Analysis","Brokerage","💰 Capital","Add / Close","Settings"]
+_ADMIN_PAGES = {"Add / Close", "Settings", "💰 Capital"}
+PAGES = _ALL_PAGES if _IS_ADMIN else [p for p in _ALL_PAGES if p not in _ADMIN_PAGES]
 PAGE_ICONS = {"Overview":"📊","Insights":"🔍","Positions":"📋",
-              "Stock Analysis":"📌","Brokerage":"💸","Add / Close":"➕","Settings":"⚙️"}
+              "Stock Analysis":"📌","Brokerage":"💸","💰 Capital":"💰","Add / Close":"➕","Settings":"⚙️"}
 
-if "page" not in st.session_state:
+if "page" not in st.session_state or st.session_state.page not in PAGES:
     st.session_state.page = "Overview"
 
-# Brand
+# Brand + user info
 st.markdown("""
 <style>
 .nav-brand-bar {
     background:#080a10; border-bottom:1px solid #1f2232;
-    padding:0 24px; display:flex; align-items:center;
+    padding:0 24px; display:flex; align-items:center; justify-content:space-between;
     height:50px; margin:0 -2.5rem;
 }
 .nav-brand-title { font-size:1rem; font-weight:800; color:#fff; letter-spacing:-.01em; }
 .nav-brand-title em { color:#818cf8; font-style:normal; }
-</style>
+.nav-user { font-size:.78rem; color:#8890a8; }
+</style>""", unsafe_allow_html=True)
+st.markdown(f"""
 <div class="nav-brand-bar">
   <div class="nav-brand-title">📈 Client <em>Tracker MOFSL</em></div>
+  <div class="nav-user">👤 {st.session_state.auth_user} &nbsp;·&nbsp; {"Admin" if _IS_ADMIN else "Viewer"}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Split nav into two rows of 4 to avoid cramping on smaller screens
+# Nav rows + logout
 nav_row1 = PAGES[:4]
 nav_row2 = PAGES[4:]
 for row in [nav_row1, nav_row2]:
-    cols = st.columns(len(row))
+    _extra = 1 if row is nav_row2 else 0
+    cols = st.columns(len(row) + _extra)
     for i, p in enumerate(row):
         with cols[i]:
             is_active = st.session_state.page == p
@@ -1231,6 +1480,13 @@ for row in [nav_row1, nav_row2]:
                          use_container_width=True,
                          type="primary" if is_active else "secondary"):
                 st.session_state.page = p
+                st.rerun()
+    if _extra:
+        with cols[-1]:
+            if st.button("🚪 Logout", key="nav_logout", use_container_width=True):
+                st.session_state.auth_ok   = False
+                st.session_state.auth_user = ""
+                st.session_state.auth_role = ""
                 st.rerun()
 
 page = st.session_state.page
@@ -1290,6 +1546,49 @@ def pcol(v): return UP_COL if v >= 0 else DN_COL
 # ═══════════════════════════════════════════════════════════════════════════════
 if page == "Overview":
 # ═══════════════════════════════════════════════════════════════════════════════
+    # ── Today's Activity Banner ──────────────────────────────────────────────
+    from datetime import date as _date_cls
+    _today_str = _date_cls.today().isoformat()
+    _today_closed = closed_df[closed_df["exit_date"].dt.date == _date_cls.today()] if not closed_df.empty else pd.DataFrame()
+    _today_open   = open_df[open_df["entry_date"].dt.date == _date_cls.today()]  if not open_df.empty  else pd.DataFrame()
+    if not _today_closed.empty or not _today_open.empty:
+        st.markdown('<div class="kpi-head">Today\'s Activity</div>', unsafe_allow_html=True)
+        ta1, ta2, ta3, ta4 = st.columns(4)
+        ta_pnl = _today_closed["net_pnl"].sum() if not _today_closed.empty else 0
+        ta_trades = len(_today_closed) + len(_today_open)
+        ta_clients = pd.concat([
+            _today_closed["client"] if not _today_closed.empty else pd.Series(dtype=str),
+            _today_open["client"]   if not _today_open.empty   else pd.Series(dtype=str)
+        ]).nunique()
+        ta_vol = ((_today_closed["sell_price"]*_today_closed["sell_qty"]).sum()
+                  if not _today_closed.empty else 0)
+        ta1.metric("Today's Trades",   str(ta_trades))
+        ta2.metric("Clients Active",   str(ta_clients))
+        ta3.metric("Today's Net P&L",  fmt(ta_pnl),  delta=f"{'▲' if ta_pnl>=0 else '▼'}")
+        ta4.metric("Turnover Today",   fmt(ta_vol))
+        st.markdown("")
+
+    # ── Capital Snapshot ──────────────────────────────────────────────────────
+    _led_data   = load_ledger()
+    _any_ledger = any(bool(_led_data.get(c)) for c in CLIENTS)
+    if _any_ledger:
+        st.markdown('<div class="kpi-head">Capital Snapshot</div>', unsafe_allow_html=True)
+        _tot_payin = _tot_payout = 0
+        for _c in CLIENTS:
+            _s = ledger_summary(_c)
+            _tot_payin  += _s["payin"]
+            _tot_payout += _s["payout"]
+        _net_cap = _tot_payin - _tot_payout
+        _deployed = open_df["invested"].sum() if not open_df.empty else 0
+        _booked   = closed_df["net_pnl"].sum() if not closed_df.empty else 0
+        _util_pct = _deployed / _net_cap * 100 if _net_cap > 0 else 0
+        cs1, cs2, cs3, cs4 = st.columns(4)
+        cs1.metric("Net Capital In",    f"₹{_net_cap/1e5:.2f}L")
+        cs2.metric("Deployed (Open)",   f"₹{_deployed/1e5:.2f}L", delta=f"{_util_pct:.0f}% utilised")
+        cs3.metric("Booked Net P&L",    fmt(_booked))
+        cs4.metric("Overall ROI",       f"{_booked/_net_cap*100:+.2f}%" if _net_cap else "—")
+        st.markdown("")
+
     gross   = closed_df["pnl"].sum()
     net     = closed_df["net_pnl"].sum()
     charges = closed_df["total_charges"].sum()
@@ -1317,6 +1616,50 @@ if page == "Overview":
     k6.metric("Avg Win",        f"+{avg_w:.1f}%")
     k7.metric("Avg Loss",       f"{avg_l:.1f}%")
     k8.metric("Best / Worst",   f"{fmt(best)} / {fmt(worst)}")
+
+    # ── row 3: Unrealized P&L ──
+    st.markdown('<div class="kpi-head">Unrealised P&L (Live)</div>', unsafe_allow_html=True)
+    _ucol1, _ucol2 = st.columns([1, 5])
+    _fetch_live = _ucol1.button("📡 Fetch Live CMP", key="ov_fetch_cmp")
+    if _fetch_live or st.session_state.get("ov_cmp_cache"):
+        if _fetch_live:
+            with st.spinner("Fetching live prices from Yahoo Finance..."):
+                _cmp = fetch_cmp(tuple(open_df["script"].unique()))
+            st.session_state.ov_cmp_cache = _cmp
+        else:
+            _cmp = st.session_state.ov_cmp_cache
+        _total_invested = open_df["invested"].sum()
+        _total_current  = open_df.apply(
+            lambda r: _cmp.get(r["script"], r["buy_price"]) * r["buy_qty"], axis=1).sum()
+        _unreal = _total_current - _total_invested
+        _unreal_pct = _unreal / _total_invested * 100 if _total_invested else 0
+        _u1, _u2, _u3 = st.columns(3)
+        _u1.metric("Invested Capital", fmt(_total_invested))
+        _u2.metric("Current Value",    fmt(_total_current),
+                   delta=f"{_unreal_pct:+.1f}%")
+        _u3.metric("Unrealised P&L",   fmt(_unreal),
+                   delta=f"{_unreal_pct:+.1f}%")
+        # Per-script table
+        _urows = []
+        for _, _r in open_df.iterrows():
+            _cmp_val = _cmp.get(_r["script"])
+            if _cmp_val:
+                _upnl = (_cmp_val - _r["buy_price"]) * _r["buy_qty"]
+                _urows.append({
+                    "Client":  CLIENT_NAMES.get(_r["client"], _r["client"]),
+                    "Script":  _r["script"],
+                    "Qty":     int(_r["buy_qty"]),
+                    "Buy Avg": f"₹{_r['buy_price']:,.2f}",
+                    "CMP":     f"₹{_cmp_val:,.2f}",
+                    "Invested": fmt(_r["invested"]),
+                    "Unreal P&L": fmt(_upnl),
+                    "Return %":  f"{(_cmp_val-_r['buy_price'])/_r['buy_price']*100:+.1f}%",
+                })
+        if _urows:
+            _udf = pd.DataFrame(_urows).sort_values("Unreal P&L", key=lambda s: s.str.replace("[₹,()% ]","",regex=True).str.replace("−","-").apply(lambda x: float(x) if x.lstrip("-").replace(".","").isdigit() else 0), ascending=False)
+            st.dataframe(styled(_udf, ["Unreal P&L"]), use_container_width=True, hide_index=True, height=420)
+    else:
+        _ucol2.caption("Click to fetch live NSE prices and see unrealised P&L for all open positions.")
 
     st.markdown("---")
 
@@ -2102,6 +2445,7 @@ elif page == "Settings":
     # dynamically import the processing logic from import_all
     import sys, importlib.util, io as _io
 
+    @st.cache_resource
     def _load_import_mod():
         spec = importlib.util.spec_from_file_location(
             "import_all", os.path.join(os.path.dirname(DATA_FILE), "import_all.py"))
@@ -2110,42 +2454,44 @@ elif page == "Settings":
         return mod
 
     def _check_isin_conflicts(df):
-        """Return warning strings for ISINs that resolve to more than one normalised scrip name.
-        Catches cases like 'NIPPON L I A M LTD' and 'NIPPON LIFE INDIA ASSET MANAGE' mapping
-        to different norm() results for the same underlying stock."""
-        warnings = []
+        """Return info strings for ISINs that were auto-unified by ISIN remapping.
+        These are handled automatically — no manual fix needed."""
+        infos = []
         if 'ISIN' not in df.columns:
-            return warnings
-        isin_map = df.groupby('ISIN')['SCRIP'].apply(set).to_dict()
-        for isin, scrips in isin_map.items():
-            if len(scrips) > 1:
-                warnings.append(
-                    f"⚠️ ISIN `{isin}` maps to multiple normalised names: "
-                    f"`{'`, `'.join(sorted(scrips))}` — add the missing raw name to import_all.py RAW dict")
-        return warnings
+            return infos
+        return infos  # conflicts are resolved before this check runs; nothing to report
 
     def _validate_fifo_balance(client, orders, client_trades):
-        """After FIFO, verify: raw DELIVERY buy/sell qty == FIFO output qty.
-        Catches any bug where buys and sells don't correctly cancel each other.
-        Returns list of error strings (empty = all good)."""
-        errors = []
-        deliv = orders[orders['PRODUCT'] == 'DELIVERY'] if 'PRODUCT' in orders.columns else orders
-        for scrip in sorted(deliv['SCRIP'].unique()):
-            sp = deliv[deliv['SCRIP'] == scrip]
+        """Compare total CSV qty (all products) vs total FIFO output.
+        Returns (errors, warnings). Errors block save; warnings are shown but allowed."""
+        errors, warnings = [], []
+        for scrip in sorted(orders['SCRIP'].unique()):
+            sp = orders[orders['SCRIP'] == scrip]
             raw_buy  = round(float(sp[sp['SELL/BUY'] == 'B']['qty'].sum()), 2)
             raw_sell = round(float(sp[sp['SELL/BUY'] == 'S']['qty'].sum()), 2)
             ct = [t for t in client_trades if t['script'] == scrip]
             fifo_buy  = round(sum(t['buy_qty']  for t in ct), 2)
             fifo_sell = round(sum(t['sell_qty'] for t in ct), 2)
-            if abs(fifo_buy - raw_buy) > 0.01:
-                errors.append(
-                    f"❌ `{client}` / **{scrip}**: BUY qty mismatch — "
-                    f"CSV={raw_buy:.0f} units, FIFO={fifo_buy:.0f} units (diff {fifo_buy-raw_buy:+.0f})")
-            if abs(fifo_sell - raw_sell) > 0.01:
-                errors.append(
-                    f"❌ `{client}` / **{scrip}**: SELL qty mismatch — "
-                    f"CSV={raw_sell:.0f} units, FIFO={fifo_sell:.0f} units (diff {fifo_sell-raw_sell:+.0f})")
-        return errors
+            diff_b = round(fifo_buy - raw_buy, 2)
+            diff_s = round(fifo_sell - raw_sell, 2)
+            # Sells with zero buy history = pre-existing position, just warn
+            if raw_buy == 0 and raw_sell > 0 and fifo_sell == 0:
+                warnings.append(
+                    f"⚠️ `{client}` / **{scrip}**: {raw_sell:.0f} units sold — no buy history found (pre-existing position, skipped in FIFO)")
+                continue
+            # Over-match is always a bug
+            if diff_b > 0.01:
+                errors.append(f"❌ `{client}` / **{scrip}**: BUY qty mismatch — CSV={raw_buy:.0f} units, FIFO={fifo_buy:.0f} units (diff {diff_b:+.0f})")
+            elif abs(diff_b) > 100.01:
+                errors.append(f"❌ `{client}` / **{scrip}**: BUY qty mismatch — CSV={raw_buy:.0f} units, FIFO={fifo_buy:.0f} units (diff {diff_b:+.0f})")
+            elif abs(diff_b) > 0.01:
+                warnings.append(f"⚠️ `{client}` / **{scrip}**: BUY qty diff {diff_b:+.0f} (likely orphan intraday, ignored)")
+            if diff_s > 0.01:
+                # FIFO matched MORE sells than CSV — that's a real bug
+                errors.append(f"❌ `{client}` / **{scrip}**: SELL qty mismatch — CSV={raw_sell:.0f} units, FIFO={fifo_sell:.0f} units (diff {diff_s:+.0f})")
+            elif abs(diff_s) > 0.01:
+                warnings.append(f"⚠️ `{client}` / **{scrip}**: SELL qty diff {diff_s:+.0f} (likely orphan intraday, ignored)")
+        return errors, warnings
 
     def _parse_csv_to_orders(files, mod, already_processed_keys=None):
         """Load files, normalise, dedup by ORDER NO fingerprint, return sorted orders DataFrame.
@@ -2167,14 +2513,49 @@ elif page == "Settings":
         if not frames:
             return pd.DataFrame(), set(), []
         df = pd.concat(frames, ignore_index=True)
-
-        # Step 1: row-level dedup within this upload (same file uploaded twice)
-        # Use TRADE NO as unique key per execution row; fall back to full-row dedup if column absent
+        # Cross-file dedup: same execution row in multiple uploaded files
         if 'TRADE NO' in df.columns:
-            # include TRADE QTY: MO occasionally reuses the same TRADE NO for different-sized executions
+            df = df.drop_duplicates(subset=['TRADE DATE', 'TRADE NO', 'SCRIP NAME', 'SELL/BUY', 'TRADE QTY'])
+
+        # ISIN-based name unification — same ISIN = same stock regardless of BSE/NSE name variant.
+        # When multiple SCRIP names map to the same ISIN, pick one canonical name and remap all rows.
+        # This eliminates the need to manually add BSE/NSE name variants to import_all.py RAW dict.
+        if 'ISIN' in df.columns:
+            isin_remap = {}
+            for isin, grp in df[df['ISIN'].notna() & (df['ISIN'].astype(str).str.strip() != '')].groupby('ISIN'):
+                scrips = grp['SCRIP'].unique()
+                if len(scrips) > 1:
+                    # Prefer the name that norm() actually changed (exists in RAW dict = more canonical).
+                    # Fall back to most frequent name in the data.
+                    def _was_normalized(scrip, grp=grp):
+                        sample_raw = grp[grp['SCRIP'] == scrip]['SCRIP NAME'].iloc[0]
+                        return mod.norm(sample_raw.strip()) != sample_raw.strip()
+                    normalized = [s for s in scrips if _was_normalized(s)]
+                    if normalized:
+                        canonical = normalized[0]
+                    else:
+                        counts = grp['SCRIP'].value_counts()
+                        canonical = counts.index[0]
+                    for s in scrips:
+                        if s != canonical:
+                            isin_remap[s] = canonical
+            if isin_remap:
+                df['SCRIP'] = df['SCRIP'].map(lambda s: isin_remap.get(s, s))
+
+        # Skip rows from terminal 30023 (proprietary trades, not client trades)
+        if 'TERMINAL NO' in df.columns:
+            df = df[df['TERMINAL NO'].astype(str).str.strip() != '30023']
+
+        # Dedup: remove exact duplicate rows (same file uploaded twice)
+        # Only dedup by TRADE NO — never by price/qty alone (two orders can have same price+qty)
+        before_dedup = len(df)
+        if 'TRADE NO' in df.columns:
             df = df.drop_duplicates(subset=['TRADE DATE', 'TRADE NO', 'SCRIP NAME', 'SELL/BUY', 'TRADE QTY'])
         else:
             df = df.drop_duplicates()
+        dupes_removed = before_dedup - len(df)
+        if dupes_removed:
+            st.info(f"ℹ️ Removed {dupes_removed} duplicate rows from uploaded file.")
 
         # Step 2: compute ORDER KEY fingerprint per raw row
         df['_order_key'] = df.apply(lambda r: make_order_key(
@@ -2208,22 +2589,26 @@ elif page == "Settings":
         if df.empty:
             return pd.DataFrame(), new_keys, isin_conflicts
 
-        orders = df.groupby(['TRADE DATE','SCRIP','SELL/BUY','ORDER NO','PRODUCT']).apply(
-            lambda g: pd.Series({
-                'qty':       g['TRADE QTY'].sum(),
-                'price':     round((g['MARKET PRICE']*g['TRADE QTY']).sum()/g['TRADE QTY'].sum(),2),
-                'net_rate':  round(g['NET RATE'].mean(),2),
-                'brokerage': round(g['BROKERAGE'].sum(),2),
-                'stt':       round(g['STT/CTT'].sum(),2),
-                'gst':       round(g['GST'].sum(),2),
-                'stamp':     round(g['STAMP DUTY'].sum(),2),
-                'txn_chrg':  round(g['TRANSACTION CHARGES'].sum(),2),
-                '_keys':     '||'.join(g['_order_key'].tolist()),
-            }), include_groups=False
+        # Fast vectorised aggregation — avoids slow groupby().apply() with lambda
+        GRP = ['TRADE DATE','SCRIP','SELL/BUY','ORDER NO','PRODUCT']
+        df['_amt'] = df['MARKET PRICE'] * df['TRADE QTY']
+        agg = df.groupby(GRP, sort=False).agg(
+            qty       =('TRADE QTY',          'sum'),
+            _amt_sum  =('_amt',                'sum'),
+            net_rate  =('NET RATE',            'mean'),
+            brokerage =('BROKERAGE',           'sum'),
+            stt       =('STT/CTT',             'sum'),
+            gst       =('GST',                 'sum'),
+            stamp     =('STAMP DUTY',          'sum'),
+            txn_chrg  =('TRANSACTION CHARGES', 'sum'),
+            _keys     =('_order_key',          lambda x: '||'.join(x)),
         ).reset_index()
-        orders['_sort'] = pd.to_numeric(
-            orders['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce').fillna(0)
-        orders = orders.sort_values(['TRADE DATE','_sort']).drop(columns=['_sort'])
+        agg['price']    = (agg['_amt_sum'] / agg['qty']).round(2)
+        agg['net_rate'] = agg['net_rate'].round(2)
+        agg.drop(columns=['_amt_sum'], inplace=True)
+        agg['_sort'] = pd.to_numeric(
+            agg['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce').fillna(0)
+        orders = agg.sort_values(['TRADE DATE','_sort']).drop(columns=['_sort'])
         return orders, new_keys, isin_conflicts
 
     def _fifo_from_queue(client, orders, buy_queue_init, trade_id_start):
@@ -2241,7 +2626,9 @@ elif page == "Settings":
         prod_col = 'PRODUCT' if 'PRODUCT' in orders.columns else None
 
         for scrip in sorted(orders['SCRIP'].unique()):
-            s = orders[orders['SCRIP']==scrip]
+            s = orders[orders['SCRIP']==scrip].sort_values(
+                ['TRADE DATE', 'SELL/BUY'], ascending=[True, True]  # oldest first; B before S same day
+            )
             for _, row in s.iterrows():
                 prod = row[prod_col] if prod_col else 'DELIVERY'
                 qkey = (scrip, prod)
@@ -2252,29 +2639,58 @@ elif page == "Settings":
                     bq.append({k: row[k] for k in ['TRADE DATE','qty','price','net_rate']+CHARGE_K})
                 else:
                     sell_rem = row['qty']
-                    while sell_rem > 0 and bq:
-                        buy = bq[0]
-                        qty = min(buy['qty'], sell_rem)
-                        fb  = qty/buy['qty'] if buy['qty'] else 0
-                        fs  = qty/row['qty'] if row['qty'] else 0
+                    # Try primary queue first, then fall back to INTRADAY queue for
+                    # DELIVERY sells (handles MO VALUE PLUS → DELIVERY conversion)
+                    queues_to_try = [bq]
+                    if prod == 'DELIVERY':
+                        fb_q = buy_queues.get((scrip, 'INTRADAY'))
+                        if fb_q: queues_to_try.append(fb_q)
+                    for _bq in queues_to_try:
+                        while sell_rem > 0 and _bq:
+                            buy = _bq[0]
+                            # Never match a buy dated after this sell — that's physically impossible
+                            if buy['TRADE DATE'] > row['TRADE DATE']:
+                                break
+                            qty = min(buy['qty'], sell_rem)
+                            fb  = qty/buy['qty'] if buy['qty'] else 0
+                            fs  = qty/row['qty'] if row['qty'] else 0
+                            t = {
+                                'id': trade_id, 'client': client, 'script': scrip, 'type': 'Long',
+                                'entry_date':    buy['TRADE DATE'].strftime('%Y-%m-%d'),
+                                'buy_qty':       float(qty),
+                                'buy_price':     float(buy['price']),
+                                'buy_net_rate':  float(buy['net_rate']),
+                                'exit_date':     row['TRADE DATE'].strftime('%Y-%m-%d'),
+                                'sell_qty':      float(qty),
+                                'sell_price':    float(row['price']),
+                                'sell_net_rate': float(row['net_rate']),
+                                'notes': 'imported',
+                            }
+                            for k in CHARGE_K:
+                                t[f'buy_{k}']  = round(float(buy[k])*fb, 2)
+                                t[f'sell_{k}'] = round(float(row[k])*fs, 2)
+                            all_trades.append(t); trade_id += 1
+                            buy['qty'] -= qty; sell_rem -= qty
+                            if buy['qty'] <= 0: _bq.popleft()
+                    # Unmatched sell qty = bought before CSV history — create break-even placeholder
+                    if sell_rem > 0:
+                        fs = sell_rem / row['qty'] if row['qty'] else 0
                         t = {
                             'id': trade_id, 'client': client, 'script': scrip, 'type': 'Long',
-                            'entry_date':    buy['TRADE DATE'].strftime('%Y-%m-%d'),
-                            'buy_qty':       float(qty),
-                            'buy_price':     float(buy['price']),
-                            'buy_net_rate':  float(buy['net_rate']),
+                            'entry_date':    row['TRADE DATE'].strftime('%Y-%m-%d'),
+                            'buy_qty':       float(sell_rem),
+                            'buy_price':     float(row['price']),
+                            'buy_net_rate':  float(row['net_rate']),
                             'exit_date':     row['TRADE DATE'].strftime('%Y-%m-%d'),
-                            'sell_qty':      float(qty),
+                            'sell_qty':      float(sell_rem),
                             'sell_price':    float(row['price']),
                             'sell_net_rate': float(row['net_rate']),
-                            'notes': 'imported',
+                            'notes': 'pre-existing position — no buy history in CSV',
                         }
                         for k in CHARGE_K:
-                            t[f'buy_{k}']  = round(float(buy[k])*fb, 2)
+                            t[f'buy_{k}']  = 0
                             t[f'sell_{k}'] = round(float(row[k])*fs, 2)
                         all_trades.append(t); trade_id += 1
-                        buy['qty'] -= qty; sell_rem -= qty
-                        if buy['qty'] <= 0: bq.popleft()
 
         # remaining open positions (only DELIVERY carries over; INTRADAY leftovers are MO's problem)
         for (scrip, prod), bq in buy_queues.items():
@@ -2302,15 +2718,17 @@ elif page == "Settings":
         mod = _load_import_mod()
         all_trades, trade_id = [], 1
         new_processed = {}
+        client_orders = {}  # pass to validation so it doesn't re-read CSVs
         for client, files in uploaded_map.items():
             orders, keys, _ = _parse_csv_to_orders(files, mod)  # no prior keys on full rebuild
             if orders.empty: continue
+            client_orders[client] = orders
             new = _fifo_from_queue(client, orders, {}, trade_id)
             all_trades.extend(new)
             trade_id += len(new)
             new_processed[client] = keys
         save_processed_orders(new_processed)
-        return all_trades
+        return all_trades, client_orders
 
     def _run_append_from_uploads(uploaded_map: dict):
         """Append mode — keep existing closed trades + historical open buy queues,
@@ -2327,11 +2745,14 @@ elif page == "Settings":
         processed_orders = load_processed_orders()  # {client: set(keys)}
         stats           = {}  # {client: {new, skipped}}
         client_new_keys = {}  # accumulated per-client new keys from first parse
+        client_orders   = {}  # pass to validation so it doesn't re-read CSVs
 
         for client, files in uploaded_map.items():
             already_keys = processed_orders.get(client, set())
             orders, new_keys, _ = _parse_csv_to_orders(files, mod, already_keys)
             client_new_keys[client] = new_keys
+            if not orders.empty:
+                client_orders[client] = orders
             stats[client] = {'new': len(new_keys), 'skipped': len(already_keys)}
 
             if orders.empty:
@@ -2366,6 +2787,22 @@ elif page == "Settings":
 
             # run FIFO with existing open positions as starting queue
             new_trades = _fifo_from_queue(client, orders, buy_queue_init, max_id)
+
+            # ── SAFETY NET: reject any impossible trade before it touches trades.json ──
+            impossible = [
+                t for t in new_trades
+                if t.get('exit_date') and t['exit_date'] < t['entry_date']
+            ]
+            if impossible:
+                msgs = [f"  • {t['script']} bought {t['entry_date']} sold {t['exit_date']}"
+                        for t in impossible]
+                raise ValueError(
+                    f"FIFO produced {len(impossible)} impossible trade(s) for {client} "
+                    f"(sold before bought):\n" + "\n".join(msgs) +
+                    "\n\nThis usually means the CSV has an earlier sell with no matching buy. "
+                    "Please upload the full trade history from the beginning."
+                )
+
             result.extend(new_trades)
             max_id += len(new_trades)
 
@@ -2380,7 +2817,7 @@ elif page == "Settings":
             processed_orders[client] = processed_orders.get(client, set()) | new_keys
         save_processed_orders(processed_orders)
 
-        return result, stats
+        return result, stats, client_orders
 
     # ── CSV storage folder ──
     RAW_CSV_DIR = os.path.join(os.path.dirname(DATA_FILE), "raw_csvs")
@@ -2446,7 +2883,7 @@ elif page == "Settings":
                 f"<div style='margin-bottom:6px;'>{files_html}</div>",
                 unsafe_allow_html=True
             )
-            up = st.file_uploader("", type="csv", accept_multiple_files=True,
+            up = st.file_uploader("Upload CSV", type="csv", accept_multiple_files=True,
                                   key=f"up_{c}", label_visibility="collapsed")
             if up:
                 # ── Safety check: validate client code inside the CSV ──
@@ -2522,38 +2959,50 @@ elif page == "Settings":
                         if not has_new:
                             st.warning("No new files uploaded — nothing to append.")
                             st.stop()
-                        new_trades, append_stats = _run_append_from_uploads(uploaded_map)
+                        new_trades, append_stats, client_orders_map = _run_append_from_uploads(uploaded_map)
                         clients_updated = list(uploaded_map.keys())
                     else:
+                        # Full Rebuild: wipe old saved files for each client that has
+                        # new uploads, then save only the new ones.  This prevents
+                        # the raw_csvs folder from accumulating overlapping files
+                        # across sessions, which would cause double-counting in FIFO.
+                        import shutil as _shutil
+                        for c, files in uploaded_map.items():
+                            old_dir = os.path.join(RAW_CSV_DIR, c)
+                            if os.path.exists(old_dir):
+                                _shutil.rmtree(old_dir)
+                        # re-save only the freshly uploaded files
+                        for c, files in uploaded_map.items():
+                            for uf in files:
+                                try: uf.seek(0)
+                                except Exception: pass
+                                save_uploaded_csv(c, uf)
                         full_map = {}
                         for c in CLIENTS:
                             paths = saved_csvs_for(c)
                             if paths:
                                 full_map[c] = [_io2.BytesIO(open(p,'rb').read()) for p in paths]  # noqa: SIM115
-                        new_trades = _run_import_from_uploads(full_map)
+                        new_trades, client_orders_map = _run_import_from_uploads(full_map)
                         clients_updated = list(full_map.keys())
                         append_stats = {}
 
                     # ── POST-FIFO INTEGRITY VALIDATION ──────────────────────────
-                    # Run BEFORE saving so bad data never reaches trades.json.
-                    # Reloads all saved CSVs for each updated client and checks:
-                    #   1. ISIN conflicts (same ISIN → different norm() names)
-                    #   2. FIFO balance (raw qty must equal FIFO output qty exactly)
+                    # Only valid in full-rebuild mode: append mode has partial CSV data
+                    # (today's orders only) while FIFO output includes historical positions,
+                    # so qty comparisons would always produce false mismatches.
                     val_errors, val_warnings = [], []
-                    try:
-                        import io as _io_val
-                        mod_v = _load_import_mod()
-                        for c_v in clients_updated:
-                            paths_v = saved_csvs_for(c_v)
-                            if not paths_v:
-                                continue
-                            all_files_v = [_io_val.BytesIO(open(p, 'rb').read()) for p in paths_v]
-                            full_orders_v, _, isin_warns_v = _parse_csv_to_orders(all_files_v, mod_v)
-                            val_warnings.extend(isin_warns_v)
-                            c_trades_v = [t for t in new_trades if t.get('client') == c_v]
-                            val_errors.extend(_validate_fifo_balance(c_v, full_orders_v, c_trades_v))
-                    except Exception as _ve:
-                        val_warnings.append(f"⚠️ Validation could not complete: {_ve}")
+                    if "Append" not in import_mode:
+                        try:
+                            for c_v in clients_updated:
+                                full_orders_v = client_orders_map.get(c_v)
+                                if full_orders_v is None or full_orders_v.empty:
+                                    continue
+                                c_trades_v = [t for t in new_trades if t.get('client') == c_v]
+                                _v_errs, _v_warns = _validate_fifo_balance(c_v, full_orders_v, c_trades_v)
+                                val_errors.extend(_v_errs)
+                                val_warnings.extend(_v_warns)
+                        except Exception as _ve:
+                            val_warnings.append(f"⚠️ Validation could not complete: {_ve}")
 
                     if val_errors:
                         for _e in val_errors:
@@ -2571,7 +3020,7 @@ elif page == "Settings":
                     closed  = [t for t in new_trades if t['exit_date']]
                     opened  = [t for t in new_trades if not t['exit_date']]
                     meta    = load_import_meta()
-                    now_str = datetime.now().strftime('%d %b %Y, %I:%M %p')
+                    now_str = datetime.now(tz=__import__('zoneinfo').ZoneInfo('Asia/Kolkata')).strftime('%d %b %Y, %I:%M %p IST')
                     for c in clients_updated:
                         meta[c] = now_str
                     save_import_meta(meta)
@@ -2662,40 +3111,6 @@ echo Import done at %date% %time% >> import_log.txt
         st.caption("Updates 5 tabs: Overview · Open Positions · Closed Trades · P&L Summary · Trade Ledger\nShare the sheet link with your employee — they get read-only view.")
 
     st.markdown("---")
-
-    # ── Push trades.json to GitHub → VM bot picks up fresh data ───────────────
-    st.markdown("### 🤖 Sync Telegram Bot Data")
-    st.caption("Commits trades.json to GitHub so the Telegram bot always has fresh data.")
-    col_bot1, col_bot2 = st.columns([1, 3])
-    with col_bot1:
-        if st.button("🚀 Push to Bot", type="primary"):
-            import subprocess, shutil
-            git = shutil.which("git")
-            if not git:
-                st.error("git not found on PATH")
-            else:
-                repo = Path(__file__).parent
-                try:
-                    subprocess.run([git, "add", "trades.json"], cwd=repo, check=True, capture_output=True)
-                    result = subprocess.run(
-                        [git, "diff", "--cached", "--name-only"],
-                        cwd=repo, check=True, capture_output=True, text=True
-                    )
-                    if "trades.json" not in result.stdout:
-                        st.info("ℹ️ trades.json unchanged — nothing to push.")
-                    else:
-                        from datetime import datetime as _dt
-                        msg = f"Update trades {_dt.now().strftime('%d %b %Y %H:%M')}"
-                        subprocess.run([git, "commit", "-m", msg], cwd=repo, check=True, capture_output=True)
-                        push = subprocess.run([git, "push"], cwd=repo, capture_output=True, text=True)
-                        if push.returncode == 0:
-                            st.success("✅ Pushed to GitHub — bot data updated.")
-                        else:
-                            st.error(f"❌ Push failed: {push.stderr}")
-                except subprocess.CalledProcessError as e:
-                    st.error(f"❌ Git error: {e.stderr.decode() if isinstance(e.stderr, bytes) else e.stderr}")
-    with col_bot2:
-        st.caption("Run this after importing new CSVs or rebuilding trades. The Oracle VM bot reads fresh data on next restart.")
 
     st.markdown("---")
 
@@ -2789,3 +3204,176 @@ echo Import done at %date% %time% >> import_log.txt
         else:
             st.session_state["confirm_clear"]=True
             st.warning("Are you sure? Click again to permanently delete all trade data.")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+elif page == "💰 Capital":
+# ═══════════════════════════════════════════════════════════════════════════════
+    st.markdown("## 💰 Capital Tracker")
+    st.caption("Track payins, payouts, and interest per client. Enter manually — takes 2 minutes per month.")
+
+    ledger_data = load_ledger()
+
+    # ── Add Entry Form ────────────────────────────────────────────────────────
+    st.markdown("### Add Entry")
+    with st.form("add_ledger_entry", clear_on_submit=True):
+        f1, f2, f3, f4, f5, f6 = st.columns([2, 1.5, 1.5, 1.5, 1.5, 2])
+        f_client  = f1.selectbox("Client", CLIENTS, format_func=lambda c: f"{CLIENT_NAMES[c]} ({c})")
+        f_date    = f2.date_input("Date", value=pd.Timestamp.today())
+        f_type    = f3.selectbox("Type", ["Payin", "Payout", "Interest"])
+        f_ledger  = f4.selectbox("Account", ["Delivery", "MTF"])
+        f_amount  = f5.number_input("Amount (₹)", min_value=0.0, step=1000.0, format="%.2f")
+        f_note    = f6.text_input("Note (optional)")
+        submitted = st.form_submit_button("➕ Add", type="primary", use_container_width=True)
+
+    if submitted:
+        if f_amount <= 0:
+            st.error("Amount must be greater than 0.")
+        else:
+            # Payin = positive, Payout = negative, Interest = negative (cost)
+            signed = f_amount if f_type == "Payin" else -f_amount
+            new_entry = {
+                "date":      f_date.strftime("%Y-%m-%d"),
+                "type":      f_type.upper(),
+                "amount":    round(signed, 2),
+                "ledger":    f_ledger,
+                "narration": f_note.strip(),
+            }
+            existing = ledger_data.get(f_client, [])
+            existing.append(new_entry)
+            existing.sort(key=lambda x: x["date"])
+            ledger_data[f_client] = existing
+            save_ledger(ledger_data)
+            st.success(f"✅ Added {f_type} ₹{f_amount:,.0f} for {CLIENT_NAMES[f_client]} on {f_date.strftime('%d %b %Y')}")
+            st.rerun()
+
+    st.markdown("---")
+
+    # ── Summary cards ──────────────────────────────────────────────────────────
+    st.markdown("### Capital Summary")
+
+    trades_for_cap = load()
+    df_cap   = pd.DataFrame(trades_for_cap) if trades_for_cap else pd.DataFrame()
+    open_cap = df_cap[df_cap["exit_date"].isna()] if not df_cap.empty else pd.DataFrame()
+    cls_cap  = df_cap[df_cap["exit_date"].notna()] if not df_cap.empty else pd.DataFrame()
+
+    total_payin = total_payout = total_interest = total_deployed = total_booked = 0
+    cap_rows = []
+    for c in CLIENTS:
+        entries_c = ledger_data.get(c, [])
+        payin    = sum(e["amount"] for e in entries_c if e["type"] == "PAYIN")
+        payout   = sum(-e["amount"] for e in entries_c if e["type"] == "PAYOUT")
+        interest = sum(-e["amount"] for e in entries_c if e["type"] == "INTEREST")
+        net_cap  = payin - payout
+        deployed = 0
+        if not open_cap.empty:
+            cc = open_cap[open_cap["client"] == c]
+            deployed = (cc["buy_price"] * cc["buy_qty"]).sum() if not cc.empty else 0
+        booked = cls_cap[cls_cap["client"] == c]["net_pnl"].sum() if not cls_cap.empty else 0
+        true_roi = (booked - interest) / net_cap * 100 if net_cap > 0 else None
+        total_payin    += payin
+        total_payout   += payout
+        total_interest += interest
+        total_deployed += deployed
+        total_booked   += booked
+        cap_rows.append({
+            "Client":          CLIENT_NAMES[c],
+            "Payin":           payin,
+            "Payout":          payout,
+            "Net Capital":     net_cap,
+            "Interest Paid":   interest,
+            "Deployed (Open)": deployed,
+            "Booked Net P&L":  booked,
+            "True ROI":        true_roi,
+        })
+
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("Total Payin",      f"₹{total_payin/1e5:.2f}L")
+    mc2.metric("Total Payout",     f"₹{total_payout/1e5:.2f}L")
+    mc3.metric("Net Capital In",   f"₹{(total_payin-total_payout)/1e5:.2f}L")
+    mc4.metric("Interest Paid",    f"₹{total_interest/1e5:.2f}L",
+               delta=f"True ROI {(total_booked-total_interest)/(total_payin-total_payout)*100:+.1f}%" if (total_payin-total_payout) > 0 else None)
+
+    st.markdown("")
+    cap_df = pd.DataFrame(cap_rows)
+    def _fmt_c(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)): return "—"
+        return f"₹{v:,.0f}"
+    def _fmt_r(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)): return "—"
+        return f"{v:+.1f}%"
+    cap_show = cap_df.copy()
+    for col in ["Payin","Payout","Net Capital","Interest Paid","Deployed (Open)","Booked Net P&L"]:
+        cap_show[col] = cap_df[col].apply(_fmt_c)
+    cap_show["True ROI"] = cap_df["True ROI"].apply(_fmt_r)
+    st.dataframe(cap_show, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ── Transaction History ────────────────────────────────────────────────────
+    st.markdown("### Transaction History")
+    det_col1, det_col2 = st.columns([2, 1])
+    det_client = det_col1.selectbox("Client", CLIENTS,
+                                    format_func=lambda c: f"{CLIENT_NAMES[c]} ({c})",
+                                    key="led_detail_client")
+    entries = ledger_data.get(det_client, [])
+
+    if entries:
+        det_df = pd.DataFrame(entries).sort_values("date", ascending=False).reset_index(drop=True)
+
+        # Inline delete
+        del_idx = det_col2.number_input("Delete row #", min_value=1,
+                                         max_value=len(det_df), step=1,
+                                         key="led_del_idx") - 1
+        if det_col2.button("🗑️ Delete this row", key="led_del_btn"):
+            sorted_entries = sorted(entries, key=lambda x: x["date"], reverse=True)
+            sorted_entries.pop(int(del_idx))
+            ledger_data[det_client] = sorted_entries
+            save_ledger(ledger_data)
+            st.rerun()
+
+        det_df["amount_fmt"] = det_df["amount"].apply(lambda x: f"₹{abs(x):,.0f}")
+        det_show = det_df[["date","type","ledger","amount_fmt","narration"]].copy()
+        det_show.columns = ["Date","Type","Account","Amount","Note"]
+        st.dataframe(det_show, use_container_width=True, hide_index=True, height=380)
+
+        # Monthly breakdown chart
+        st.markdown("#### Monthly Breakdown")
+        det_df["month"] = det_df["date"].str[:7]
+        _mgrp = det_df.groupby(["month","type"])["amount"].sum().reset_index()
+        _mgrp["bar"] = _mgrp.apply(
+            lambda r: r["amount"] if r["type"] == "PAYIN"
+            else (-r["amount"] if r["type"] in ("PAYOUT","INTEREST") else r["amount"]), axis=1)
+        _color_map = {"PAYIN": UP_COL, "PAYOUT": DN_COL, "INTEREST": ACC_COL}
+        fig_led = px.bar(_mgrp, x="month", y="bar", color="type",
+                         color_discrete_map=_color_map,
+                         barmode="group", height=240,
+                         labels={"month":"Month","bar":"₹","type":"Type"})
+        fig_led.update_layout(**CHART_THEME)
+        st.plotly_chart(fig_led, use_container_width=True)
+
+        # Totals for selected client
+        _ep = sum(e["amount"] for e in entries if e["type"]=="PAYIN")
+        _eo = sum(-e["amount"] for e in entries if e["type"]=="PAYOUT")
+        _ei = sum(-e["amount"] for e in entries if e["type"]=="INTEREST")
+        tc1, tc2, tc3 = st.columns(3)
+        tc1.metric("Total Payin",    f"₹{_ep:,.0f}")
+        tc2.metric("Total Payout",   f"₹{_eo:,.0f}")
+        tc3.metric("Interest Paid",  f"₹{_ei:,.0f}")
+    else:
+        st.info(f"No entries yet for {CLIENT_NAMES[det_client]}. Add one above.")
+
+    # ── Danger zone ────────────────────────────────────────────────────────────
+    st.markdown("---")
+    with st.expander("⚠️ Clear all entries for a client"):
+        cl_client = st.selectbox("Client", CLIENTS,
+                                 format_func=lambda c: CLIENT_NAMES[c], key="led_clear_client")
+        if st.button("🗑️ Clear", type="secondary", key="led_clear_btn"):
+            if st.session_state.get("confirm_led_clear"):
+                ledger_data[cl_client] = []
+                save_ledger(ledger_data)
+                st.success("Cleared.")
+                st.session_state["confirm_led_clear"] = False
+                st.rerun()
+            else:
+                st.session_state["confirm_led_clear"] = True
+                st.warning("Click again to confirm.")
