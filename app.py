@@ -2959,8 +2959,35 @@ elif page == "Settings":
                         if not has_new:
                             st.warning("No new files uploaded — nothing to append.")
                             st.stop()
-                        new_trades, append_stats, client_orders_map = _run_append_from_uploads(uploaded_map)
-                        clients_updated = list(uploaded_map.keys())
+                        # Save new files to raw_csvs first, then rebuild each affected
+                        # client from ALL their saved CSVs so ISIN unification always
+                        # runs across the full trade history (prevents name-mismatch bugs).
+                        for c, files in uploaded_map.items():
+                            for uf in files:
+                                try: uf.seek(0)
+                                except Exception: pass
+                                save_uploaded_csv(c, uf)
+                        append_map = {}
+                        for c in uploaded_map:
+                            paths = saved_csvs_for(c)
+                            if paths:
+                                append_map[c] = [_io2.BytesIO(open(p, 'rb').read()) for p in paths]  # noqa: SIM115
+                        # full FIFO for affected clients; merge with other clients from trades.json
+                        partial_trades, client_orders_map = _run_import_from_uploads(append_map)
+                        existing_all = load()
+                        updated_clients_set = set(append_map.keys())
+                        other_trades = [t for t in existing_all if t.get('client') not in updated_clients_set]
+                        new_trades = other_trades + partial_trades
+                        # count genuinely new orders for the stats display
+                        processed_orders = load_processed_orders()
+                        append_stats = {}
+                        for c, files in uploaded_map.items():
+                            already_keys = processed_orders.get(c, set())
+                            _, new_keys, _ = _parse_csv_to_orders(files, _load_import_mod(), already_keys)
+                            append_stats[c] = {'new': len(new_keys), 'skipped': len(already_keys)}
+                            processed_orders[c] = already_keys | new_keys
+                        save_processed_orders(processed_orders)
+                        clients_updated = list(append_map.keys())
                     else:
                         # Full Rebuild: wipe old saved files for each client that has
                         # new uploads, then save only the new ones.  This prevents
@@ -2987,11 +3014,8 @@ elif page == "Settings":
                         append_stats = {}
 
                     # ── POST-FIFO INTEGRITY VALIDATION ──────────────────────────
-                    # Only valid in full-rebuild mode: append mode has partial CSV data
-                    # (today's orders only) while FIFO output includes historical positions,
-                    # so qty comparisons would always produce false mismatches.
                     val_errors, val_warnings = [], []
-                    if "Append" not in import_mode:
+                    if True:  # runs for both Append and Full Rebuild (both now use full raw_csvs)
                         try:
                             for c_v in clients_updated:
                                 full_orders_v = client_orders_map.get(c_v)
