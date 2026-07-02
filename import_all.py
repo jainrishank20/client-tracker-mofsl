@@ -196,26 +196,19 @@ def load_csv(path):
     df['SCRIP'] = df['SCRIP NAME'].apply(norm)
     return df
 
-# ── gather files per client ──────────────────────────────────────────────────
-CLIENT_FILES = {
-    'RIMK1209': [
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1209 (1).csv',
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1209.csv',
-    ],
-    'RIMK1220': [
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1220 (1).csv',
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1220.csv',
-    ],
-    'RIMK1238': [
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1238.csv',
-    ],
-    'RIMK1248': [
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1248.csv',
-    ],
-    'RIMK1252': [
-        r'C:\Users\jainr\Downloads\TradeDetailsAndSummary_RIMK1252.csv',
-    ],
-}
+# ── gather files per client — auto-discover from CSV_DIR ─────────────────────
+import glob, platform
+
+if platform.system() == 'Windows':
+    CSV_DIR = r'C:\Users\jainr\Downloads\MO_Trades'
+else:
+    CSV_DIR = '/home/opc/client-tracker-mofsl/mo_csvs'
+
+CLIENT_FILES = {}
+for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_RIMK*.csv'))):
+    m = re.search(r'(RIMK\d+)', os.path.basename(f))
+    if m:
+        CLIENT_FILES.setdefault(m.group(1), []).append(f)
 
 if __name__ == '__main__':
     all_trades, trade_id = [], 1

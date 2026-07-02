@@ -1,7 +1,9 @@
-import json, urllib.request, urllib.parse
+import json, urllib.request, urllib.parse, os
+from datetime import date
 
-cfg    = json.load(open('bot_config.json'))
-trades = json.load(open('trades.json'))
+BASE   = os.path.dirname(os.path.abspath(__file__))
+cfg    = json.load(open(os.path.join(BASE, 'bot_config.json')))
+trades = json.load(open(os.path.join(BASE, 'trades.json')))
 
 open_t   = [t for t in trades if not t.get('exit_date')]
 closed_t = [t for t in trades if t.get('exit_date')]
@@ -12,15 +14,23 @@ for t in closed_t:
     pnl[t['client']] = pnl.get(t['client'], 0) + p
 
 NAMES = {
-    'RIMK1209': 'Sathyavrath', 'RIMK1220': 'Kalpana',
-    'RIMK1238': 'Iranna',      'RIMK1248': 'Udayakumar',
-    'RIMK1249': 'Sundareshwari', 'RIMK1252': 'Savitha',
+    'RIMK1205': 'Siva Sankara Reddy',
+    'RIMK1209': 'Sathyavrath',
+    'RIMK1215': 'Malleswari',
+    'RIMK1220': 'Kalpana',
+    'RIMK1238': 'Iranna',
+    'RIMK1247': 'Srujana',
+    'RIMK1248': 'Udayakumar',
+    'RIMK1249': 'Sundareshwari',
+    'RIMK1252': 'Savitha',
+    'RIMK1256': 'Sheeba',
 }
 
+today = date.today().strftime('%d %b %Y')
 lines = [
-    'Full Rebuild Done',
+    '✅ Daily Update Done',
     f"{len(trades)} trades ({len(open_t)} open, {len(closed_t)} closed)",
-    'GSheet synced 02 Jul 2026',
+    f'GSheet synced {today}',
     '',
 ]
 for c, name in NAMES.items():
