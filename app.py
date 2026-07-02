@@ -609,10 +609,13 @@ def sync_to_gsheet(trades: list):
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 DATA_FILE    = os.path.join(os.path.dirname(__file__), "trades.json")
 LEDGER_FILE  = os.path.join(os.path.dirname(__file__), "ledger.json")
-CLIENTS      = ["RIMK1209","RIMK1220","RIMK1238","RIMK1248","RIMK1249","RIMK1252"]
-CLIENT_NAMES = {"RIMK1209":"Sathyavrath","RIMK1220":"Kalpana",
-                "RIMK1238":"Iranna","RIMK1248":"Udayakumar",
-                "RIMK1249":"Sundareshwari","RIMK1252":"Savitha"}
+CLIENTS      = ["RIMK1205","RIMK1209","RIMK1215","RIMK1220","RIMK1238",
+                "RIMK1247","RIMK1248","RIMK1249","RIMK1252","RIMK1256"]
+CLIENT_NAMES = {"RIMK1205":"Siva Sankara Reddy","RIMK1209":"Sathyavrath",
+                "RIMK1215":"Malleswari","RIMK1220":"Kalpana",
+                "RIMK1238":"Iranna","RIMK1247":"Srujana",
+                "RIMK1248":"Udayakumar","RIMK1249":"Sundareshwari",
+                "RIMK1252":"Savitha","RIMK1256":"Sheeba"}
 TELEGRAM_TOKEN = ""
 TELEGRAM_CHAT  = ""
 
@@ -1430,12 +1433,16 @@ def to_excel(df_dict):
 
 # ── CLIENT COLORS ─────────────────────────────────────────────────────────────
 CLIENT_COLORS = {
-    "RIMK1209": "#818cf8",   # indigo   – Sathyavrath
-    "RIMK1220": "#fb923c",   # orange   – Kalpana
-    "RIMK1238": "#a78bfa",   # violet   – Iranna
-    "RIMK1248": "#34d399",   # emerald  – Udayakumar
-    "RIMK1249": "#fbbf24",   # amber    – Sundareshwari
-    "RIMK1252": "#f472b6",   # pink     – Savitha
+    "RIMK1205": "#38bdf8",   # sky      – Siva Sankara Reddy
+    "RIMK1209": "#818cf8",   # indigo  – Sathyavrath
+    "RIMK1215": "#4ade80",   # green   – Malleswari
+    "RIMK1220": "#fb923c",   # orange  – Kalpana
+    "RIMK1238": "#a78bfa",   # violet  – Iranna
+    "RIMK1247": "#e879f9",   # fuchsia – Srujana
+    "RIMK1248": "#34d399",   # emerald – Udayakumar
+    "RIMK1249": "#fbbf24",   # amber   – Sundareshwari
+    "RIMK1252": "#f472b6",   # pink    – Savitha
+    "RIMK1256": "#f87171",   # red     – Sheeba
 }
 
 # ── TOP NAVBAR ────────────────────────────────────────────────────────────────
