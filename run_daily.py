@@ -1,8 +1,17 @@
 """
-Daily automation — runs on Windows laptop via Task Scheduler at 8:30 PM.
-1. Downloads CSVs from CBOS (Playwright on laptop)
-2. SCPs CSVs to VM
-3. SSHs into VM: import_all → gsheet sync → telegram
+Daily automation — runs via Windows Task Scheduler at 8:30 PM (Mon-Fri)
+or automatically on laptop login if the day's run was missed.
+
+Flow:
+  1. Clean old current-FY CSVs from local Downloads folder
+  2. Download fresh current-FY CSVs from CBOS (Playwright on laptop)
+  3. SCP CSVs to VM (VM already has last-FY CSVs from initial setup)
+  4. VM: import_all.py  → rebuild trades.json from ALL CSVs (both FYs)
+  5. VM: vm_sync_gsheet.py → push to Google Sheet
+  6. VM: send_notify.py → Telegram summary
+
+Run manually anytime by double-clicking "Run Daily Update" on Desktop.
+For a full rebuild (both FYs): python run_daily.py --full
 """
 import subprocess, os, glob, sys, time
 
@@ -12,64 +21,79 @@ VM_HOST  = "152.67.164.204"
 VM_DIR   = "/home/opc/client-tracker-mofsl"
 CSV_DIR  = r"C:\Users\jainr\Downloads\MO_Trades"
 BASE     = os.path.dirname(os.path.abspath(__file__))
+FULL     = "--full" in sys.argv
 
 SSH_OPTS = ["-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=30"]
 
-def ssh(cmd):
-    result = subprocess.run(
-        ["ssh"] + SSH_OPTS + [f"{VM_USER}@{VM_HOST}", cmd],
-        capture_output=True, text=True
-    )
-    print(result.stdout)
-    if result.returncode != 0:
-        print(f"STDERR: {result.stderr}")
-    return result.returncode == 0
+
+def ssh(cmd, check=False):
+    r = subprocess.run(["ssh"] + SSH_OPTS + [f"{VM_USER}@{VM_HOST}", cmd],
+                       capture_output=True, text=True)
+    print(r.stdout.strip())
+    if r.stderr.strip():
+        print(f"  stderr: {r.stderr.strip()}")
+    if check and r.returncode != 0:
+        raise RuntimeError(f"SSH command failed: {cmd}")
+    return r.returncode == 0
+
 
 def scp(local_files, remote_dir):
-    result = subprocess.run(
+    r = subprocess.run(
         ["scp"] + SSH_OPTS + local_files + [f"{VM_USER}@{VM_HOST}:{remote_dir}/"],
         capture_output=True, text=True
     )
-    print(result.stdout)
-    if result.returncode != 0:
-        print(f"SCP error: {result.stderr}")
-    return result.returncode == 0
+    if r.returncode != 0:
+        print(f"  SCP error: {r.stderr.strip()}")
+    return r.returncode == 0
 
 
-print("=" * 50)
-print(f"Daily run started: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-print("=" * 50)
+def log(msg):
+    print(f"\n{'='*55}\n{msg}\n{'='*55}")
 
-# Step 1: Download CSVs
-print("\n[1/4] Downloading CSVs from CBOS...")
-r = subprocess.run([sys.executable, os.path.join(BASE, "mo_downloader.py")])
+
+log(f"Daily run started: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+    + (" [FULL MODE]" if FULL else ""))
+
+# ── Step 1: Clean old current-FY CSVs ────────────────────────────────────────
+log("[1/5] Cleaning old CSVs from Downloads...")
+pattern = os.path.join(CSV_DIR, "TradeDetailsAndSummary_RIMK*_2026_2027.csv")
+old = glob.glob(pattern)
+for f in old:
+    os.remove(f)
+    print(f"  Deleted: {os.path.basename(f)}")
+if not old:
+    print("  Nothing to clean.")
+
+# ── Step 2: Download from CBOS ────────────────────────────────────────────────
+log("[2/5] Downloading CSVs from CBOS...")
+args = [sys.executable, os.path.join(BASE, "mo_downloader.py")]
+if FULL:
+    args.append("--full")
+r = subprocess.run(args)
 if r.returncode != 0:
     print("ERROR: Download failed. Aborting.")
     sys.exit(1)
 
-# Step 2: SCP CSVs to VM
-print("\n[2/4] Uploading CSVs to VM...")
+# ── Step 3: SCP to VM ────────────────────────────────────────────────────────
+log("[3/5] Uploading CSVs to VM...")
 csvs = glob.glob(os.path.join(CSV_DIR, "TradeDetailsAndSummary_RIMK*.csv"))
 if not csvs:
-    print("No CSV files found. Aborting.")
+    print("No CSV files found after download. Aborting.")
     sys.exit(1)
-print(f"  Uploading {len(csvs)} files...")
+print(f"  Uploading {len(csvs)} file(s)...")
 ssh(f"mkdir -p {VM_DIR}/mo_csvs")
 if not scp(csvs, f"{VM_DIR}/mo_csvs"):
-    print("ERROR: SCP failed. Aborting.")
+    print("ERROR: Upload failed. Aborting.")
     sys.exit(1)
-print(f"  Uploaded {len(csvs)} CSVs to VM.")
+print(f"  Uploaded {len(csvs)} CSV(s).")
 
-# Step 3: Import on VM
-print("\n[3/4] Running import on VM...")
-ok = ssh(f"cd {VM_DIR} && python3 import_all.py 2>&1")
-if not ok:
-    print("WARNING: Import may have failed.")
+# ── Step 4: Import on VM ─────────────────────────────────────────────────────
+log("[4/5] Rebuilding trades on VM...")
+ssh(f"cd {VM_DIR} && python3 import_all.py 2>&1", check=True)
 
-# Step 4: GSheet sync + Telegram on VM
-print("\n[4/4] Syncing GSheet and sending Telegram...")
-ssh(f"cd {VM_DIR} && python3 vm_sync_gsheet.py 2>&1 && python3 send_notify.py 2>&1")
+# ── Step 5: GSheet + Telegram ────────────────────────────────────────────────
+log("[5/5] Syncing Google Sheet and sending Telegram...")
+ssh(f"cd {VM_DIR} && python3 vm_sync_gsheet.py 2>&1")
+ssh(f"cd {VM_DIR} && python3 send_notify.py 2>&1")
 
-print("\n" + "=" * 50)
-print(f"Daily run completed: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-print("=" * 50)
+log(f"Daily run completed: {time.strftime('%Y-%m-%d %H:%M:%S')}")

@@ -1,22 +1,11 @@
 """
 Motilal Oswal CBOS - Automated Trade CSV Downloader
-Logs in with OTP, downloads Trade Details (DETAIL report) for each client.
-
-Requirements:
-    pip install playwright
-    playwright install chromium
 
 Usage:
-    python mo_downloader.py
+    python mo_downloader.py           # current FY only (daily use)
+    python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
-
-import asyncio
-import imaplib
-import email
-import email.utils
-import re
-import os
-import time
+import asyncio, imaplib, email, email.utils, re, os, sys, time, glob
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
@@ -27,24 +16,16 @@ GMAIL_USER         = "jainrishank20@gmail.com"
 GMAIL_APP_PASSWORD = "chos xzci zyso zzef"
 
 CLIENTS = [
-    "RIMK1205",
-    "RIMK1209",
-    "RIMK1215",
-    "RIMK1220",
-    "RIMK1238",
-    "RIMK1247",
-    "RIMK1248",
-    "RIMK1249",
-    "RIMK1252",
-    "RIMK1256",
+    "RIMK1205","RIMK1209","RIMK1215","RIMK1220","RIMK1238",
+    "RIMK1247","RIMK1248","RIMK1249","RIMK1252","RIMK1256",
 ]
 
 DOWNLOAD_DIR = r"C:\Users\jainr\Downloads\MO_Trades"
 LOGIN_URL    = "https://backoffice.motilaloswal.com/Login.aspx"
+DATE_OPTION  = "Current Financial Year"
 
-# "Today" | "Yesterday" | "Current Financial Year"
-DATE_OPTION      = "Current Financial Year"
-FINANCIAL_YEARS  = ["2025-2026", "2026-2027"]  # downloads both FYs for full rebuild
+FULL_MODE       = "--full" in sys.argv
+FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
