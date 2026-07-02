@@ -2470,7 +2470,10 @@ elif page == "Settings":
             raw_buy  = round(float(sp[sp['SELL/BUY'] == 'B']['qty'].sum()), 2)
             raw_sell = round(float(sp[sp['SELL/BUY'] == 'S']['qty'].sum()), 2)
             ct = [t for t in client_trades if t['script'] == scrip]
-            fifo_buy  = round(sum(t['buy_qty']  for t in ct), 2)
+            # Exclude pre-existing position entries from buy count — those are synthetic
+            # buys added when a sell has no matching buy in the uploaded CSV history.
+            # They are expected and should not be compared against CSV buy totals.
+            fifo_buy  = round(sum(t['buy_qty']  for t in ct if t.get('notes') != 'pre-existing position'), 2)
             fifo_sell = round(sum(t['sell_qty'] for t in ct), 2)
             diff_b = round(fifo_buy - raw_buy, 2)
             diff_s = round(fifo_sell - raw_sell, 2)
