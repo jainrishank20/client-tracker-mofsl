@@ -197,7 +197,7 @@ def load_csv(path):
     return df
 
 # ── gather files per client — auto-discover from CSV_DIR ─────────────────────
-import glob, platform
+import glob, platform, re
 
 if platform.system() == 'Windows':
     CSV_DIR = r'C:\Users\jainr\Downloads\MO_Trades'
