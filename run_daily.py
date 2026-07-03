@@ -56,7 +56,7 @@ log(f"Daily run started: {time.strftime('%Y-%m-%d %H:%M:%S')}"
 
 # ── Step 1: Clean old current-FY CSVs ────────────────────────────────────────
 log("[1/5] Cleaning old CSVs from Downloads...")
-pattern = os.path.join(CSV_DIR, "TradeDetailsAndSummary_RIMK*_2026_2027.csv")
+pattern = os.path.join(CSV_DIR, "TradeDetailsAndSummary_RIMK*.csv")
 old = glob.glob(pattern)
 for f in old:
     os.remove(f)
@@ -75,17 +75,21 @@ if r.returncode != 0:
     sys.exit(1)
 
 # ── Step 3: SCP to VM ────────────────────────────────────────────────────────
-log("[3/5] Uploading CSVs to VM...")
+# (ledger.json is scraped inside mo_downloader.py in the same CBOS session)
+log("[3/5] Uploading CSVs + ledger to VM...")
 csvs = glob.glob(os.path.join(CSV_DIR, "TradeDetailsAndSummary_RIMK*.csv"))
 if not csvs:
     print("No CSV files found after download. Aborting.")
     sys.exit(1)
-print(f"  Uploading {len(csvs)} file(s)...")
+print(f"  Uploading {len(csvs)} CSV(s)...")
 ssh(f"mkdir -p {VM_DIR}/mo_csvs")
 if not scp(csvs, f"{VM_DIR}/mo_csvs"):
     print("ERROR: Upload failed. Aborting.")
     sys.exit(1)
-print(f"  Uploaded {len(csvs)} CSV(s).")
+ledger_path = os.path.join(BASE, "ledger.json")
+if os.path.exists(ledger_path):
+    scp([ledger_path], VM_DIR)
+    print("  Uploaded ledger.json")
 
 # ── Step 4: Import on VM ─────────────────────────────────────────────────────
 log("[4/5] Rebuilding trades on VM...")

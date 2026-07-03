@@ -491,6 +491,92 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         await close_download_modal(page)
 
 
+async def scrape_ledger_balances(page, home_url: str) -> dict:
+    """Scrape COMBINED+MTF Voucher Ledger balance for all clients.
+    Reuses the existing CBOS session — call this after CSV downloads."""
+    import json as _json
+    from mo_ledger_scraper import (parse_indian, get_popup_balance, close_popup,
+                                   click_segment_link, navigate_to_financial_summary,
+                                   dismiss_any_popup, go_home)
+
+    ledger = {}
+    print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
+
+    for client in CLIENTS:
+        print(f"\n  {client}...")
+        try:
+            await go_home(page, home_url)
+            await dismiss_any_popup(page)
+
+            inp = page.locator('#txtClientCode')
+            await inp.wait_for(state='visible', timeout=10000)
+            await inp.click()
+            await page.keyboard.press('Control+A')
+            await inp.type(client, delay=80)
+            await asyncio.sleep(1.5)
+            await page.keyboard.press('ArrowDown')
+            await asyncio.sleep(0.3)
+            await page.keyboard.press('Enter')
+            await asyncio.sleep(0.5)
+
+            async with page.context.expect_page(timeout=6000) as new_page_info:
+                await page.locator('#btnView_ClientDashboard').click()
+            dash_page = await new_page_info.value
+            await dash_page.wait_for_load_state('domcontentloaded', timeout=10000)
+            await asyncio.sleep(2)
+
+            fs_loaded = await navigate_to_financial_summary(dash_page)
+            if not fs_loaded:
+                print(f"    Financial Summary not found")
+                await dash_page.close()
+                ledger[client] = {'combined': 0.0, 'mtf': 0.0}
+                continue
+
+            await asyncio.sleep(1)
+            await dash_page.evaluate("""
+                () => {
+                    for (const btn of document.querySelectorAll('button, .close, [class*="close"]')) {
+                        if (window.getComputedStyle(btn).display === 'none') continue;
+                        if (btn.textContent.trim() === '×' || btn.innerHTML.includes('×')) {
+                            btn.click(); return;
+                        }
+                    }
+                }
+            """)
+            await asyncio.sleep(0.5)
+
+            combined_bal = 0.0
+            if await click_segment_link(dash_page, 'COMBINED'):
+                combined_bal = await get_popup_balance(dash_page)
+                print(f"    COMBINED = {combined_bal:,.2f}")
+                await close_popup(dash_page)
+            else:
+                print(f"    COMBINED not found")
+
+            await asyncio.sleep(0.5)
+
+            mtf_bal = 0.0
+            if await click_segment_link(dash_page, 'MTF'):
+                mtf_bal = await get_popup_balance(dash_page)
+                print(f"    MTF      = {mtf_bal:,.2f}")
+                await close_popup(dash_page)
+            else:
+                print(f"    MTF      = 0")
+
+            await dash_page.close()
+            ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
+
+        except Exception as e:
+            print(f"    ERROR: {e}")
+            ledger[client] = {'combined': 0.0, 'mtf': 0.0}
+
+    out_path = os.path.join(BASE, 'ledger.json')
+    with open(out_path, 'w') as f:
+        _json.dump(ledger, f, indent=2)
+    print(f"\nLedger saved: {out_path}")
+    return ledger
+
+
 async def main():
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
@@ -499,6 +585,7 @@ async def main():
         page = await browser.new_page()
 
         await login(page)
+        home_url = page.url
 
         first = True
         for fy in FINANCIAL_YEARS:
@@ -509,8 +596,11 @@ async def main():
                     first = False
                 except Exception as e:
                     print(f"  ERROR for {client} [{fy}]: {e}")
-                    await close_download_modal(page)  # ensure modal doesn't block next client
+                    await close_download_modal(page)
                     first = False
+
+        # Scrape ledger in the same session — no second login needed
+        await scrape_ledger_balances(page, home_url)
 
         await browser.close()
 

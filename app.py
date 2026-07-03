@@ -208,13 +208,27 @@ def sync_to_gsheet(trades: list):
             format_cell_ranges(ws, ranges)
 
     # ── Build Google Finance formula map ────────────────────────────────────────
+    import re as _re
+    _SUFFIX_RE = _re.compile(
+        r'\s+(LIMITED|LTD\.?|CO\.?\s*LTD\.?|CORP\.?|PVT\.?|INC\.?|INDUSTRIES|IND\.?)\.?$',
+        _re.IGNORECASE
+    )
+    def _normalize_script(s):
+        """Strip trailing Ltd/Limited/etc for SYMBOL_MAP fallback lookup."""
+        return _SUFFIX_RE.sub('', s.strip()).strip()
+
     def gfinance_formula(script):
-        """Returns =GOOGLEFINANCE("NSE:TICKER","price") formula for a script."""
         overrides = load_ticker_overrides()
         if script in overrides and overrides[script]:
             sym = overrides[script].strip().upper().replace(".NS","")
-        else:
-            sym = SYMBOL_MAP.get(script, script.replace(" ","").replace("&","").replace(".",""))
+            return f'=GOOGLEFINANCE("NSE:{sym}","price")'
+        if script in SYMBOL_MAP:
+            return f'=GOOGLEFINANCE("NSE:{SYMBOL_MAP[script]}","price")'
+        norm = _normalize_script(script)
+        if norm in SYMBOL_MAP:
+            return f'=GOOGLEFINANCE("NSE:{SYMBOL_MAP[norm]}","price")'
+        # last resort: strip all punctuation/spaces
+        sym = _re.sub(r'[^A-Z0-9&]', '', script.upper())
         return f'=GOOGLEFINANCE("NSE:{sym}","price")'
 
     # also keep python CMP for overview unrealized calc
@@ -1212,6 +1226,121 @@ SYMBOL_MAP = {
     "TCS":                        "TCS",
     "CEMINDIA PROJECTS LIMITED":  "CEMPRO",
     "JAIN RESOURCE RECYCLING LIMITE": "JAINREC",
+    # base names (suffix-stripped versions matched by gfinance_formula normalizer)
+    "ETERNAL":                    "ETERNAL",
+    "FEDERAL BANK":               "FEDERALBNK",
+    "GRANULES INDIA":             "GRANULES",
+    "GRASIM INDUSTRIES":          "GRASIM",
+    "ICICI BANK":                 "ICICIBANK",
+    "IDBI BANK":                  "IDBI",
+    "INDUS TOWERS":               "INDUSTOWER",
+    "INFO EDGE (I)":              "NAUKRI",
+    "INFO EDGE":                  "NAUKRI",
+    "KOTAK MAHINDRA BANK":        "KOTAKBANK",
+    "MAHINDRA & MAHINDRA":        "M&M",
+    "MAHINDRA LIFESPACE DEVLTD":  "MAHLIFE",
+    "MAHINDRA LIFESPACE DEV":     "MAHLIFE",
+    "MAHINDRA LIFESPACE":         "MAHLIFE",
+    "MINDA CORPORATION":          "MINDACORP",
+    "MMTC LTD.":                  "MMTC",
+    "ONE 97 COMMUNICATIONS":      "PAYTM",
+    "PNB HOUSING FIN":            "PNBHOUSING",
+    "PNB HOUSING FINANCE":        "PNBHOUSING",
+    "PRESTIGE ESTATE":            "PRESTIGE",
+    "PRESTIGE ESTATES":           "PRESTIGE",
+    "SBI LIFE INSURANCE CO":      "SBILIFE",
+    "SBI LIFE INSURANCE":         "SBILIFE",
+    "SHRIRAM FINANCE":            "SHRIRAMFIN",
+    "STATE BANK OF INDIA":        "SBIN",
+    "SUPRIYA LIFESCIENCE":        "SUPRIYA",
+    "SWIGGY":                     "SWIGGY",
+    "SYNGENE INTERNATIONAL":      "SYNGENE",
+    "TATA COMMUNICATIONS":        "TATACOMM",
+    "TATA POWER CO":              "TATAPOWER",
+    "TATA POWER":                 "TATAPOWER",
+    "TATA STEEL":                 "TATASTEEL",
+    "TECH MAHINDRA":              "TECHM",
+    "UNITED SPIRITS":             "MCDOWELL-N",
+    "VARROC ENGINEERING":         "VARROC",
+    "ZERODHAAMC - LIQUIDCASE":    "LIQUIDCASE",
+    "INDIAN RAILWAY FIN CORP L":  "IRFC",
+    "INDIAN RAILWAY FIN CORP":    "IRFC",
+    "INDIAN RAILWAY FINANCE":     "IRFC",
+    "LUPIN LTD.":                 "LUPIN",
+    "PARADEEP PHOSPHATES":        "PARADEEP",
+    "AARTI INDUSTRIES":           "AARTIIND",
+    "VEDANT FASHIONS":            "MANYAVAR",
+    "MANKIND PHARMA":             "MANKIND",
+    "JSWINFRA":                   "JSWINFRA",
+    "JSW INFRASTRUCTURE":         "JSWINFRA",
+    "TATA MOTORS":                "TATAMOTORS",
+    "TATA CONSULTANCY":           "TCS",
+    "LARSEN & TOUBRO":            "LT",
+    "HINDUSTAN UNILEVER":         "HINDUNILVR",
+    "ASIAN PAINTS":               "ASIANPAINT",
+    "BAJAJ FINANCE":              "BAJFINANCE",
+    "BAJAJ FINSERV":              "BAJAJFINSV",
+    "MARUTI SUZUKI":              "MARUTI",
+    "SUN PHARMACEUTICAL":         "SUNPHARMA",
+    "SUN PHARMA":                 "SUNPHARMA",
+    "DR REDDY":                   "DRREDDY",
+    "DR. REDDY S LABORATORIES":   "DRREDDY",
+    "DR. REDDY'S LABORATORIES":   "DRREDDY",
+    "CIPLA":                      "CIPLA",
+    "AXIS BANK":                  "AXISBANK",
+    "POWER GRID":                 "POWERGRID",
+    "COAL INDIA":                 "COALINDIA",
+    "OIL AND NATURAL GAS":        "ONGC",
+    "OIL & NATURAL GAS":          "ONGC",
+    "BHARAT PETROLEUM":           "BPCL",
+    "INDIAN OIL":                 "IOC",
+    "HERO MOTOCORP":              "HEROMOTOCO",
+    "GLAND PHARMA":               "GLAND",
+    "METROPOLIS HEALTHCARE":      "METROPOLIS",
+    "DEEPAK NITRITE":             "DEEPAKNTR",
+    "NAVIN FLUORINE":             "NAVINFLUOR",
+    "VINATI ORGANICS":            "VINATIORGA",
+    "ATUL":                       "ATUL",
+    "SUMITOMO CHEMICAL":          "SUMICHEM",
+    "ROSSARI BIOTECH":            "ROSSARI",
+    "FINE ORGANIC":               "FINEORG",
+    "GALAXY SURFACTANTS":         "GALAXYSURF",
+    # exact names as they appear in trades.json (with Ltd./Limited suffix variants)
+    "BHARAT ELECTRONICS LTD.":    "BEL",
+    "BHARAT ELECTRONICS LTD":     "BEL",
+    "HINDUSTAN AERONAUTICS LIMITED": "HAL",
+    "HINDUSTAN AERONAUTICS LTD":  "HAL",
+    "ADANI PORT & SEZ LTD":       "ADANIPORTS",
+    "ADANI PORTS & SEZ LTD":      "ADANIPORTS",
+    "ADANI PORTS & SEZ LTD.":     "ADANIPORTS",
+    "ADITYA BIRLA LIFES BRAN L":  "ABLBL",
+    "AETHER INDUSTRIES LIMITED":  "AETHER",
+    "AETHER INDUSTRIES LTD":      "AETHER",
+    "BAJAJ HOUSING FINANCE LIMITED": "BAJAJHFL",
+    "BIRLASOFT LIMITED":          "BSOFT",
+    "BIRLASOFT LTD":              "BSOFT",
+    "CROMPT GREA CON ELEC LTD":   "CROMPTON",
+    "CROMPTON GREAVES CONSUMER":  "CROMPTON",
+    "CITY UNION BANK LTD":        "CUB",
+    "CITY UNION BANK LIMITED":    "CUB",
+    "CLEAN SCIENCE & TECH LTD":   "CLEANSCIENCE",
+    "CENTRAL DEPO SER (I) LTD":   "CDSL",
+    "BEML LIMITED":"BEML","BEML LTD":"BEML",
+    "KAVERI SEED CO. LTD.":"KSCL","KAVERI SEED CO LTD":"KSCL","KAVERI SEED":"KSCL",
+    "RITES LIMITED":"RITES","RITES LTD":"RITES",
+    "PARAS DEF AND SPCE TECH L":"PARAS","PARAS DEFENCE AND SPACE TECH":"PARAS","PARAS DEFENCE":"PARAS",
+    "BALKRISHNA INDUSTRIES LTD.": "BALKRISIND",
+    "BALKRISHNA INDUSTRIES LTD":  "BALKRISIND",
+    "KFIN TECHNOLOGIES LIMITED":  "KFINTECH",
+    "KFIN TECHNOLOGIES LTD":      "KFINTECH",
+    "HCL TECHNOLOGIES LTD":       "HCLTECH",
+    "HCL TECHNOLOGIES LTD.":      "HCLTECH",
+    "THOMAS COOK (INDIA) LTD":    "THOMASCOOK",
+    "THOMAS COOK INDIA LTD":      "THOMASCOOK",
+    "OLECTRA GREENTECH LTD":      "OLECTRA",
+    "OLECTRA GREENTECH LIMITED":  "OLECTRA",
+    "CARBORUNDUM UNIVERSAL LTD":  "CARBORUNIV",
+    "CARBORUNDUM UNIVERSAL LIMITED": "CARBORUNIV",
 }
 
 # ── Ticker overrides (user-editable, stored in ticker_overrides.json) ────────
