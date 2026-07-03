@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 import_meta.json
 processed_orders.json
+trades.json
+ledger.json
+*.log
 check_pnl.py
 debug_*.py
 verify_rebuild.py

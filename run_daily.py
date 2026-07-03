@@ -4,11 +4,10 @@ or automatically on laptop login if the day's run was missed.
 
 Flow:
   1. Clean old current-FY CSVs from local Downloads folder
-  2. Download fresh current-FY CSVs from CBOS (Playwright on laptop)
-  3. SCP CSVs to VM (VM already has last-FY CSVs from initial setup)
+  2. Download fresh CSVs + scrape ledger balances from CBOS (same session)
+  3. SCP CSVs + ledger.json to VM
   4. VM: import_all.py  → rebuild trades.json from ALL CSVs (both FYs)
-  5. VM: vm_sync_gsheet.py → push to Google Sheet
-  6. VM: send_notify.py → Telegram summary
+  5. VM: vm_sync_gsheet.py + send_notify.py → GSheet sync + Telegram
 
 Run manually anytime by double-clicking "Run Daily Update" on Desktop.
 For a full rebuild (both FYs): python run_daily.py --full

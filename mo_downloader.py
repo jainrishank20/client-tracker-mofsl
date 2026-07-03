@@ -5,15 +5,16 @@ Usage:
     python mo_downloader.py           # current FY only (daily use)
     python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
-import asyncio, imaplib, email, email.utils, re, os, sys, time, glob
+import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-MO_USERNAME        = "RRISHANKMK"
-MO_PASSWORD        = "Rishank@2012"
-GMAIL_USER         = "jainrishank20@gmail.com"
-GMAIL_APP_PASSWORD = "chos xzci zyso zzef"
+_cfg = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json')))
+MO_USERNAME        = _cfg['mo_username']
+MO_PASSWORD        = _cfg['mo_password']
+GMAIL_USER         = _cfg['gmail_user']
+GMAIL_APP_PASSWORD = _cfg['gmail_app_password']
 
 CLIENTS = [
     "RIMK1205","RIMK1209","RIMK1215","RIMK1220","RIMK1238",
@@ -494,10 +495,103 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
 async def scrape_ledger_balances(page, home_url: str) -> dict:
     """Scrape COMBINED+MTF Voucher Ledger balance for all clients.
     Reuses the existing CBOS session — call this after CSV downloads."""
-    import json as _json
-    from mo_ledger_scraper import (parse_indian, get_popup_balance, close_popup,
-                                   click_segment_link, navigate_to_financial_summary,
-                                   dismiss_any_popup, go_home)
+    # Helpers inlined to avoid circular import with mo_ledger_scraper
+
+    def _parse_indian(s):
+        s = str(s).strip().replace(',', '').replace(' ', '')
+        if not s or s in ('0.00', '0', '-', ''):
+            return 0.0
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    async def _get_popup_balance(pg):
+        await asyncio.sleep(2.5)
+        val = await pg.evaluate("""
+            () => {
+                for (const tbl of document.querySelectorAll('table')) {
+                    const s = window.getComputedStyle(tbl);
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    let balIdx = -1;
+                    const ths = tbl.querySelectorAll('th');
+                    if (ths.length) {
+                        const hdrs = Array.from(ths).map(h => h.textContent.trim().toUpperCase());
+                        balIdx = hdrs.indexOf('BALANCE');
+                    }
+                    if (balIdx < 0) {
+                        const firstTr = tbl.querySelector('tr');
+                        if (firstTr) {
+                            const cells = Array.from(firstTr.querySelectorAll('th,td'))
+                                               .map(c => c.textContent.trim().toUpperCase());
+                            balIdx = cells.indexOf('BALANCE');
+                        }
+                    }
+                    if (balIdx < 0) continue;
+                    const rows = Array.from(tbl.querySelectorAll('tr'));
+                    for (let i = 1; i < rows.length; i++) {
+                        const cells = rows[i].querySelectorAll('td');
+                        if (cells.length > balIdx && cells[balIdx].textContent.trim())
+                            return cells[balIdx].textContent.trim();
+                    }
+                }
+                return null;
+            }
+        """)
+        return _parse_indian(val or '0')
+
+    async def _close_popup(pg):
+        await pg.evaluate("""
+            () => {
+                for (const b of document.querySelectorAll(
+                        '.close, [data-dismiss="modal"], .modal-header .close')) {
+                    if (window.getComputedStyle(b).display !== 'none') { b.click(); return; }
+                }
+            }
+        """)
+        await pg.keyboard.press("Escape")
+        await asyncio.sleep(0.8)
+
+    async def _click_segment(pg, seg):
+        return await pg.evaluate("""
+            (seg) => {
+                for (const row of document.querySelectorAll('tr')) {
+                    const cells = row.querySelectorAll('td');
+                    if (!cells.length || cells[0].textContent.trim().toUpperCase() !== seg) continue;
+                    const link = row.querySelector('a');
+                    if (link) { link.click(); return true; }
+                    if (cells[1]) { cells[1].click(); return true; }
+                }
+                return false;
+            }
+        """, seg)
+
+    async def _nav_fin_summary(pg):
+        found = await pg.evaluate("""
+            () => {
+                const kw = ['FINANCIAL SUMMARY', 'FIN SUMMARY'];
+                for (const a of document.querySelectorAll('a, li, td')) {
+                    const t = a.textContent.trim().toUpperCase().replace(/\\s+/g, ' ');
+                    if (kw.some(k => t.includes(k))) { a.click(); return true; }
+                }
+                return false;
+            }
+        """)
+        if found:
+            await asyncio.sleep(2)
+        return found
+
+    async def _dismiss_alert(pg):
+        await pg.evaluate("""
+            () => {
+                for (const btn of document.querySelectorAll('button, .close')) {
+                    if (window.getComputedStyle(btn).display === 'none') continue;
+                    if (btn.textContent.trim() === '×' || btn.innerHTML.includes('×'))
+                        { btn.click(); return; }
+                }
+            }
+        """)
+        await asyncio.sleep(0.5)
 
     ledger = {}
     print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
@@ -505,8 +599,9 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
     for client in CLIENTS:
         print(f"\n  {client}...")
         try:
-            await go_home(page, home_url)
-            await dismiss_any_popup(page)
+            await page.goto(home_url, wait_until='domcontentloaded', timeout=20000)
+            await asyncio.sleep(1.5)
+            await _dismiss_alert(page)
 
             inp = page.locator('#txtClientCode')
             await inp.wait_for(state='visible', timeout=10000)
@@ -525,7 +620,7 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             await dash_page.wait_for_load_state('domcontentloaded', timeout=10000)
             await asyncio.sleep(2)
 
-            fs_loaded = await navigate_to_financial_summary(dash_page)
+            fs_loaded = await _nav_fin_summary(dash_page)
             if not fs_loaded:
                 print(f"    Financial Summary not found")
                 await dash_page.close()
@@ -533,33 +628,23 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 continue
 
             await asyncio.sleep(1)
-            await dash_page.evaluate("""
-                () => {
-                    for (const btn of document.querySelectorAll('button, .close, [class*="close"]')) {
-                        if (window.getComputedStyle(btn).display === 'none') continue;
-                        if (btn.textContent.trim() === '×' || btn.innerHTML.includes('×')) {
-                            btn.click(); return;
-                        }
-                    }
-                }
-            """)
-            await asyncio.sleep(0.5)
+            await _dismiss_alert(dash_page)
 
             combined_bal = 0.0
-            if await click_segment_link(dash_page, 'COMBINED'):
-                combined_bal = await get_popup_balance(dash_page)
+            if await _click_segment(dash_page, 'COMBINED'):
+                combined_bal = await _get_popup_balance(dash_page)
                 print(f"    COMBINED = {combined_bal:,.2f}")
-                await close_popup(dash_page)
+                await _close_popup(dash_page)
             else:
                 print(f"    COMBINED not found")
 
             await asyncio.sleep(0.5)
 
             mtf_bal = 0.0
-            if await click_segment_link(dash_page, 'MTF'):
-                mtf_bal = await get_popup_balance(dash_page)
+            if await _click_segment(dash_page, 'MTF'):
+                mtf_bal = await _get_popup_balance(dash_page)
                 print(f"    MTF      = {mtf_bal:,.2f}")
-                await close_popup(dash_page)
+                await _close_popup(dash_page)
             else:
                 print(f"    MTF      = 0")
 
@@ -572,7 +657,7 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
 
     out_path = os.path.join(BASE, 'ledger.json')
     with open(out_path, 'w') as f:
-        _json.dump(ledger, f, indent=2)
+        json.dump(ledger, f, indent=2)
     print(f"\nLedger saved: {out_path}")
     return ledger
 

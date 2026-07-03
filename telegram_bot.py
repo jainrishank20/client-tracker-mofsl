@@ -4,6 +4,7 @@ Answers natural-language questions about trades, positions and ledger.
 Fast: pre-filters data before sending to Groq so LLM only sees relevant rows.
 """
 import json, os, re, time, urllib.request, urllib.parse, urllib.error
+from typing import Optional
 from groq import Groq
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +46,7 @@ def load_ledger():
     except Exception:
         return {}
 
-def detect_client(text: str) -> str | None:
+def detect_client(text: str) -> Optional[str]:
     """Return client code if text mentions a known client name or code."""
     t = text.lower()
     for name, code in NAME_TO_CODE.items():
@@ -94,7 +95,7 @@ def all_open_summary(trades: list) -> str:
     open_t = [t for t in trades if not t.get('exit_date')]
     if not open_t:
         return "No open positions across any client."
-    by_client: dict[str, list] = {}
+    by_client = {}  # type: dict
     for t in open_t:
         by_client.setdefault(t['client'], []).append(t)
     lines = [f"*Open Positions — {len(open_t)} total*\n"]
