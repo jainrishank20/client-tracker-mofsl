@@ -695,7 +695,8 @@ def sync_to_gsheet(trades: list):
 
     cap_rows_gs = []
     for c in CLIENTS:
-        entries = _ledger_data.get(c, [])
+        raw = _ledger_data.get(c, [])
+        entries = raw if isinstance(raw, list) else []  # our ledger.json has dicts not lists
         payin  = sum(e["amount"] for e in entries if e["amount"] > 0)
         payout = sum(-e["amount"] for e in entries if e["amount"] < 0)
         od_c   = open_df[open_df["client"] == c] if not open_df.empty else pd.DataFrame()
@@ -723,7 +724,8 @@ def sync_to_gsheet(trades: list):
 
     all_ledger_rows = []
     for c in CLIENTS:
-        for e in _ledger_data.get(c, []):
+        raw = _ledger_data.get(c, [])
+        for e in (raw if isinstance(raw, list) else []):
             all_ledger_rows.append({
                 "Client":    c,
                 "Name":      CLIENT_NAMES.get(c, c),

@@ -21,8 +21,10 @@ CLIENTS = [
     "RIMK1247","RIMK1248","RIMK1249","RIMK1252","RIMK1256",
 ]
 
+BASE         = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = r"C:\Users\jainr\Downloads\MO_Trades"
 LOGIN_URL    = "https://backoffice.motilaloswal.com/Login.aspx"
+HOME_URL     = "https://backoffice.motilaloswal.com/Home.aspx"
 DATE_OPTION  = "Current Financial Year"
 
 FULL_MODE       = "--full" in sys.argv
@@ -336,7 +338,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             await date_inp.click(force=True)
             await asyncio.sleep(1)
             # Try preferred DATE_OPTION first; fall back to first visible li in dropdown
-            coords = await page.evaluate("""
+            coords = await page.evaluate(r"""
                 (option) => {
                     const visibleLi = [];
                     for (const el of document.querySelectorAll('li, span, div, a')) {
@@ -596,15 +598,20 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
     ledger = {}
     print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
 
+    first_client = True
     for client in CLIENTS:
         print(f"\n  {client}...")
         try:
-            await page.goto(home_url, wait_until='domcontentloaded', timeout=20000)
-            await asyncio.sleep(1.5)
+            if not first_client:
+                await page.go_back(wait_until='domcontentloaded', timeout=15000)
+                await asyncio.sleep(1.5)
+            else:
+                await asyncio.sleep(1)
+            first_client = False
             await _dismiss_alert(page)
 
             inp = page.locator('#txtClientCode')
-            await inp.wait_for(state='visible', timeout=10000)
+            await inp.wait_for(state='visible', timeout=15000)
             await inp.click()
             await page.keyboard.press('Control+A')
             await inp.type(client, delay=80)
@@ -614,41 +621,42 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             await page.keyboard.press('Enter')
             await asyncio.sleep(0.5)
 
-            async with page.context.expect_page(timeout=6000) as new_page_info:
-                await page.locator('#btnView_ClientDashboard').click()
-            dash_page = await new_page_info.value
-            await dash_page.wait_for_load_state('domcontentloaded', timeout=10000)
+            # Force View Dashboard to open in same tab (new tab kills the session)
+            await page.evaluate("""
+                () => { window._origOpen = window.open;
+                        window.open = (url) => { window.location.href = url; return window; }; }
+            """)
+            await page.locator('#btnView_ClientDashboard').click()
+            await page.wait_for_load_state('domcontentloaded', timeout=15000)
             await asyncio.sleep(2)
 
-            fs_loaded = await _nav_fin_summary(dash_page)
+            fs_loaded = await _nav_fin_summary(page)
             if not fs_loaded:
                 print(f"    Financial Summary not found")
-                await dash_page.close()
                 ledger[client] = {'combined': 0.0, 'mtf': 0.0}
                 continue
 
             await asyncio.sleep(1)
-            await _dismiss_alert(dash_page)
+            await _dismiss_alert(page)
 
             combined_bal = 0.0
-            if await _click_segment(dash_page, 'COMBINED'):
-                combined_bal = await _get_popup_balance(dash_page)
+            if await _click_segment(page, 'COMBINED'):
+                combined_bal = await _get_popup_balance(page)
                 print(f"    COMBINED = {combined_bal:,.2f}")
-                await _close_popup(dash_page)
+                await _close_popup(page)
             else:
                 print(f"    COMBINED not found")
 
             await asyncio.sleep(0.5)
 
             mtf_bal = 0.0
-            if await _click_segment(dash_page, 'MTF'):
-                mtf_bal = await _get_popup_balance(dash_page)
+            if await _click_segment(page, 'MTF'):
+                mtf_bal = await _get_popup_balance(page)
                 print(f"    MTF      = {mtf_bal:,.2f}")
-                await _close_popup(dash_page)
+                await _close_popup(page)
             else:
                 print(f"    MTF      = 0")
 
-            await dash_page.close()
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
 
         except Exception as e:
@@ -672,6 +680,13 @@ async def main():
         await login(page)
         home_url = page.url
 
+        # Scrape ledger first — session is freshest right after login
+        await scrape_ledger_balances(page, home_url)
+
+        # Return to Home.aspx after ledger (page is on ClientDashboard after last scrape)
+        await page.go_back(wait_until='domcontentloaded', timeout=15000)
+        await asyncio.sleep(1.5)
+
         first = True
         for fy in FINANCIAL_YEARS:
             print(f"\n{'='*40}\nFinancial Year: {fy}\n{'='*40}")
@@ -683,9 +698,6 @@ async def main():
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
                     first = False
-
-        # Scrape ledger in the same session — no second login needed
-        await scrape_ledger_balances(page, home_url)
 
         await browser.close()
 
