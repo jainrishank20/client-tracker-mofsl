@@ -29,6 +29,19 @@ NAMES = {
 NAME_TO_CODE = {v.lower(): k for k, v in NAMES.items()}
 NAME_TO_CODE.update({k.lower(): k for k in NAMES})  # also match codes directly
 
+def _load_overrides():
+    try:
+        return json.load(open(os.path.join(BASE, 'ticker_overrides.json')))
+    except Exception:
+        return {}
+
+def sym(script):
+    """Convert raw CBOS script name to clean NSE ticker symbol."""
+    ov = _load_overrides()
+    if script in ov:
+        return ov[script]
+    return re.sub(r'[^A-Z0-9&]', '', script.upper())
+
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
 
@@ -82,7 +95,7 @@ def trades_summary_for(client: str, trades: list) -> str:
         for t in open_t:
             qty = t.get('buy_qty', 0)
             bp  = t.get('buy_price', 0)
-            lines.append(f"  {t.get('script','?')}  qty={qty}  @₹{bp:.2f}")
+            lines.append(f"  {sym(t.get('script','?'))}  qty={qty}  @₹{bp:.2f}")
     if closed_t:
         total_pnl = sum(
             (t.get('sell_price',0) - t.get('buy_price',0)) * t.get('buy_qty',0)
@@ -102,7 +115,7 @@ def all_open_summary(trades: list) -> str:
     for code, rows in by_client.items():
         lines.append(f"*{NAMES.get(code, code)}* ({len(rows)})")
         for t in rows:
-            lines.append(f"  {t.get('script','?')}  qty={t.get('buy_qty',0)}  @₹{t.get('buy_price',0):.2f}")
+            lines.append(f"  {sym(t.get('script','?'))}  qty={t.get('buy_qty',0)}  @₹{t.get('buy_price',0):.2f}")
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
