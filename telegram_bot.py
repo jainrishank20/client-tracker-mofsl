@@ -6,6 +6,11 @@ Fast: pre-filters data before sending to Groq so LLM only sees relevant rows.
 import json, os, re, time, urllib.request, urllib.parse, urllib.error
 from typing import Optional
 from groq import Groq
+try:
+    import yfinance as yf
+    _YF = True
+except ImportError:
+    _YF = False
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,20 +87,50 @@ def fmt_inr(val: float) -> str:
     groups.insert(0, head)
     return f"{sign}{','.join(groups)},{tail}"
 
+def fetch_cmp(symbols: list) -> dict:
+    """Fetch live CMP for a list of NSE symbols. Returns {symbol: price}."""
+    if not _YF or not symbols:
+        return {}
+    try:
+        tickers = [s + '.NS' for s in symbols]
+        data = yf.download(tickers, period='1d', interval='1m',
+                           progress=False, auto_adjust=True)
+        result = {}
+        for s, t in zip(symbols, tickers):
+            try:
+                price = float(data['Close'][t].dropna().iloc[-1])
+                result[s] = price
+            except Exception:
+                pass
+        return result
+    except Exception:
+        return {}
+
 def trades_summary_for(client: str, trades: list) -> str:
     rows = [t for t in trades if t.get('client') == client]
     if not rows:
         return f"No trades found for {NAMES.get(client, client)}."
     open_t   = [t for t in rows if not t.get('exit_date')]
     closed_t = [t for t in rows if t.get('exit_date')]
+
+    # Fetch live CMP for open positions
+    open_syms = list({sym(t.get('script','')) for t in open_t})
+    cmp = fetch_cmp(open_syms)
+
     lines = [f"*{NAMES.get(client, client)}* ({client})"]
     lines.append(f"Open: {len(open_t)}  |  Closed: {len(closed_t)}")
     if open_t:
         lines.append("\n*Open positions:*")
         for t in open_t:
-            qty = t.get('buy_qty', 0)
-            bp  = t.get('buy_price', 0)
-            lines.append(f"  {sym(t.get('script','?'))}  qty={qty}  @₹{bp:.2f}")
+            qty   = int(t.get('buy_qty', 0))
+            bp    = t.get('buy_price', 0)
+            sc    = sym(t.get('script', '?'))
+            line  = f"  {sc}  qty={qty}  @₹{bp:.2f}"
+            if sc in cmp:
+                unreal = (cmp[sc] - bp) * qty
+                sign   = '+' if unreal >= 0 else ''
+                line  += f"  ({sign}₹{fmt_inr(unreal)})"
+            lines.append(line)
     if closed_t:
         total_pnl = sum(
             (t.get('sell_price',0) - t.get('buy_price',0)) * t.get('buy_qty',0)
@@ -115,7 +150,7 @@ def all_open_summary(trades: list) -> str:
     for code, rows in by_client.items():
         lines.append(f"*{NAMES.get(code, code)}* ({len(rows)})")
         for t in rows:
-            lines.append(f"  {sym(t.get('script','?'))}  qty={t.get('buy_qty',0)}  @₹{t.get('buy_price',0):.2f}")
+            lines.append(f"  {sym(t.get('script','?'))}  qty={int(t.get('buy_qty',0))}  @₹{t.get('buy_price',0):.2f}")
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
