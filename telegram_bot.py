@@ -222,12 +222,37 @@ def fetch_single_cmp(symbol: str) -> Optional[float]:
 
 # ── Formatted responses ───────────────────────────────────────────────────────
 
+def _table(headers: list, rows: list) -> str:
+    """Render a fixed-width monospace table with a header row and separator."""
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(str(cell)))
+    def fmt_row(cells, aligns):
+        parts = []
+        for cell, w, align in zip(cells, widths, aligns):
+            s = str(cell)
+            parts.append(s.ljust(w) if align == 'l' else s.rjust(w))
+        return '  '.join(parts)
+    sep = '─' * (sum(widths) + 2 * (len(widths) - 1))
+    aligns = ['l'] + ['r'] * (len(headers) - 1)
+    aligns[0] = 'r'  # serial number right-aligned
+    aligns[1] = 'l'  # script name left-aligned
+    lines = [
+        f"`{fmt_row(headers, aligns)}`",
+        f"`{sep}`",
+    ]
+    for row in rows:
+        lines.append(f"`{fmt_row(row, aligns)}`")
+    return '\n'.join(lines)
+
+
 def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) -> str:
-    rows = [t for t in trades if t.get('client') == client]
-    if not rows:
+    all_rows = [t for t in trades if t.get('client') == client]
+    if not all_rows:
         return f"No trades found for {names.get(client, client)}."
-    open_t   = [t for t in rows if not t.get('exit_date')]
-    closed_t = [t for t in rows if t.get('exit_date')]
+    open_t   = [t for t in all_rows if not t.get('exit_date')]
+    closed_t = [t for t in all_rows if t.get('exit_date')]
 
     # Merge FIFO lots by scrip — total qty, weighted avg price
     merged = {}
@@ -245,56 +270,76 @@ def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) 
 
     cmp_data = fetch_cmp(list(merged.keys()))
 
-    lines = [f"*{names.get(client, client)}* ({client})"]
-    lines.append(f"Open: {len(merged)}  |  Closed: {len(closed_t)}")
+    name = names.get(client, client)
+    lines = [f"*{name}* ({client})"]
+    lines.append(f"Open: {len(merged)} scrip(s)  |  Closed: {len(closed_t)} trade(s)")
+
     if merged:
         lines.append("")
-        for sc, d in sorted(merged.items()):
+        table_rows = []
+        for i, (sc, d) in enumerate(sorted(merged.items()), 1):
             qty = int(d['qty'])
             avg = d['avg']
-            line = f"`{sc:<18} {qty:>5}  @{avg:>9.2f}`"
+            pnl_str = ''
             if sc in cmp_data:
                 unreal = (cmp_data[sc] - avg) * qty
                 sign   = '+' if unreal >= 0 else ''
-                line  += f"  `{sign}₹{fmt_inr(unreal)}`"
-            lines.append(line)
+                pnl_str = f"{sign}Rs{fmt_inr(unreal)}"
+            table_rows.append([i, sc, qty, f"{avg:.2f}", pnl_str])
+        headers = ['#', 'Script', 'Qty', 'Avg Price', 'Unreal P&L']
+        lines.append(_table(headers, table_rows))
+
     if closed_t:
         total_pnl = sum(
             (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
             for t in closed_t
         )
         sign = '+' if total_pnl >= 0 else ''
-        lines.append(f"\nClosed P&L: {sign}₹{fmt_inr(total_pnl)}")
+        lines.append(f"\nRealized P&L: *{sign}Rs {fmt_inr(total_pnl)}*")
     return '\n'.join(lines)
 
 
 def today_trades_for(client: str, trades: list, names: dict, overrides: dict) -> str:
-    today_str = datetime.date.today().isoformat()
+    today_str  = datetime.date.today().isoformat()
+    today_disp = datetime.date.today().strftime('%d %b %Y')
     client_trades = [t for t in trades if t.get('client') == client]
 
-    # Buys: entered today AND still open (not double-counted as sell)
+    # Buys: entered today AND still open
     buys  = [t for t in client_trades
              if (t.get('entry_date') or '')[:10] == today_str and not t.get('exit_date')]
-    # Sells: exited today (whether intraday or old buy)
+    # Sells: exited today
     sells = [t for t in client_trades
              if (t.get('exit_date') or '')[:10] == today_str]
 
     if not buys and not sells:
-        return f"No trades for {names.get(client, client)} today."
+        return f"No trades for {names.get(client, client)} today ({today_disp})."
 
-    lines = [f"*{names.get(client, client)} — Today's trades*"]
+    name  = names.get(client, client)
+    lines = [f"*{name} — {today_disp}*"]
+
     if buys:
-        lines.append("\n*Bought:*")
-        for t in buys:
-            sc = sym(t['script'], overrides)
-            lines.append(f"  `{sc}  {int(t['buy_qty'])}  @ ₹{t['buy_price']:.2f}`")
+        lines.append(f"\n*Buys  ({len(buys)})*")
+        table_rows = []
+        for i, t in enumerate(buys, 1):
+            sc    = sym(t['script'], overrides)
+            qty   = int(t['buy_qty'])
+            price = f"{t['buy_price']:.2f}"
+            table_rows.append([i, sc, qty, price])
+        lines.append(_table(['#', 'Script', 'Qty', 'Price'], table_rows))
+
     if sells:
-        lines.append("\n*Sold:*")
-        for t in sells:
-            sc  = sym(t['script'], overrides)
-            pnl = (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
-            sign = '+' if pnl >= 0 else ''
-            lines.append(f"  `{sc}  {int(t.get('sell_qty', t.get('buy_qty',0)))}  @ ₹{t.get('sell_price',0):.2f}  ({sign}₹{fmt_inr(pnl)})`")
+        lines.append(f"\n*Sells  ({len(sells)})*")
+        table_rows = []
+        for i, t in enumerate(sells, 1):
+            sc    = sym(t['script'], overrides)
+            qty   = int(t.get('sell_qty', t.get('buy_qty', 0)))
+            price = f"{t.get('sell_price', 0):.2f}"
+            pnl   = (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
+            sign  = '+' if pnl >= 0 else ''
+            pnl_s = f"{sign}Rs{fmt_inr(pnl)}"
+            table_rows.append([i, sc, qty, price, pnl_s])
+        lines.append(_table(['#', 'Script', 'Qty', 'Price', 'P&L'], table_rows))
+
     return '\n'.join(lines)
 
 
