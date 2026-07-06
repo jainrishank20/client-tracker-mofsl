@@ -24,8 +24,8 @@ Fully automated end-to-end pipeline that:
 │  GitHub Actions  (runs at 8:30 PM IST, Mon-Fri)                 │
 │                                                                   │
 │  1. mo_downloader.py   ──▶  CBOS backoffice (Playwright)         │
-│                              └─ OTP via Gmail IMAP               │
-│  2. import_all.py      ──▶  Rebuilds trades.json (FIFO)          │
+│                              └─ OTP via Gmail IMAP (All Mail)    │
+│  2. import_all.py      ──▶  Rebuilds trades.json (FIFO/ISIN)     │
 │  3. vm_sync_gsheet.py  ──▶  Google Sheets API                    │
 │  4. send_notify.py     ──▶  Telegram (ledger summary)            │
 │  5. SCP                ──▶  trades.json + ledger.json → VM       │
@@ -37,7 +37,7 @@ Fully automated end-to-end pipeline that:
 │                                                                   │
 │  telegram_bot.py  (systemd service: tgbot)                       │
 │  └─ reads trades.json + ledger.json locally                      │
-│  └─ responds to /open, /alert, /pnl, /ledger, /run, etc.        │
+│  └─ /open, /ledger, /pnl, /alert, /run, /addclient, etc.        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,53 +49,53 @@ Fully automated end-to-end pipeline that:
 - **Trigger:** Cron `0 15 * * 1-5` (3 PM UTC = 8:30 PM IST), plus manual dispatch
 - **Runner:** `ubuntu-latest` (7 GB RAM — plenty for Playwright)
 - **Duration:** ~15–20 minutes per run
-- **What it does:** Full pipeline steps 1–5, then SCPs results to VM
+- **Steps:** CBOS download → import → GSheet sync → Telegram notify → SCP to VM
 
 ### `mo_downloader.py` — CBOS Scraper
 - Uses Playwright (headless Chromium) to log into CBOS backoffice
-- Handles OTP via Gmail IMAP polling
-- Downloads trade CSVs for all 10 clients (current FY by default, `--full` for both FYs)
-- Scrapes ledger balances via the ClientDashboard page
-- Saves CSVs to `mo_csvs/` and ledger to `ledger.json`
-- **Key behaviour:** Uses `page.go_back()` between clients (not `page.goto()`), because CBOS URL params are single-use session tokens
+- Handles OTP via Gmail IMAP — searches `[Gmail]/All Mail` (catches all folders)
+- OTP retry: 3 attempts, 180s timeout, auto-clicks Resend button on failure
+- Handles "session already active" popup before OTP is sent
+- Downloads trade CSVs for all clients defined in `bot_config.json → clients`
+- Scrapes ledger balances, saves to `ledger.json`
+- **Key behaviour:** Uses `page.go_back()` between clients (CBOS URL params are session tokens)
 
 ### `import_all.py` — Trade Importer
 - Reads all CSVs from `mo_csvs/`
-- Normalises scrip names (handles NSE/BSE name differences)
-- **FIFO matching keyed on ISIN** (exchange-agnostic — prevents BSE/NSE name mismatch bugs)
-- Outputs `trades.json` with full history: open positions + closed trades with P&L
+- Normalises scrip names (handles NSE/BSE name differences via RAW dict)
+- **FIFO matching keyed on ISIN** — exchange-agnostic, permanently fixes BSE/NSE name mismatch bugs
+- If ISIN unavailable, falls back to normalised scrip name
 - Excludes terminal `30023` (dealer terminal)
+- Outputs `trades.json`: open positions + closed trades with full charge breakdown
 
 ### `vm_sync_gsheet.py` — Google Sheet Sync
 - Reads `trades.json` + `ledger.json`
 - Writes to Google Sheet `1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo`
-- Tabs: Overview, Open Positions, Closed Trades, P&L Summary, Ledger, per-client sheets
 - CMP column uses `=GOOGLEFINANCE("NSE:SYMBOL","price")` formula (live in sheet)
-- Unrealized P&L in Overview uses `=SUMIF(...)` pulling from Open Positions tab
+- Charge keys: `buy_txn`, `sell_txn` (not `buy_txn_chrg`)
 
 ### `send_notify.py` — Daily Telegram Notification
-- Sends formatted ledger balance table to all configured chat IDs
-- Runs once per day after GSheet sync
+- Sends compact ledger balance table (client codes, fixed-width monospace)
+- Sends to all chat IDs in `bot_config.json → allowed_chat_id`
+- Runs once per day after GSheet sync (also manually runnable on VM)
 
 ### `telegram_bot.py` — Always-on Bot (VM)
-- Polls Telegram every 30 seconds
+- Polls Telegram every 30 seconds (socket timeout 35s to avoid spurious timeouts)
+- Restarts automatically via systemd (`Restart=always`, `RestartSec=10`)
 - **Commands:**
-  - `/open` — all open positions with live unrealized P&L (via yfinance)
-  - `/ledger` — all ledger balances
+  - `/open` — all open positions (compact per-client summary)
+  - `/ledger` — ledger balances (compact monospace table)
   - `/pnl` — realized P&L by client
-  - `/summary` — quick snapshot
-  - `/run` — trigger `run_daily_vm.py` on VM (re-import + sync without CBOS download)
-  - `/alert SYMBOL PRICE` — set live price alert (polls every 5 min during market hours)
+  - `/summary` — snapshot (open/closed counts, total P&L)
+  - `/run` — triggers GitHub Actions `workflow_dispatch` (full pipeline, ~15 min)
+  - `/clients` — list all configured clients
+  - `/addclient CODE NAME` — add client to `bot_config.json` + updates GitHub Secret
+  - `/removeclient CODE` — remove client from `bot_config.json` + updates GitHub Secret
+  - `/alert SYM PRICE [above|below]` — set price alert (polls every 5 min in market hours)
   - `/alerts` — list active alerts
-  - `/cancelalert SYMBOL` — remove alert
-- Natural language queries routed to Groq (LLaMA 3.1)
-- Alerts stored in `price_alerts.json`
-
-### `run_daily_vm.py` — VM-local Pipeline (for `/run` command)
-- Triggered by Telegram `/run` via the bot
-- Skips CBOS download (uses existing CSVs)
-- Runs: import_all → vm_sync_gsheet → send_notify
-- Useful for re-syncing after a manual fix without waiting for the nightly run
+  - `/cancelalert SYM` — remove alert
+- Natural language queries routed to Groq (LLaMA 3.1 8b)
+- Clients loaded fresh on every command (picks up `/addclient` changes without restart)
 
 ---
 
@@ -106,40 +106,37 @@ Fully automated end-to-end pipeline that:
 client-tracker-mofsl/
 ├── .github/
 │   └── workflows/
-│       └── daily_run.yml       # GitHub Actions pipeline
-├── mo_downloader.py            # CBOS Playwright scraper
-├── import_all.py               # CSV → trades.json (FIFO)
-├── vm_sync_gsheet.py           # trades.json → Google Sheet
-├── send_notify.py              # Daily Telegram ledger message
-├── telegram_bot.py             # Always-on Telegram bot
-├── run_daily_vm.py             # VM-local re-sync (no CBOS)
-├── ticker_overrides.json       # CBOS name → NSE ticker map
-├── run_daily.py                # Legacy laptop runner (kept for reference)
-├── ARCHITECTURE.md             # This file
-└── .gitignore                  # Excludes: bot_config, gsheet_key, trades, ledger, csvs
+│       └── daily_run.yml         # GitHub Actions pipeline
+├── mo_downloader.py              # CBOS Playwright scraper
+├── import_all.py                 # CSV → trades.json (FIFO/ISIN)
+├── vm_sync_gsheet.py             # trades.json → Google Sheet
+├── send_notify.py                # Daily Telegram ledger message
+├── telegram_bot.py               # Always-on Telegram bot
+├── ticker_overrides.json         # CBOS name → NSE ticker map (also a GitHub Secret)
+├── ARCHITECTURE.md               # This file
+└── .gitignore                    # Excludes: bot_config, gsheet_key, trades, ledger, csvs
 ```
 
-### On Oracle VM (`/home/opc/client-tracker-mofsl/`)
+### On Oracle VM (`/home/opc/client-tracker-mofsl/`) — 7 files only
 ```
-telegram_bot.py         # Pulled from GitHub
-run_daily_vm.py         # Pulled from GitHub
-ticker_overrides.json   # Pulled from GitHub (also a GitHub Secret)
-bot_config.json         # NOT in git — credentials file (see Secrets)
-gsheet_key.json         # NOT in git — Google service account key
-trades.json             # Generated — written by GitHub Actions via SCP
-ledger.json             # Generated — written by GitHub Actions via SCP
-price_alerts.json       # Generated — bot writes alerts here
-logs/                   # Log files from run_daily_vm.py
+telegram_bot.py       # Deployed manually via SCP when updated
+send_notify.py        # Deployed manually via SCP when updated
+bot_config.json       # NOT in git — credentials + client list (see Secrets)
+gsheet_key.json       # NOT in git — Google service account key
+ticker_overrides.json # Deployed manually via SCP when updated
+trades.json           # Written by GitHub Actions nightly via SCP
+ledger.json           # Written by GitHub Actions nightly via SCP
+price_alerts.json     # Created by bot when alerts are set — NOT backed up
 ```
 
 ### On GitHub Actions (ephemeral — gone after each run)
 ```
-bot_config.json         # Reconstructed from secret BOT_CONFIG
-gsheet_key.json         # Reconstructed from secret GSHEET_KEY
-ticker_overrides.json   # Reconstructed from secret TICKER_OVERRIDES
-mo_csvs/*.csv           # Downloaded from CBOS, used by import_all.py
-trades.json             # Built by import_all.py, SCPed to VM
-ledger.json             # Scraped by mo_downloader.py, SCPed to VM
+bot_config.json       # Reconstructed from secret BOT_CONFIG
+gsheet_key.json       # Reconstructed from secret GSHEET_KEY
+ticker_overrides.json # Reconstructed from secret TICKER_OVERRIDES (deleted in cleanup)
+mo_csvs/*.csv         # Downloaded from CBOS, used by import_all.py
+trades.json           # Built by import_all.py, SCPed to VM
+ledger.json           # Scraped by mo_downloader.py, SCPed to VM
 ```
 
 ---
@@ -149,23 +146,34 @@ ledger.json             # Scraped by mo_downloader.py, SCPed to VM
 ### GitHub Actions Secrets
 | Secret | Contents | Used by |
 |---|---|---|
-| `BOT_CONFIG` | Full `bot_config.json` (all credentials) | mo_downloader, send_notify, telegram_bot |
+| `BOT_CONFIG` | Full `bot_config.json` | mo_downloader, send_notify, telegram_bot |
 | `GSHEET_KEY` | Full `gsheet_key.json` (GCP service account) | vm_sync_gsheet |
-| `TICKER_OVERRIDES` | Full `ticker_overrides.json` | import flow, bot |
+| `TICKER_OVERRIDES` | Full `ticker_overrides.json` | import_all, bot |
 | `VM_SSH_KEY` | Private SSH key for `opc@152.67.164.204` | SCP of trades/ledger to VM |
 
-### `bot_config.json` (on VM + reconstructed in Actions)
+### `bot_config.json` structure
 ```json
 {
-  "telegram_token":      "...",
-  "groq_api_key":        "...",
-  "allowed_chat_id":     "7100061306,1257819265",
-  "mo_username":         "RRISHANKMK",
-  "mo_password":         "...",
-  "gmail_user":          "jainrishank20@gmail.com",
-  "gmail_app_password":  "..."
+  "telegram_token":     "...",
+  "groq_api_key":       "...",
+  "allowed_chat_id":    "7100061306,1257819265",
+  "mo_username":        "RRISHANKMK",
+  "mo_password":        "...",
+  "gmail_user":         "jainrishank20@gmail.com",
+  "gmail_app_password": "...",
+  "github_token":       "gho_... (expires — replace with classic PAT)",
+  "github_repo":        "jainrishank20/client-tracker-mofsl",
+  "clients": {
+    "RIMK1205": "Siva Sankara Reddy",
+    "RIMK1209": "Sathyavrath",
+    ...
+  }
 }
 ```
+
+> ⚠️ `github_token` is an OAuth token that expires. Replace with a classic PAT:
+> github.com/settings/tokens → Generate new token (classic) → scope: `repo` → no expiry.
+> Then run `set_secrets.py` to update all GitHub Secrets.
 
 ---
 
@@ -184,6 +192,9 @@ ledger.json             # Scraped by mo_downloader.py, SCPed to VM
 | RIMK1252 | Savitha |
 | RIMK1256 | Sheeba |
 
+> To add a new client: send `/addclient RIMKXXXX Name` to the bot.
+> Bot updates `bot_config.json` on VM and pushes to GitHub Secret automatically.
+
 ---
 
 ## Infrastructure
@@ -191,69 +202,90 @@ ledger.json             # Scraped by mo_downloader.py, SCPed to VM
 | Resource | Details |
 |---|---|
 | GitHub repo | `github.com/jainrishank20/client-tracker-mofsl` (private) |
-| GitHub Actions | Free tier — ~300 min/month used (well within 2000 min limit) |
+| GitHub Actions | Free tier — ~20 min/run, well within 2000 min/month limit |
 | Oracle VM | `152.67.164.204`, user `opc`, Oracle Linux 9, Always Free tier |
-| SSH key | `ssh-key-2026-06-11.key` (stored locally + as GitHub Secret) |
+| SSH key | `ssh-key-2026-06-11.key` (stored locally + as GitHub Secret `VM_SSH_KEY`) |
 | Google Sheet | ID `1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo` |
-| GCP project | `client-tracker-mofsl` |
+| GCP project | `client-tracker-mofsl` (service account for GSheet API) |
 
 ---
 
-## VM Setup
-
-The VM runs only the Telegram bot. Nothing else.
+## VM Setup (systemd)
 
 ```bash
 # Service file: /etc/systemd/system/tgbot.service
-# To check status:
-systemctl status tgbot
+[Unit]
+Description=Client Tracker Telegram Bot
+After=network-online.target
+Wants=network-online.target
 
-# To restart after code update:
-systemctl restart tgbot
+[Service]
+Type=simple
+User=opc
+WorkingDirectory=/home/opc/client-tracker-mofsl
+ExecStart=/usr/bin/python3 -u /home/opc/client-tracker-mofsl/telegram_bot.py
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=0
+MemoryMax=180M
 
-# To view logs:
-journalctl -u tgbot -f
+[Install]
+WantedBy=multi-user.target
 ```
 
-### Updating bot code on VM
 ```bash
-ssh opc@152.67.164.204
-cd /home/opc/client-tracker-mofsl
-git pull origin main
-systemctl restart tgbot
+# Useful commands
+systemctl status tgbot          # check status
+systemctl restart tgbot         # restart
+journalctl -u tgbot -f          # live logs
+journalctl -u tgbot -n 50       # last 50 lines
 ```
+
+---
+
+## Deploying Code Changes to VM
+
+GitHub Actions doesn't deploy code — only `trades.json` + `ledger.json`. For code changes:
+
+```bash
+# From your laptop
+scp -i ssh-key-2026-06-11.key <file> opc@152.67.164.204:/home/opc/client-tracker-mofsl/
+ssh -i ssh-key-2026-06-11.key opc@152.67.164.204 "sudo systemctl restart tgbot"
+```
+
+Files that need manual SCP when changed: `telegram_bot.py`, `send_notify.py`, `ticker_overrides.json`
 
 ---
 
 ## Common Operations
 
 ### Trigger a run manually
-- **GitHub UI:** Go to Actions tab → "Daily Trade Download" → "Run workflow"
-- **Telegram:** Send `/run` to the bot (re-syncs without CBOS download)
+- **Telegram:** Send `/run` to the bot → triggers GitHub Actions workflow_dispatch
+- **GitHub UI:** Actions tab → "Daily Trade Download" → "Run workflow"
 
 ### Add a new client
-1. Add client code + name to `NAMES` dict in `telegram_bot.py`
-2. Add to `CLIENTS` list in `send_notify.py`
-3. Add to `CLIENTS` list in `vm_sync_gsheet.py`
-4. Add to `CLIENT_NAMES` dict in `vm_sync_gsheet.py`
-5. Push to GitHub — next run picks it up automatically
+Send `/addclient RIMKXXXX Full Name` to the bot. Done. No code changes needed.
 
-### Add a new ticker override (CBOS name → NSE symbol)
-1. Edit `ticker_overrides.json` locally
+### Add a ticker override (CBOS name → NSE symbol)
+1. Edit `ticker_overrides.json` on laptop
 2. Push to GitHub
-3. Update GitHub Secret `TICKER_OVERRIDES` with new file contents
-4. Or: update directly on VM and in the secret
+3. SCP to VM: `scp ... ticker_overrides.json opc@152.67.164.204:/home/opc/client-tracker-mofsl/`
+4. Run `set_secrets.py` to update `TICKER_OVERRIDES` GitHub Secret
 
 ### Full rebuild (both financial years)
-- GitHub Actions: edit workflow to pass `--full` to `mo_downloader.py`
-- Or run locally: `python run_daily.py --full`
+Trigger GitHub Actions manually with `--full` flag (edit workflow temporarily).
+
+### Update GitHub Secrets after any config change
+```bash
+python C:\Users\jainr\AppData\Local\Temp\set_secrets.py
+```
 
 ### If GitHub Actions run fails
-1. Check the Actions tab for error logs
+1. Check Actions tab → click the failed run → click the failed step
 2. Common failures:
-   - CBOS login timeout → OTP email delay → retry manually
-   - VM SSH unreachable → Oracle free tier intermittent → retry
-   - GSheet API quota → wait 1 minute, re-run
+   - OTP timeout → CBOS email delayed → retry via `/run` in Telegram
+   - VM SSH unreachable → Oracle free tier blip → retry, or reboot from Oracle console
+   - GSheet API quota → wait 1 min, retry
 
 ---
 
@@ -262,18 +294,27 @@ systemctl restart tgbot
 ```
 CBOS Backoffice
     │
-    │  Playwright (headless Chrome)
-    │  OTP via Gmail IMAP
+    │  Playwright headless (GitHub Actions runner)
+    │  OTP via Gmail IMAP → [Gmail]/All Mail
     ▼
 mo_csvs/*.csv  +  ledger.json
     │
-    │  import_all.py (FIFO, ISIN-keyed)
+    │  import_all.py (FIFO, keyed on ISIN)
     ▼
 trades.json
     │
     ├──▶  vm_sync_gsheet.py ──▶  Google Sheet (live CMP via GOOGLEFINANCE)
     │
-    ├──▶  send_notify.py    ──▶  Telegram (daily ledger table)
+    ├──▶  send_notify.py    ──▶  Telegram (compact ledger table, both IDs)
     │
     └──▶  SCP to VM         ──▶  telegram_bot.py (responds to queries)
 ```
+
+---
+
+## Known Limitations
+
+- **Oracle free tier** may go down intermittently — bot auto-restarts when VM recovers
+- **`price_alerts.json`** is only on VM — lost if VM is fully wiped (rare)
+- **`github_token`** in bot_config.json expires — replace with classic PAT (no expiry)
+- **GSheet CMP** uses `GOOGLEFINANCE` which has a ~15 min delay and daily quota limits

@@ -74,6 +74,12 @@ def sym(script):
 
 def load_alerts() -> dict:
     with _alerts_lock:
+        # Primary: bot_config.json (survives VM rebuilds)
+        try:
+            return load_cfg().get('alerts', {})
+        except Exception:
+            pass
+        # Fallback: legacy price_alerts.json
         try:
             return json.load(open(ALERTS_FILE))
         except Exception:
@@ -81,7 +87,16 @@ def load_alerts() -> dict:
 
 def save_alerts(alerts: dict):
     with _alerts_lock:
+        # Write to price_alerts.json (fast, local)
         json.dump(alerts, open(ALERTS_FILE, 'w'), indent=2)
+        # Also persist into bot_config.json + push to GitHub Secret (async)
+        try:
+            c = load_cfg()
+            c['alerts'] = alerts
+            save_cfg(c)
+            threading.Thread(target=_push_config_to_github, args=(c,), daemon=True).start()
+        except Exception:
+            pass
 
 
 def _push_config_to_github(cfg: dict):
@@ -585,6 +600,15 @@ def send(chat_id: str, text: str):
 
 def main():
     print("Bot starting...")
+    # Restore alerts from bot_config.json if price_alerts.json is missing (VM rebuild recovery)
+    if not os.path.exists(ALERTS_FILE):
+        try:
+            backed_up = load_cfg().get('alerts', {})
+            if backed_up:
+                json.dump(backed_up, open(ALERTS_FILE, 'w'), indent=2)
+                print(f"Restored {len(backed_up)} alert(s) from bot_config.json")
+        except Exception:
+            pass
     # Start price alert poller in background
     threading.Thread(target=alert_poller, daemon=True).start()
     print("Price alert poller started.")
