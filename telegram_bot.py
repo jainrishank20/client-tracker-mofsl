@@ -65,11 +65,19 @@ def load_overrides() -> dict:
     except Exception:
         return {}
 
+try:
+    from symbol_map import resolve as _sym_resolve
+except ImportError:
+    def _sym_resolve(script, overrides):
+        if script in overrides:
+            v = overrides[script]
+            if v:
+                return v.strip().upper().replace(".NS", "")
+        return re.sub(r'[^A-Z0-9&]', '', script.upper())
+
 def sym(script: str, overrides: dict) -> str:
-    """Convert CBOS script name to clean NSE ticker. Pass pre-loaded overrides."""
-    if script in overrides:
-        return overrides[script]
-    return re.sub(r'[^A-Z0-9&]', '', script.upper())
+    """Convert CBOS script name to clean NSE ticker via SYMBOL_MAP + suffix stripping."""
+    return _sym_resolve(script, overrides)
 
 # ── Alerts persistence ────────────────────────────────────────────────────────
 
