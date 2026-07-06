@@ -4,7 +4,14 @@ on:
   schedule:
     # 3:00 PM UTC = 8:30 PM IST, Mon-Fri
     - cron: '0 15 * * 1-5'
-  workflow_dispatch:  # manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      full_history:
+        description: 'Download both FY 2025-26 and 2026-27 (use for initial setup or missing history)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 jobs:
   daily-run:
@@ -41,7 +48,12 @@ jobs:
 
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
       - name: Download CSVs from CBOS (Playwright headless)
-        run: python mo_downloader.py
+        run: |
+          if [ "${{ github.event.inputs.full_history }}" = "true" ]; then
+            python mo_downloader.py --full
+          else
+            python mo_downloader.py
+          fi
         timeout-minutes: 20
 
       # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
