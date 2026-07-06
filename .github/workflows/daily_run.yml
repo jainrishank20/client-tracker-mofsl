@@ -21,7 +21,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install playwright pandas gspread gspread-formatting google-auth google-auth-oauthlib groq yfinance
+        run: pip install playwright pandas gspread gspread-formatting google-auth google-auth-oauthlib groq yfinance PyNaCl
 
       - name: Install Playwright Chromium + system deps
         run: |
@@ -72,4 +72,4 @@ jobs:
 
       - name: Cleanup credentials
         if: always()
-        run: rm -f bot_config.json gsheet_key.json
+        run: rm -f bot_config.json gsheet_key.json ticker_overrides.json

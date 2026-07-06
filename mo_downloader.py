@@ -16,13 +16,9 @@ MO_PASSWORD        = _cfg['mo_password']
 GMAIL_USER         = _cfg['gmail_user']
 GMAIL_APP_PASSWORD = _cfg['gmail_app_password']
 
-CLIENTS = list(_cfg.get("clients", {
-    "RIMK1205":"Siva Sankara Reddy","RIMK1209":"Sathyavrath",
-    "RIMK1215":"Malleswari","RIMK1220":"Kalpana",
-    "RIMK1238":"Iranna","RIMK1247":"Srujana",
-    "RIMK1248":"Udayakumar","RIMK1249":"Sundareshwari",
-    "RIMK1252":"Savitha","RIMK1256":"Sheeba",
-}).keys())
+if "clients" not in _cfg or not _cfg["clients"]:
+    raise RuntimeError("bot_config.json missing 'clients' key — cannot determine which accounts to download")
+CLIENTS = list(_cfg["clients"].keys())
 
 BASE         = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = (
