@@ -28,7 +28,8 @@ def gh(path, method='GET', data=None):
         'Content-Type': 'application/json',
     })
     with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
+        body = r.read()
+        return json.loads(body) if body else {}
 
 def set_secret(name, value):
     from nacl import encoding, public
@@ -38,12 +39,12 @@ def set_secret(name, value):
     encrypted = base64.b64encode(box.encrypt(value.encode())).decode()
     payload   = json.dumps({'encrypted_value': encrypted, 'key_id': pub_info['key_id']}).encode()
     gh(f'actions/secrets/{name}', method='PUT', data=payload)
-    print(f'  ✅ {name} updated')
+    print(f'  OK {name} updated')
 
 print(f'Updating secrets for {REPO} ...')
 for secret_name, filepath in SECRETS.items():
     if not os.path.exists(filepath):
-        print(f'  ⚠️  Skipping {secret_name} — {filepath} not found')
+        print(f'  SKIP {secret_name} -- {filepath} not found')
         continue
     value = open(filepath).read()
     set_secret(secret_name, value)
