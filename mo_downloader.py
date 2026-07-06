@@ -138,7 +138,7 @@ async def login(page):
 
         print(f"  OTP attempt {attempt+1}: {otp}")
         inp = page.locator(OTP_INPUT).first
-        await inp.triple_click()
+        await inp.click()
         await inp.fill(otp)
         await asyncio.sleep(0.5)
         await page.click('button:has-text("Validate")')
