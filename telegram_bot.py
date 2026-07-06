@@ -327,6 +327,7 @@ def today_trades_for(client: str, trades: list, names: dict, overrides: dict) ->
             table_rows.append([i, sc, qty, price])
         lines.append(_table(['#', 'Script', 'Qty', 'Price'], table_rows))
 
+    net_pnl = 0.0
     if sells:
         lines.append(f"\n*Sells  ({len(sells)})*")
         table_rows = []
@@ -335,10 +336,13 @@ def today_trades_for(client: str, trades: list, names: dict, overrides: dict) ->
             qty   = int(t.get('sell_qty') or t.get('buy_qty') or 0)
             price = f"{float(t.get('sell_price') or 0):.2f}"
             pnl   = (float(t.get('sell_price') or 0) - float(t.get('buy_price') or 0)) * qty
+            net_pnl += pnl
             sign  = '+' if pnl >= 0 else ''
-            pnl_s = f"{sign}Rs{fmt_inr(pnl)}"
+            pnl_s = f"{sign}₹{fmt_inr(pnl)}"
             table_rows.append([i, sc, qty, price, pnl_s])
         lines.append(_table(['#', 'Script', 'Qty', 'Price', 'P&L'], table_rows))
+        sign = '+' if net_pnl >= 0 else ''
+        lines.append(f"\n*Net P&L today: {sign}₹{fmt_inr(net_pnl)}*")
 
     return '\n'.join(lines)
 
