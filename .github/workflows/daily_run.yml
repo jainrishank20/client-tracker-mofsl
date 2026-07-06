@@ -58,6 +58,7 @@ jobs:
 
       # ── Step 5: Push trades.json + ledger.json to VM (bot reads these) ──────
       - name: Push data files to VM
+        continue-on-error: true   # VM unreachable = skip, don't fail whole run
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |

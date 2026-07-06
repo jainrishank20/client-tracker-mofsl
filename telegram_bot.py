@@ -196,16 +196,13 @@ def all_open_summary(trades: list) -> str:
         by_client.setdefault(t['client'], []).append(t)
 
     lines = [f"*Open Positions — {len(open_t)} total*\n"]
-    lines.append(f"`{'Client':<18} {'Pos':>4} {'Invested':>12}`")
-    lines.append("`" + "─" * 36 + "`")
     total_inv = 0
     for code, rows in by_client.items():
         invested = sum(t.get('buy_price', 0) * t.get('buy_qty', 0) for t in rows)
         total_inv += invested
-        lines.append(f"`{NAMES.get(code,code):<18} {len(rows):>4} {fmt_inr(invested):>12}`")
-    lines.append("`" + "─" * 36 + "`")
-    lines.append(f"`{'TOTAL':<18} {len(open_t):>4} {fmt_inr(total_inv):>12}`")
-    lines.append("\n_Ask about a specific client for their positions_")
+        lines.append(f"*{NAMES.get(code,code)}* — {len(rows)} pos — ₹{fmt_inr(invested)}")
+    lines.append(f"\n*Total invested: ₹{fmt_inr(total_inv)}*")
+    lines.append("_Ask about a specific client for their positions_")
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
