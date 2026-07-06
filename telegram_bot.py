@@ -494,6 +494,15 @@ def alert_poller():
             time.sleep(60)
 
 
+# ── Groq helpers ─────────────────────────────────────────────────────────────
+
+_SLIM_KEYS = ('client','script','entry_date','exit_date','buy_qty','buy_price','sell_qty','sell_price')
+
+def _slim(trades: list) -> list:
+    """Strip charge fields before sending to Groq — keeps tokens under limit."""
+    return [{k: t.get(k) for k in _SLIM_KEYS} for t in trades]
+
+
 # ── Groq: answer free-form questions ─────────────────────────────────────────
 
 def ask_groq(question: str, context: str) -> str:
@@ -677,15 +686,15 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         # Free-form client question → Groq
         rows    = [t for t in trades if t.get('client') == client]
         context = (f"Client: {names.get(client, client)} ({client})\n"
-                   f"Trades: {json.dumps(rows[:40])}\n"
+                   f"Trades: {json.dumps(_slim(rows[:25]))}\n"
                    f"Ledger: {json.dumps(ledger.get(client, {}))}")
         return ask_groq(text, context)
 
     # General free-form → Groq
     open_t   = [t for t in trades if not t.get('exit_date')]
     closed_t = [t for t in trades if t.get('exit_date')]
-    context  = (f"Open trades ({len(open_t)}): {json.dumps(open_t[:30])}\n"
-                f"Closed trades ({len(closed_t)} total)\n"
+    context  = (f"Open ({len(open_t)} trades): {json.dumps(_slim(open_t[:20]))}\n"
+                f"Closed ({len(closed_t)} total): {json.dumps(_slim(closed_t[:10]))}\n"
                 f"Ledger: {json.dumps(ledger)}")
     return ask_groq(text, context)
 
