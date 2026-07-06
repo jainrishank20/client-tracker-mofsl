@@ -668,6 +668,21 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             return f"Alert for {sym_key} cancelled."
         return f"No alert found for {sym_key}."
 
+    # "today's trades" with no client → show ALL clients
+    if 'today' in tl and any(w in tl for w in ('trade', 'bought', 'sold', 'taken')):
+        today_str  = datetime.date.today().isoformat()
+        today_disp = datetime.date.today().strftime('%d %b %Y')
+        parts = [f"*All Trades — {today_disp}*"]
+        any_found = False
+        for code in names:
+            section = today_trades_for(code, trades, names, overrides)
+            if 'No trades' not in section:
+                parts.append('\n' + section)
+                any_found = True
+        if not any_found:
+            return f"No trades recorded for any client today ({today_disp})."
+        return '\n'.join(parts)
+
     # Client-specific query
     client = detect_client(text, names)
     if client:
