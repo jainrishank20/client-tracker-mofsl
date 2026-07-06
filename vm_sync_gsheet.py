@@ -146,22 +146,15 @@ def sync_to_gsheet(trades: list):
         _time.sleep(1)
         try:
             ws = sh.worksheet(name)
-            _retry(ws.clear)
             if ws.row_count < rows or ws.col_count < cols:
                 ws.resize(rows=max(rows, ws.row_count), cols=max(cols, ws.col_count))
         except gspread.WorksheetNotFound:
             ws = sh.add_worksheet(title=name, rows=rows, cols=cols)
-        try:
-            sh.batch_update({'requests': [{'updateCells': {
-                'range': {'sheetId': ws.id},
-                'fields': 'userEnteredFormat'
-            }}]})
-        except Exception:
-            pass
         return ws
 
     def write_df(ws, df):
         if df.empty:
+            _retry(ws.clear)
             ws.update([["No data"]], value_input_option='RAW')
             return
         df2 = df.copy()
@@ -172,6 +165,8 @@ def sync_to_gsheet(trades: list):
             try: return float(v) if '.' in v else int(v)
             except: return v
         data = [df2.columns.tolist()] + [[try_num(v) for v in r] for r in df2.values.tolist()]
+        # Clear immediately before write — minimises the empty-sheet window
+        _retry(ws.clear)
         _retry(ws.update, data, value_input_option='USER_ENTERED')
         _time.sleep(0.5)
 
