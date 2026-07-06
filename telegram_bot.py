@@ -266,10 +266,10 @@ def today_trades_for(client: str, trades: list, names: dict, overrides: dict) ->
 
     # Buys: entered today AND still open (not double-counted as sell)
     buys  = [t for t in client_trades
-             if t.get('entry_date', '')[:10] == today_str and not t.get('exit_date')]
+             if (t.get('entry_date') or '')[:10] == today_str and not t.get('exit_date')]
     # Sells: exited today (whether intraday or old buy)
     sells = [t for t in client_trades
-             if t.get('exit_date', '')[:10] == today_str]
+             if (t.get('exit_date') or '')[:10] == today_str]
 
     if not buys and not sells:
         return f"No trades for {names.get(client, client)} today."
