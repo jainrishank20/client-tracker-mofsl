@@ -249,32 +249,52 @@ def all_open_summary(trades: list) -> str:
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
-    lines = ["*Ledger Balances*\n"]
-    lines.append(f"{'Client':<18} {'Delivery':>12} {'MTF':>14}")
-    lines.append('─' * 46)
-    for code, name in NAMES.items():
-        d = ledger.get(code, {})
-        combined = fmt_inr(d.get('combined', 0))
-        mtf      = fmt_inr(d.get('mtf', 0))
-        lines.append(f"{name:<18} {combined:>12} {mtf:>14}")
-    return '`' + '\n'.join(lines) + '`'
+    names  = get_names()
+    codes  = list(names.keys()) or sorted(ledger.keys())
+    rows   = []
+    for c in codes:
+        d = ledger.get(c, {})
+        rows.append((c, fmt_inr(d.get('combined', 0)), fmt_inr(d.get('mtf', 0))))
+    w0 = max(len(r[0]) for r in rows) if rows else 8
+    w1 = max(len('Delivery'), max((len(r[1]) for r in rows), default=0))
+    w2 = max(len('MTF'),      max((len(r[2]) for r in rows), default=0))
+    sep = '─' * (w0 + w1 + w2 + 4)
+    def row_line(c, d, m): return f"{c:<{w0}}  {d:>{w1}}  {m:>{w2}}"
+    out = ["*Ledger Balances*", f"`{sep}`",
+           f"`{row_line('Client','Delivery','MTF')}`", f"`{sep}`"]
+    for c, d, m in rows:
+        out.append(f"`{row_line(c, d, m)}`")
+    out.append(f"`{sep}`")
+    return '\n'.join(out)
 
 def pnl_summary(trades: list) -> str:
+    names    = get_names()
     closed_t = [t for t in trades if t.get('exit_date')]
-    lines = ["*Realized P&L by Client*\n"]
-    total = 0
-    for code, name in NAMES.items():
-        rows = [t for t in closed_t if t.get('client') == code]
-        if not rows:
+    rows, total = [], 0
+    for code in names:
+        client_trades = [t for t in closed_t if t.get('client') == code]
+        if not client_trades:
             continue
-        pnl  = sum((t.get('sell_price',0) - t.get('buy_price',0)) * t.get('buy_qty',0) for t in rows)
-        sign = '+' if pnl >= 0 else ''
+        pnl = sum((t.get('sell_price',0) - t.get('buy_price',0)) * t.get('buy_qty',0)
+                  for t in client_trades)
         total += pnl
-        lines.append(f"{name:<18} {sign}₹{fmt_inr(pnl)}")
-    lines.append('─' * 32)
+        rows.append((code, pnl))
+    if not rows:
+        return "No closed trades yet."
+    w0  = max(len(r[0]) for r in rows)
+    w1  = max(len('P&L'), max(len(fmt_inr(r[1])) + 1 for r in rows))
+    sep = '─' * (w0 + w1 + 2)
+    def row_line(c, p):
+        s = ('+' if p >= 0 else '') + fmt_inr(p)
+        return f"{c:<{w0}}  {s:>{w1}}"
+    out = ["*Realized P&L*", f"`{sep}`",
+           f"`{'Client':<{w0}}  {'P&L':>{w1}}`", f"`{sep}`"]
+    for code, pnl in rows:
+        out.append(f"`{row_line(code, pnl)}`")
+    out.append(f"`{sep}`")
     sign = '+' if total >= 0 else ''
-    lines.append(f"{'TOTAL':<18} {sign}₹{fmt_inr(total)}")
-    return '`' + '\n'.join(lines) + '`'
+    out.append(f"`{'TOTAL':<{w0}}  {sign+fmt_inr(total):>{w1}}`")
+    return '\n'.join(out)
 
 
 # ── /run — trigger daily pipeline ────────────────────────────────────────────
