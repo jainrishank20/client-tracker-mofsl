@@ -43,8 +43,7 @@ for c in CLIENTS:
     m = fmt(ledger.get(c, {}).get('mtf', 0.0))
     rows.append((c, d, m))
 
-NAMES = cfg.get('clients', {})
-rows_display = [(NAMES.get(c, c), d, m) for c, d, m in rows]
+rows_display = rows  # use client codes — short, fixed width, fits mobile
 w0 = max(len(r[0]) for r in rows_display) if rows_display else 6
 w1 = max(len('Delivery'), max((len(r[1]) for r in rows_display), default=0))
 w2 = max(len('MTF'),      max((len(r[2]) for r in rows_display), default=0))
