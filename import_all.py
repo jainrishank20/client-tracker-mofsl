@@ -137,7 +137,7 @@ import glob, platform, re
 if platform.system() == 'Windows':
     CSV_DIR = r'C:\Users\jainr\Downloads\MO_Trades'
 else:
-    CSV_DIR = '/home/opc/client-tracker-mofsl/mo_csvs'
+    CSV_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mo_csvs')
 
 CLIENT_FILES = {}
 for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_RIMK*.csv'))):
