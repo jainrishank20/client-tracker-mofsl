@@ -1,14 +1,26 @@
-.env
+# Credentials — never commit
 bot_config.json
 gsheet_key.json
-raw_csvs/
-__pycache__/
-*.pyc
-import_meta.json
-processed_orders.json
+CREDENTIALS.md
+.env
+
+# Data files — written by pipeline, pushed to VM via SCP
 trades.json
 ledger.json
-*.log
+price_alerts.json
+import_meta.json
+processed_orders.json
+
+# Downloaded CSVs
+mo_csvs/
+raw_csvs/
+
+# Python
+__pycache__/
+*.pyc
+.python-version
+
+# Debug / scratch scripts
 check_pnl.py
 debug_*.py
 verify_rebuild.py

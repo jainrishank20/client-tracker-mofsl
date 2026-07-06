@@ -1,6 +1,0 @@
-[server]
-headless = true
-enableCORS = false
-
-[theme]
-base = "dark"
