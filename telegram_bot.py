@@ -196,14 +196,16 @@ def all_open_summary(trades: list) -> str:
         by_client.setdefault(t['client'], []).append(t)
 
     lines = [f"*Open Positions — {len(open_t)} total*\n"]
+    lines.append(f"`{'Client':<18} {'Pos':>4} {'Invested':>12}`")
+    lines.append("`" + "─" * 36 + "`")
+    total_inv = 0
     for code, rows in by_client.items():
-        lines.append(f"*{NAMES.get(code, code)}* ({len(rows)})")
-        for t in rows:
-            sc  = sym(t.get('script','?'))
-            qty = int(t.get('buy_qty',0))
-            bp  = t.get('buy_price',0)
-            lines.append(f"  {sc}  qty={qty}  @₹{bp:.2f}")
-    lines.append(f"\n_For live P&L: ask about a specific client_")
+        invested = sum(t.get('buy_price', 0) * t.get('buy_qty', 0) for t in rows)
+        total_inv += invested
+        lines.append(f"`{NAMES.get(code,code):<18} {len(rows):>4} {fmt_inr(invested):>12}`")
+    lines.append("`" + "─" * 36 + "`")
+    lines.append(f"`{'TOTAL':<18} {len(open_t):>4} {fmt_inr(total_inv):>12}`")
+    lines.append("\n_Ask about a specific client for their positions_")
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
@@ -448,21 +450,24 @@ def handle(text: str, chat_id: str) -> Optional[str]:
 
 # ── Telegram polling ──────────────────────────────────────────────────────────
 
-def tg(method: str, **kwargs):
+def tg(method: str, _socket_timeout: int = 15, **kwargs):
     data = urllib.parse.urlencode(kwargs).encode()
     req  = urllib.request.Request(
         f"https://api.telegram.org/bot{TOKEN}/{method}", data=data)
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=_socket_timeout) as r:
         return json.loads(r.read())
 
 def send(chat_id: str, text: str):
-    try:
-        tg('sendMessage', chat_id=chat_id, text=text, parse_mode='Markdown')
-    except Exception:
+    MAX = 4000
+    chunks = [text[i:i+MAX] for i in range(0, len(text), MAX)]
+    for chunk in chunks:
         try:
-            tg('sendMessage', chat_id=chat_id, text=text)
-        except Exception as e:
-            print(f"Send error: {e}")
+            tg('sendMessage', chat_id=chat_id, text=chunk, parse_mode='Markdown')
+        except Exception:
+            try:
+                tg('sendMessage', chat_id=chat_id, text=chunk)
+            except Exception as e:
+                print(f"Send error: {e}")
 
 def main():
     print("Bot starting...")
@@ -473,7 +478,7 @@ def main():
     offset = 0
     while True:
         try:
-            updates = tg('getUpdates', offset=offset, timeout=30)
+            updates = tg('getUpdates', _socket_timeout=35, offset=offset, timeout=30)
             for upd in updates.get('result', []):
                 offset = upd['update_id'] + 1
                 msg    = upd.get('message') or upd.get('edited_message')
