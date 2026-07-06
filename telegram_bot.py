@@ -113,20 +113,31 @@ def fmt_inr(val: float) -> str:
     return f"{sign}{','.join(groups)},{tail}"
 
 def fetch_cmp(symbols: list) -> dict:
-    """Fetch live CMP for a list of NSE symbols. Returns {symbol: price}."""
+    """Fetch live CMP for a list of NSE symbols. Returns {symbol: price}.
+    Capped at 15 symbols — too many causes timeouts."""
     if not _YF or not symbols:
         return {}
+    symbols = list(symbols)[:15]  # hard cap
     try:
         tickers = [s + '.NS' for s in symbols]
         data = yf.download(tickers, period='1d', interval='1m',
-                           progress=False, auto_adjust=True)
+                           progress=False, auto_adjust=True,
+                           timeout=10)
         result = {}
-        for s, t in zip(symbols, tickers):
+        if len(tickers) == 1:
+            # Single ticker returns flat DataFrame
             try:
-                price = float(data['Close'][t].dropna().iloc[-1])
-                result[s] = price
+                price = float(data['Close'].dropna().iloc[-1])
+                result[symbols[0]] = price
             except Exception:
                 pass
+        else:
+            for s, t in zip(symbols, tickers):
+                try:
+                    price = float(data['Close'][t].dropna().iloc[-1])
+                    result[s] = price
+                except Exception:
+                    pass
         return result
     except Exception:
         return {}
@@ -184,23 +195,15 @@ def all_open_summary(trades: list) -> str:
     for t in open_t:
         by_client.setdefault(t['client'], []).append(t)
 
-    # Fetch all CMPs at once
-    all_syms = list({sym(t.get('script','')) for t in open_t})
-    cmp = fetch_cmp(all_syms)
-
     lines = [f"*Open Positions — {len(open_t)} total*\n"]
     for code, rows in by_client.items():
         lines.append(f"*{NAMES.get(code, code)}* ({len(rows)})")
         for t in rows:
-            sc    = sym(t.get('script','?'))
-            qty   = int(t.get('buy_qty',0))
-            bp    = t.get('buy_price',0)
-            line  = f"  {sc}  qty={qty}  @₹{bp:.2f}"
-            if sc in cmp:
-                unreal = (cmp[sc] - bp) * qty
-                sign   = '+' if unreal >= 0 else ''
-                line  += f"  ({sign}₹{fmt_inr(unreal)})"
-            lines.append(line)
+            sc  = sym(t.get('script','?'))
+            qty = int(t.get('buy_qty',0))
+            bp  = t.get('buy_price',0)
+            lines.append(f"  {sc}  qty={qty}  @₹{bp:.2f}")
+    lines.append(f"\n_For live P&L: ask about a specific client_")
     return '\n'.join(lines)
 
 def ledger_summary(ledger: dict) -> str:
