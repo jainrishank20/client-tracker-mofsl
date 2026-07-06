@@ -284,7 +284,8 @@ if __name__ == '__main__':
 
     print(f'All clients imported: {len(all_trades)} trades')
     print(f'  Open  : {len(opened)}')
-    print(f'  Closed: {len(closed)}   Win rate: {wins}/{len(closed)} = {wins/len(closed)*100:.0f}%')
+    wr = f'{wins}/{len(closed)} = {wins/len(closed)*100:.0f}%' if closed else 'n/a'
+    print(f'  Closed: {len(closed)}   Win rate: {wr}')
     print(f'  Realised P&L : Rs {pnl:,.0f}')
     print(f'  Open capital : Rs {cap:,.0f}')
     print()

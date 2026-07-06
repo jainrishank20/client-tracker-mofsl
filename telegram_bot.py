@@ -26,27 +26,33 @@ except ImportError:
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-cfg         = json.load(open(os.path.join(BASE, 'bot_config.json')))
+CFG_FILE    = os.path.join(BASE, 'bot_config.json')
+
+def load_cfg():
+    return json.load(open(CFG_FILE))
+
+def save_cfg(cfg):
+    json.dump(cfg, open(CFG_FILE, 'w'), indent=2)
+
+cfg         = load_cfg()
 TOKEN       = cfg['telegram_token']
 CHAT_IDS    = {c.strip() for c in str(cfg['allowed_chat_id']).split(',')}
 groq_client = Groq(api_key=cfg['groq_api_key'])
 
-NAMES = {
-    'RIMK1205': 'Siva Sankara Reddy',
-    'RIMK1209': 'Sathyavrath',
-    'RIMK1215': 'Malleswari',
-    'RIMK1220': 'Kalpana',
-    'RIMK1238': 'Iranna',
-    'RIMK1247': 'Srujana',
-    'RIMK1248': 'Udayakumar',
-    'RIMK1249': 'Sundareshwari',
-    'RIMK1252': 'Savitha',
-    'RIMK1256': 'Sheeba',
-}
-NAME_TO_CODE = {v.lower(): k for k, v in NAMES.items()}
-NAME_TO_CODE.update({k.lower(): k for k in NAMES})
+def get_names():
+    return load_cfg().get('clients', {})
 
-ALERTS_FILE = os.path.join(BASE, 'price_alerts.json')
+def get_name_to_code():
+    names = get_names()
+    m = {v.lower(): k for k, v in names.items()}
+    m.update({k.lower(): k for k in names})
+    return m
+
+NAMES        = get_names()        # module-level for compatibility
+NAME_TO_CODE = get_name_to_code()
+
+ALERTS_FILE  = os.path.join(BASE, 'price_alerts.json')
+_alerts_lock = threading.Lock()
 
 # ── Symbol resolution ─────────────────────────────────────────────────────────
 
@@ -67,13 +73,50 @@ def sym(script):
 # ── Alerts persistence ────────────────────────────────────────────────────────
 
 def load_alerts() -> dict:
-    try:
-        return json.load(open(ALERTS_FILE))
-    except Exception:
-        return {}
+    with _alerts_lock:
+        try:
+            return json.load(open(ALERTS_FILE))
+        except Exception:
+            return {}
 
 def save_alerts(alerts: dict):
-    json.dump(alerts, open(ALERTS_FILE, 'w'), indent=2)
+    with _alerts_lock:
+        json.dump(alerts, open(ALERTS_FILE, 'w'), indent=2)
+
+
+def _push_config_to_github(cfg: dict):
+    """Update the BOT_CONFIG GitHub Secret so next Actions run sees the new config."""
+    try:
+        import base64
+        token = cfg.get('github_token', '')
+        repo  = cfg.get('github_repo', '')
+        if not token or not repo:
+            return
+        headers = {'Authorization': f'token {token}',
+                   'Accept': 'application/vnd.github+json',
+                   'Content-Type': 'application/json'}
+        # Get repo public key
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{repo}/actions/secrets/public-key',
+            headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            pk_data = json.loads(r.read())
+        pub_key_b64 = pk_data['key']
+        key_id      = pk_data['key_id']
+        # Encrypt
+        from nacl import public as nacl_public, encoding as nacl_encoding
+        pub_key_bytes = base64.b64decode(pub_key_b64)
+        pk  = nacl_public.PublicKey(pub_key_bytes)
+        box = nacl_public.SealedBox(pk)
+        encrypted = base64.b64encode(box.encrypt(json.dumps(cfg).encode())).decode()
+        payload = json.dumps({'encrypted_value': encrypted, 'key_id': key_id}).encode()
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{repo}/actions/secrets/BOT_CONFIG',
+            data=payload, method='PUT', headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            pass  # 204 No Content on success
+    except Exception as e:
+        print(f"GitHub Secret update failed: {e}")
 
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
@@ -333,8 +376,9 @@ def ask_groq(question: str, context: str) -> str:
 # ── Route messages ────────────────────────────────────────────────────────────
 
 def handle(text: str, chat_id: str) -> Optional[str]:
-    text = text.strip()
-    tl   = text.lower()
+    text  = text.strip()
+    tl    = text.lower()
+    NAMES = get_names()  # always fresh — picks up /addclient changes without restart
     trades = load_trades()
     ledger = load_ledger()
 
@@ -342,14 +386,17 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         return (
             "📊 *Client Tracker Bot*\n\n"
             "*Commands:*\n"
-            "/open — all open positions with live P&L\n"
+            "/open — all open positions\n"
             "/ledger — ledger balances\n"
             "/summary — snapshot\n"
             "/pnl — realized P&L by client\n"
             "/run — trigger daily pipeline\n"
-            "/alert SYMBOL PRICE — set price alert\n"
+            "/alert SYM PRICE \\[above\\|below\\] — price alert\n"
             "/alerts — list active alerts\n"
-            "/cancelalert SYMBOL — remove alert\n\n"
+            "/cancelalert SYM — remove alert\n"
+            "/clients — list all clients\n"
+            "/addclient CODE NAME — add new client\n"
+            "/removeclient CODE — remove client\n\n"
             "*Or ask naturally:*\n"
             "_'Sathyavrath open trades'_\n"
             "_'What is Savitha's ledger?'_"
@@ -379,19 +426,63 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             f"Total realised P&L: {sign}₹{fmt_inr(total_pnl)}"
         )
 
+    # /addclient CODE NAME
+    m = re.match(r'^/addclient\s+([A-Z0-9]+)\s+(.+)$', text.strip(), re.IGNORECASE)
+    if m:
+        code = m.group(1).upper()
+        name = m.group(2).strip()
+        c = load_cfg()
+        if 'clients' not in c:
+            c['clients'] = {}
+        if code in c['clients']:
+            return f"Client *{code}* already exists as _{c['clients'][code]}_."
+        c['clients'][code] = name
+        save_cfg(c)
+        _push_config_to_github(c)
+        return (f"✅ Client *{code}* — _{name}_ added.\n"
+                f"GitHub Secret updated. Next nightly run will include this client.")
+
+    # /clients — list all clients
+    if tl in ('/clients', '/listclients'):
+        names = get_names()
+        if not names:
+            return "No clients configured."
+        lines = ["*Configured Clients:*"]
+        for code, name in names.items():
+            lines.append(f"  `{code}` — {name}")
+        return '\n'.join(lines)
+
+    # /removeclient CODE
+    m = re.match(r'^/removeclient\s+([A-Z0-9]+)$', text.strip(), re.IGNORECASE)
+    if m:
+        code = m.group(1).upper()
+        c = load_cfg()
+        if code not in c.get('clients', {}):
+            return f"Client *{code}* not found."
+        removed_name = c['clients'].pop(code)
+        save_cfg(c)
+        _push_config_to_github(c)
+        return f"✅ Client *{code}* — _{removed_name}_ removed. GitHub Secret updated."
+
     # /run — trigger daily pipeline
     if tl == '/run':
         trigger_daily_run(chat_id)
         return None  # response sent async from thread
 
-    # /alert SYMBOL PRICE
-    m = re.match(r'^/alert\s+([A-Z0-9&]+)\s+([\d.]+)$', text.upper())
+    # /alert SYMBOL PRICE [above|below]
+    m = re.match(r'^/alert\s+([A-Z0-9&]+)\s+([\d.]+)(?:\s+(above|below))?$', text.upper())
     if m:
-        sym_key = m.group(1)
-        target  = float(m.group(2))
+        sym_key   = m.group(1)
+        target    = float(m.group(2))
+        forced_dir = m.group(3)  # 'ABOVE', 'BELOW', or None
         alerts  = load_alerts()
         current = fetch_single_cmp(sym_key)
-        direction = 'above' if (current is None or target > current) else 'below'
+        if forced_dir:
+            direction = forced_dir.lower()
+        elif current is not None:
+            direction = 'above' if target > current else 'below'
+        else:
+            direction = 'above'  # default when CMP unavailable
         alerts[sym_key] = {'target': target, 'chat_id': chat_id, 'direction': direction}
         save_alerts(alerts)
         cmp_str = f" (CMP ₹{current:.2f})" if current else ""

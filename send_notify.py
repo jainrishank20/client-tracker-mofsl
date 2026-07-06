@@ -1,13 +1,18 @@
 import json, urllib.request, urllib.parse, os
 from datetime import date
 
-BASE   = os.path.dirname(os.path.abspath(__file__))
-cfg    = json.load(open(os.path.join(BASE, 'bot_config.json')))
-ledger = json.load(open(os.path.join(BASE, 'ledger.json')))
-trades = json.load(open(os.path.join(BASE, 'trades.json')))
+BASE = os.path.dirname(os.path.abspath(__file__))
 
-CLIENTS = ['RIMK1205','RIMK1209','RIMK1215','RIMK1220','RIMK1238',
-           'RIMK1247','RIMK1248','RIMK1249','RIMK1252','RIMK1256']
+try:
+    cfg    = json.load(open(os.path.join(BASE, 'bot_config.json')))
+    ledger = json.load(open(os.path.join(BASE, 'ledger.json')))
+    trades = json.load(open(os.path.join(BASE, 'trades.json')))
+except FileNotFoundError as e:
+    print(f"ERROR: {e} — aborting notify")
+    raise SystemExit(1)
+
+# clients list from config, fallback to ledger keys
+CLIENTS = list(cfg.get('clients', {}).keys()) or sorted(ledger.keys())
 
 open_count   = sum(1 for t in trades if not t.get('exit_date'))
 closed_count = sum(1 for t in trades if t.get('exit_date'))
@@ -38,9 +43,11 @@ for c in CLIENTS:
     m = fmt(ledger.get(c, {}).get('mtf', 0.0))
     rows.append((c, d, m))
 
-w0 = max(len(r[0]) for r in rows)
-w1 = max(len('Delivery'), max(len(r[1]) for r in rows))
-w2 = max(len('MTF'),      max(len(r[2]) for r in rows))
+NAMES = cfg.get('clients', {})
+rows_display = [(NAMES.get(c, c), d, m) for c, d, m in rows]
+w0 = max(len(r[0]) for r in rows_display) if rows_display else 6
+w1 = max(len('Delivery'), max((len(r[1]) for r in rows_display), default=0))
+w2 = max(len('MTF'),      max((len(r[2]) for r in rows_display), default=0))
 
 
 def row_line(c, d, m):
@@ -56,8 +63,8 @@ lines = [
     f'`{header}`',
     f'`{sep}`',
 ]
-for c, d, m in rows:
-    lines.append(f'`{row_line(c, d, m)}`')
+for name, d, m in rows_display:
+    lines.append(f'`{row_line(name, d, m)}`')
 lines.append(f'`{sep}`')
 
 msg = '\n'.join(lines)

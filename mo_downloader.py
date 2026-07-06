@@ -16,10 +16,13 @@ MO_PASSWORD        = _cfg['mo_password']
 GMAIL_USER         = _cfg['gmail_user']
 GMAIL_APP_PASSWORD = _cfg['gmail_app_password']
 
-CLIENTS = [
-    "RIMK1205","RIMK1209","RIMK1215","RIMK1220","RIMK1238",
-    "RIMK1247","RIMK1248","RIMK1249","RIMK1252","RIMK1256",
-]
+CLIENTS = list(_cfg.get("clients", {
+    "RIMK1205":"Siva Sankara Reddy","RIMK1209":"Sathyavrath",
+    "RIMK1215":"Malleswari","RIMK1220":"Kalpana",
+    "RIMK1238":"Iranna","RIMK1247":"Srujana",
+    "RIMK1248":"Udayakumar","RIMK1249":"Sundareshwari",
+    "RIMK1252":"Savitha","RIMK1256":"Sheeba",
+}).keys())
 
 BASE         = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = (

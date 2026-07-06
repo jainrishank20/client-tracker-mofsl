@@ -21,7 +21,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install playwright pandas gspread google-auth google-auth-oauthlib groq yfinance
+        run: pip install playwright pandas gspread gspread-formatting google-auth google-auth-oauthlib groq yfinance
 
       - name: Install Playwright Chromium + system deps
         run: |

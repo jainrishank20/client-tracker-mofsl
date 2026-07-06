@@ -11,15 +11,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 GSHEET_KEY = os.path.join(BASE, "gsheet_key.json")
 GSHEET_ID  = "1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo"
 
-CLIENTS = ["RIMK1205","RIMK1209","RIMK1215","RIMK1220","RIMK1238",
-           "RIMK1247","RIMK1248","RIMK1249","RIMK1252","RIMK1256"]
-CLIENT_NAMES = {
-    "RIMK1205":"Siva Sankara Reddy","RIMK1209":"Sathyavrath",
-    "RIMK1215":"Malleswari","RIMK1220":"Kalpana",
-    "RIMK1238":"Iranna","RIMK1247":"Srujana",
-    "RIMK1248":"Udayakumar","RIMK1249":"Sundareshwari",
-    "RIMK1252":"Savitha","RIMK1256":"Sheeba",
-}
+_cfg = json.load(open(os.path.join(BASE, "bot_config.json")))
+CLIENT_NAMES = _cfg.get("clients", {})
+CLIENTS = list(CLIENT_NAMES.keys())
 
 TICKER_OVERRIDES_FILE = os.path.join(BASE, "ticker_overrides.json")
 
@@ -256,7 +250,7 @@ def sync_to_gsheet(trades: list):
 
     def total_charges(row, prefix):
         keys = [f'{prefix}_brokerage', f'{prefix}_stt', f'{prefix}_gst',
-                f'{prefix}_stamp', f'{prefix}_txn_chrg']
+                f'{prefix}_stamp', f'{prefix}_txn']
         return sum(float(row.get(k, 0) or 0) for k in keys)
 
     HEADER_BG   = Color(0.13, 0.13, 0.18)
