@@ -220,22 +220,33 @@ def trades_summary_for(client: str, trades: list) -> str:
     open_t   = [t for t in rows if not t.get('exit_date')]
     closed_t = [t for t in rows if t.get('exit_date')]
 
-    open_syms = list({sym(t.get('script','')) for t in open_t})
-    cmp = fetch_cmp(open_syms)
+    # Merge FIFO lots by scrip — sum qty, weighted avg price
+    merged = {}
+    for t in open_t:
+        sc  = sym(t.get('script', '?'))
+        qty = t.get('buy_qty', 0)
+        bp  = t.get('buy_price', 0)
+        if sc not in merged:
+            merged[sc] = {'qty': 0, 'cost': 0.0}
+        merged[sc]['qty']  += qty
+        merged[sc]['cost'] += qty * bp
+    for sc in merged:
+        merged[sc]['avg'] = merged[sc]['cost'] / merged[sc]['qty'] if merged[sc]['qty'] else 0
+
+    cmp = fetch_cmp(list(merged.keys()))
 
     lines = [f"*{NAMES.get(client, client)}* ({client})"]
-    lines.append(f"Open: {len(open_t)}  |  Closed: {len(closed_t)}")
-    if open_t:
-        lines.append("\n*Open positions:*")
-        for t in open_t:
-            qty   = int(t.get('buy_qty', 0))
-            bp    = t.get('buy_price', 0)
-            sc    = sym(t.get('script', '?'))
-            line  = f"  {sc}  qty={qty}  @₹{bp:.2f}"
+    lines.append(f"Open: {len(merged)}  |  Closed: {len(closed_t)}")
+    if merged:
+        lines.append("")
+        for sc, d in sorted(merged.items()):
+            qty  = int(d['qty'])
+            avg  = d['avg']
+            line = f"`{sc:<18} {qty:>5} @ {avg:>8.2f}`"
             if sc in cmp:
-                unreal = (cmp[sc] - bp) * qty
+                unreal = (cmp[sc] - avg) * qty
                 sign   = '+' if unreal >= 0 else ''
-                line  += f"  ({sign}₹{fmt_inr(unreal)})"
+                line  += f"  `{sign}{fmt_inr(unreal)}`"
             lines.append(line)
     if closed_t:
         total_pnl = sum(
@@ -554,6 +565,29 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     client = detect_client(text)
     if client:
         if any(w in tl for w in ('open', 'position', 'trade', 'holding')):
+            # "today's trades" — show only today's entries/exits
+            if 'today' in tl:
+                today_str = datetime.date.today().isoformat()
+                today_trades = [t for t in trades
+                                if t.get('client') == client
+                                and (t.get('entry_date','')[:10] == today_str
+                                     or t.get('exit_date','')[:10] == today_str)]
+                if not today_trades:
+                    return f"No trades for {NAMES.get(client, client)} today."
+                buys  = [t for t in today_trades if t.get('entry_date','')[:10] == today_str]
+                sells = [t for t in today_trades if t.get('exit_date','')[:10] == today_str]
+                lines = [f"*{NAMES.get(client, client)} — Today's trades*"]
+                if buys:
+                    lines.append("\n*Bought:*")
+                    for t in buys:
+                        lines.append(f"  {sym(t['script'])}  {int(t['buy_qty'])} @ ₹{t['buy_price']:.2f}")
+                if sells:
+                    lines.append("\n*Sold:*")
+                    for t in sells:
+                        pnl = (t['sell_price'] - t['buy_price']) * t['sell_qty']
+                        sign = '+' if pnl >= 0 else ''
+                        lines.append(f"  {sym(t['script'])}  {int(t['sell_qty'])} @ ₹{t['sell_price']:.2f}  ({sign}₹{fmt_inr(pnl)})")
+                return '\n'.join(lines)
             return trades_summary_for(client, trades)
         if any(w in tl for w in ('ledger', 'balance', 'debit', 'credit', 'mtf')):
             d = ledger.get(client, {})
