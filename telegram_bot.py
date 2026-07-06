@@ -300,27 +300,33 @@ def pnl_summary(trades: list) -> str:
 # ── /run — trigger daily pipeline ────────────────────────────────────────────
 
 def trigger_daily_run(chat_id: str):
-    """Run the daily pipeline in a background thread, send status updates."""
+    """Trigger GitHub Actions workflow_dispatch — pipeline runs on GitHub, not VM."""
     def _run():
-        send(chat_id, "⏳ Starting daily pipeline on VM...")
-        script = os.path.join(BASE, 'run_daily_vm.py')
         try:
-            r = subprocess.run(
-                [sys.executable, script],
-                capture_output=True, text=True, timeout=900
+            c     = load_cfg()
+            token = c.get('github_token', '')
+            repo  = c.get('github_repo', '')
+            if not token or not repo:
+                send(chat_id, "❌ github_token/github_repo missing from bot_config.json")
+                return
+            payload = json.dumps({'ref': 'main'}).encode()
+            req = urllib.request.Request(
+                f'https://api.github.com/repos/{repo}/actions/workflows/daily_run.yml/dispatches',
+                data=payload, method='POST',
+                headers={
+                    'Authorization': f'token {token}',
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json',
+                }
             )
-            if r.returncode == 0:
-                # Extract key stats from stdout
-                lines = r.stdout.splitlines()
-                stats = [l for l in lines if 'imported:' in l or 'Open' in l or 'Closed' in l]
-                summary = '\n'.join(stats[-5:]) if stats else 'Done.'
-                send(chat_id, f"✅ Daily run complete\n```\n{summary}\n```")
-            else:
-                send(chat_id, f"❌ Daily run failed\n```\n{r.stderr[-500:]}\n```")
-        except subprocess.TimeoutExpired:
-            send(chat_id, "❌ Daily run timed out after 15 minutes.")
+            with urllib.request.urlopen(req, timeout=15) as r:
+                pass  # 204 No Content = success
+            send(chat_id,
+                 "✅ GitHub Actions run triggered!\n"
+                 "_Full pipeline: CBOS download → import → GSheet sync → notify_\n"
+                 "_Takes ~15–20 min. You'll get the ledger message when done._")
         except Exception as e:
-            send(chat_id, f"❌ Error: {e}")
+            send(chat_id, f"❌ Failed to trigger run: {e}")
     threading.Thread(target=_run, daemon=True).start()
 
 
