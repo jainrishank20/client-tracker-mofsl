@@ -169,7 +169,7 @@ if __name__ == '__main__':
         orders = df.groupby(['TRADE DATE', 'FIFO_KEY', 'SCRIP', 'SELL/BUY', 'ORDER NO']).apply(
             lambda g: pd.Series({
                 'qty':        g['TRADE QTY'].sum(),
-                'price':      round((g['MARKET PRICE'] * g['TRADE QTY']).sum() / g['TRADE QTY'].sum(), 2),
+                'price':      round((g['MARKET PRICE'] * g['TRADE QTY']).sum() / g['TRADE QTY'].sum(), 2) if g['TRADE QTY'].sum() > 0 else 0,
                 'net_rate':   round(g['NET RATE'].mean(), 2),
                 'brokerage':  round(g['BROKERAGE'].sum(), 2),
                 'stt':        round(g['STT/CTT'].sum(), 2),

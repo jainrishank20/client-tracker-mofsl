@@ -374,18 +374,20 @@ def sync_to_gsheet(trades: list):
         gross   = round((float(r['sell_price']) - float(r['buy_price'])) * float(r['sell_qty']), 2) if not is_open else ''
         charges = round(total_charges(r,'buy') + total_charges(r,'sell'), 2)
         net     = round(gross - charges, 2) if gross != '' else ''
-        pct     = round(gross / (float(r['buy_price']) * float(r['sell_qty'])) * 100, 2) if gross != '' and float(r['buy_price']) > 0 else ''
-        hold    = (r['exit_date'] - r['entry_date']).days if not is_open else ''
+        _bp  = float(r['buy_price'])
+        _sq  = float(r['sell_qty']) if not is_open else 0
+        pct  = round(gross / (_bp * _sq) * 100, 2) if gross != '' and _bp > 0 and _sq > 0 else ''
+        hold = (r['exit_date'] - r['entry_date']).days if not is_open and pd.notna(r['exit_date']) and pd.notna(r['entry_date']) else ''
         ledger_rows.append({
             'Client':       r['client'],
             'Client Name':  CLIENT_NAMES.get(r['client'], r['client']),
             'Script':       r['script'],
             'Status':       'Open' if is_open else 'Closed',
-            'Entry Date':   r['entry_date'].strftime('%Y-%m-%d'),
+            'Entry Date':   r['entry_date'].strftime('%Y-%m-%d') if pd.notna(r['entry_date']) else '',
             'Buy Qty':      float(r['buy_qty']),
             'Buy Price':    float(r['buy_price']),
             'Invested (₹)': round(float(r['buy_price']) * float(r['buy_qty']), 2),
-            'Exit Date':    '' if is_open else r['exit_date'].strftime('%Y-%m-%d'),
+            'Exit Date':    '' if is_open else (r['exit_date'].strftime('%Y-%m-%d') if pd.notna(r['exit_date']) else ''),
             'Sell Qty':     float(r['sell_qty']) if not is_open else '',
             'Sell Price':   float(r['sell_price']) if not is_open else '',
             'Gross P&L':    gross,
@@ -479,9 +481,10 @@ def sync_to_gsheet(trades: list):
         cl['Buy Charges']  = cl.apply(lambda r: round(total_charges(r,'buy'), 2), axis=1)
         cl['Sell Charges'] = cl.apply(lambda r: round(total_charges(r,'sell'),2), axis=1)
         cl['Net P&L']      = (cl['Gross P&L'] - cl['Buy Charges'] - cl['Sell Charges']).round(2)
-        cl['% Return']     = (cl['Gross P&L'] / (cl['buy_price'] * cl['sell_qty']) * 100).round(2)
+        denom = cl['buy_price'] * cl['sell_qty']
+        cl['% Return']     = cl['Gross P&L'].where(denom == 0, cl['Gross P&L'] / denom.replace(0, float('nan')) * 100).round(2).fillna(0)
         cl['Type']         = cl.apply(lambda r: 'Intraday'
-                              if r['entry_date'].date()==r['exit_date'].date() else 'Delivery', axis=1)
+                              if pd.notna(r['entry_date']) and pd.notna(r['exit_date']) and r['entry_date'].date()==r['exit_date'].date() else 'Delivery', axis=1)
         cl['Hold Days']    = (cl['exit_date'] - cl['entry_date']).dt.days
         cl['Entry Date']   = cl['entry_date'].dt.strftime('%Y-%m-%d')
         cl['Exit Date']    = cl['exit_date'].dt.strftime('%Y-%m-%d')

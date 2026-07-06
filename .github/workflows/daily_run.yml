@@ -67,7 +67,7 @@ jobs:
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no"
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
-          $SCP trades.json ledger.json "$VM:$VMDIR/"
+          $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
           rm /tmp/vm_key
 
       - name: Cleanup credentials

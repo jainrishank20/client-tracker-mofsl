@@ -322,8 +322,8 @@ def today_trades_for(client: str, trades: list, names: dict, overrides: dict) ->
         table_rows = []
         for i, t in enumerate(buys, 1):
             sc    = sym(t['script'], overrides)
-            qty   = int(t['buy_qty'])
-            price = f"{t['buy_price']:.2f}"
+            qty   = int(t.get('buy_qty') or 0)
+            price = f"{float(t.get('buy_price') or 0):.2f}"
             table_rows.append([i, sc, qty, price])
         lines.append(_table(['#', 'Script', 'Qty', 'Price'], table_rows))
 
@@ -332,9 +332,9 @@ def today_trades_for(client: str, trades: list, names: dict, overrides: dict) ->
         table_rows = []
         for i, t in enumerate(sells, 1):
             sc    = sym(t['script'], overrides)
-            qty   = int(t.get('sell_qty', t.get('buy_qty', 0)))
-            price = f"{t.get('sell_price', 0):.2f}"
-            pnl   = (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
+            qty   = int(t.get('sell_qty') or t.get('buy_qty') or 0)
+            price = f"{float(t.get('sell_price') or 0):.2f}"
+            pnl   = (float(t.get('sell_price') or 0) - float(t.get('buy_price') or 0)) * qty
             sign  = '+' if pnl >= 0 else ''
             pnl_s = f"{sign}Rs{fmt_inr(pnl)}"
             table_rows.append([i, sc, qty, price, pnl_s])
