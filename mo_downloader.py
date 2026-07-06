@@ -456,26 +456,62 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         raise RuntimeError(f"Validation — {modal_txt}")
     await asyncio.sleep(1)
 
-    # ── Poll the FIRST row (most recent = current client) until SUCCESS ──
+    # ── Snapshot existing rows BEFORE triggering download ────────────────────
+    # CBOS Download History keeps all previous downloads visible.
+    # Always reading rows[0] grabs the previous client's stale SUCCESS entry.
+    # Fix: snapshot row signatures before the click; after the click, find the
+    # NEW row (status=PROCESSING/PENDING) and poll only that row.
+    pre_sigs = await page.evaluate("""
+        () => {
+            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+            return Array.from(rows).map(r =>
+                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
+            );
+        }
+    """) or []
+    pre_set = set(pre_sigs)
+
+    # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
+    row_cells = None
+    fresh_row_idx = None
     for _ in range(30):
-        row_cells = await page.evaluate("""
+        all_rows = await page.evaluate("""
             () => {
                 const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                if (!rows.length) return null;
-                return Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
+                return Array.from(rows).map(r =>
+                    Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim())
+                );
             }
-        """)
-        if not row_cells:
-            await asyncio.sleep(3)
-            continue
-        status_cell = next((c for c in row_cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
-        print(f"  Row: {row_cells}")
-        if status_cell == 'SUCCESS':
-            break
-        if status_cell == 'FAILED':
-            raise RuntimeError(f"Server reported FAILED for {client}")
-        # Click Refresh
+        """) or []
+
+        # Prefer a row that is PROCESSING/PENDING (definitely fresh)
+        found = None
+        found_idx = None
+        for i, cells in enumerate(all_rows):
+            sig = '|'.join(cells)
+            status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
+            if status in ('PROCESSING', 'PENDING'):
+                found, found_idx = cells, i
+                break  # unambiguously the new request
+            # A SUCCESS row not present before the click = our fresh completed download
+            if status == 'SUCCESS' and sig not in pre_set:
+                found, found_idx = cells, i
+                break
+
+        if found is not None:
+            row_cells = found
+            fresh_row_idx = found_idx
+            status_cell = next((c for c in row_cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
+            print(f"  Row[{fresh_row_idx}]: {row_cells}")
+            if status_cell == 'SUCCESS':
+                break
+            if status_cell == 'FAILED':
+                raise RuntimeError(f"Server reported FAILED for {client}")
+        else:
+            print(f"  Waiting for fresh row (pre={len(pre_set)} sigs, cur={len(all_rows)} rows)...")
+
+        # Refresh the modal table
         await page.evaluate("""
             () => {
                 for (const b of document.querySelectorAll('button')) {
@@ -498,19 +534,18 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         await close_download_modal(page)
         return None
 
-    # ── Click Download in the first row ──
+    # ── Click Download link in the FRESH row (not always row[0]) ─────────────
     fy_tag = fy.replace("-", "_")
     save_path = os.path.join(download_dir, f"TradeDetailsAndSummary_{client}_{fy_tag}.csv")
     async with page.expect_download(timeout=60000) as dl_info:
         await page.evaluate("""
-            () => {
+            (idx) => {
                 const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                if (rows.length) {
-                    const link = rows[0].querySelector('a, button');
-                    if (link) link.click();
-                }
+                const row  = rows[idx] || rows[0];
+                const link = row.querySelector('a, button');
+                if (link) link.click();
             }
-        """)
+        """, fresh_row_idx if fresh_row_idx is not None else 0)
     dl = await dl_info.value
     try:
         if os.path.exists(save_path):
