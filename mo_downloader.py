@@ -35,7 +35,7 @@ FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def get_otp_from_gmail(sent_after: float, max_wait=120) -> str:
+def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
     """Poll Gmail for the latest OTP email received after sent_after."""
     print("  Waiting for OTP email...")
     deadline = time.time() + max_wait
@@ -43,7 +43,8 @@ def get_otp_from_gmail(sent_after: float, max_wait=120) -> str:
         try:
             mail = imaplib.IMAP4_SSL("imap.gmail.com")
             mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            mail.select("inbox")
+            # Search inbox AND all mail (catches spam/promotions tabs)
+            mail.select('"[Gmail]/All Mail"')
 
             today_imap = date.today().strftime("%d-%b-%Y")
             _, data = mail.search(None, f'SUBJECT "OTP For CBOS" SINCE {today_imap}')
@@ -85,7 +86,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=120) -> str:
             print(f"  Gmail error: {e}")
         time.sleep(5)
 
-    raise RuntimeError("OTP not received within 90 seconds.")
+    raise RuntimeError(f"OTP not received within {max_wait} seconds.")
 
 
 async def login(page):
@@ -97,15 +98,17 @@ async def login(page):
     await page.locator('input[type="text"], input:not([type="password"]):not([type="hidden"])').first.fill(MO_USERNAME)
     await page.locator('input[type="password"]').first.fill(MO_PASSWORD)
 
-    login_time = time.time()  # capture JUST before Sign In click so OTP is definitely newer
     await page.locator('button, input[type="submit"]').filter(has_text=re.compile(r'sign\s*in', re.I)).first.click()
     await asyncio.sleep(2)
 
     # Dismiss "session already active" popup if it appears
+    # Reset login_time AFTER this click — this is when CBOS sends the OTP
+    login_time = time.time()
     try:
         btn = page.locator('button:has-text("Login")').filter(has_not_text="Sign")
         if await btn.count() > 0:
             print("  Session conflict — clicking Login...")
+            login_time = time.time()  # OTP triggered by THIS click, not Sign In
             await btn.first.click()
             await asyncio.sleep(1)
     except Exception:
