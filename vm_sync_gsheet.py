@@ -444,6 +444,12 @@ def sync_to_gsheet(trades: list):
     ws_ov = upsert_ws("📊 Overview", rows=25, cols=12)
     write_df(ws_ov, df_ov)
     apply_header_fmt(ws_ov, len(df_ov.columns))
+    # Replace static Unrealized P&L (col H) and Total P&L (col I) with live formulas
+    # H = SUMIF from Open Positions tab col K (Unrealized P&L), I = Realized Net + Unrealized
+    n = len(df_ov)
+    unreal_fmls = [[f"=SUMIF('📋 Open Positions'!A:A,A{r},'📋 Open Positions'!K:K)",
+                    f"=G{r}+H{r}"] for r in range(2, n+2)]
+    ws_ov.update(unreal_fmls, range_name=f'H2:I{n+1}', value_input_option='USER_ENTERED')
     apply_num_cols(ws_ov, [5,6,7,8,9], len(df_ov))
     for ci in [7,8,9]: apply_pnl_conditional(ws_ov, ci, len(df_ov))
     flush_pnl_rules(ws_ov)

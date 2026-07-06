@@ -1,0 +1,85 @@
+name: Daily Trade Download
+
+on:
+  schedule:
+    # 3:00 PM UTC = 8:30 PM IST, Mon-Fri
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  daily-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install playwright pandas gspread google-auth google-auth-oauthlib groq yfinance
+
+      - name: Install Playwright Chromium
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Reconstruct credentials
+        env:
+          BOT_CONFIG:    ${{ secrets.BOT_CONFIG }}
+          GSHEET_KEY:    ${{ secrets.GSHEET_KEY }}
+          TICKER_OVERRIDES: ${{ secrets.TICKER_OVERRIDES }}
+        run: |
+          echo "$BOT_CONFIG"    > bot_config.json
+          echo "$GSHEET_KEY"    > gsheet_key.json
+          echo "$TICKER_OVERRIDES" > ticker_overrides.json
+          mkdir -p mo_csvs
+
+      - name: Download CSVs from CBOS
+        run: python mo_downloader.py
+        timeout-minutes: 20
+
+      - name: Upload CSVs + ledger to VM
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          echo "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
+          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no"
+          VM="opc@152.67.164.204"
+          VMDIR="/home/opc/client-tracker-mofsl"
+
+          # Upload CSVs
+          $SSH $VM "mkdir -p $VMDIR/mo_csvs"
+          $SCP mo_csvs/TradeDetailsAndSummary_RIMK*.csv "$VM:$VMDIR/mo_csvs/"
+
+          # Upload ledger if it was scraped
+          [ -f ledger.json ] && $SCP ledger.json "$VM:$VMDIR/"
+
+          # Upload any updated code files
+          $SCP import_all.py vm_sync_gsheet.py send_notify.py ticker_overrides.json "$VM:$VMDIR/"
+
+      - name: Run import + sync on VM
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          echo "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60"
+          VM="opc@152.67.164.204"
+          VMDIR="/home/opc/client-tracker-mofsl"
+
+          $SSH $VM "cd $VMDIR && python3 import_all.py 2>&1"
+          $SSH $VM "cd $VMDIR && python3 vm_sync_gsheet.py 2>&1"
+          $SSH $VM "cd $VMDIR && python3 send_notify.py 2>&1"
+
+      - name: Cleanup credentials
+        if: always()
+        run: |
+          rm -f bot_config.json gsheet_key.json /tmp/vm_key

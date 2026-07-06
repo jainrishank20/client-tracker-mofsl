@@ -22,7 +22,11 @@ CLIENTS = [
 ]
 
 BASE         = os.path.dirname(os.path.abspath(__file__))
-DOWNLOAD_DIR = r"C:\Users\jainr\Downloads\MO_Trades"
+DOWNLOAD_DIR = (
+    os.path.join(BASE, 'mo_csvs')
+    if os.name != 'nt'
+    else r"C:\Users\jainr\Downloads\MO_Trades"
+)
 LOGIN_URL    = "https://backoffice.motilaloswal.com/Login.aspx"
 HOME_URL     = "https://backoffice.motilaloswal.com/Home.aspx"
 DATE_OPTION  = "Current Financial Year"
@@ -674,7 +678,9 @@ async def main():
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        headless = os.name != 'nt'  # headless on Linux VM, visible on Windows
+        launch_args = ['--no-sandbox', '--disable-dev-shm-usage'] if os.name != 'nt' else []
+        browser = await p.chromium.launch(headless=headless, args=launch_args)
         page = await browser.new_page()
 
         await login(page)

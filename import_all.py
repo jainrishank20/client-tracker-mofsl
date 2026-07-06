@@ -123,6 +123,12 @@ def load_csv(path):
     df['SELL/BUY'] = df['SELL/BUY'].str.strip()
     df['SCRIP NAME'] = df['SCRIP NAME'].str.strip()
     df['SCRIP'] = df['SCRIP NAME'].apply(norm)
+    # ISIN is exchange-agnostic — use it as the primary FIFO key to handle
+    # NSE/BSE name mismatches (e.g. "SUN PHARMACEUTICAL IND L" vs "SUN PHARMACEUTICAL INDUSTRIES")
+    if 'ISIN' in df.columns:
+        df['ISIN'] = df['ISIN'].str.strip()
+    else:
+        df['ISIN'] = ''
     return df
 
 # ── gather files per client — auto-discover from CSV_DIR ─────────────────────
@@ -155,7 +161,12 @@ if __name__ == '__main__':
 
         if 'PRODUCT' not in df.columns:
             df['PRODUCT'] = 'DELIVERY'
-        orders = df.groupby(['TRADE DATE', 'SCRIP', 'SELL/BUY', 'ORDER NO']).apply(
+        # FIFO key: ISIN when available (exchange-agnostic), fallback to normalised scrip name.
+        # This fixes NSE/BSE name mismatches like "SUN PHARMACEUTICAL IND L" vs "SUN PHARMACEUTICAL INDUSTRIES".
+        df['FIFO_KEY'] = df.apply(
+            lambda r: r['ISIN'] if r.get('ISIN', '') else r['SCRIP'], axis=1
+        )
+        orders = df.groupby(['TRADE DATE', 'FIFO_KEY', 'SCRIP', 'SELL/BUY', 'ORDER NO']).apply(
             lambda g: pd.Series({
                 'qty':        g['TRADE QTY'].sum(),
                 'price':      round((g['MARKET PRICE'] * g['TRADE QTY']).sum() / g['TRADE QTY'].sum(), 2),
@@ -176,12 +187,16 @@ if __name__ == '__main__':
         orders['SIDE SORT'] = (orders['SELL/BUY'] == 'S').astype(int)
         orders = orders.sort_values(['TRADE DATE', 'SIDE SORT', 'ORDER NO SORT']).drop(columns=['ORDER NO SORT', 'SIDE SORT'])
 
-        for scrip in sorted(orders['SCRIP'].unique()):
-            s = orders[orders['SCRIP'] == scrip]
+        for fifo_key in sorted(orders['FIFO_KEY'].unique()):
+            s = orders[orders['FIFO_KEY'] == fifo_key]
             buy_queue = deque()
+            # Use the buy-side SCRIP name as canonical; falls back to first SCRIP seen
+            canonical_scrip = fifo_key  # will be overwritten by first buy
 
             for _, row in s.iterrows():
                 if row['SELL/BUY'] == 'B':
+                    if canonical_scrip == fifo_key:
+                        canonical_scrip = row['SCRIP']
                     buy_queue.append({
                         'date':      row['TRADE DATE'],
                         'qty':       row['qty'],
@@ -205,7 +220,7 @@ if __name__ == '__main__':
                         all_trades.append({
                             'id':            trade_id,
                             'client':        client,
-                            'script':        scrip,
+                            'script':        canonical_scrip,
                             'type':          'Long',
                             'entry_date':    buy['date'].strftime('%Y-%m-%d'),
                             'buy_qty':       float(qty),
@@ -239,7 +254,7 @@ if __name__ == '__main__':
                 all_trades.append({
                     'id':            trade_id,
                     'client':        client,
-                    'script':        scrip,
+                    'script':        canonical_scrip,
                     'type':          'Long',
                     'entry_date':    buy['date'].strftime('%Y-%m-%d'),
                     'buy_qty':       float(buy['qty']),
