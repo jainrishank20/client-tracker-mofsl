@@ -119,17 +119,44 @@ async def login(page):
         'mat-dialog-container input, [role="dialog"] input, .cdk-overlay-container input',
         timeout=20000
     )
-    otp = get_otp_from_gmail(sent_after=login_time)
-    print(f"  OTP received: {otp}")
 
-    await page.locator(
-        'mat-dialog-container input, [role="dialog"] input, .cdk-overlay-container input'
-    ).first.fill(otp)
-    await page.click('button:has-text("Validate")')
+    OTP_INPUT  = 'mat-dialog-container input, [role="dialog"] input, .cdk-overlay-container input'
+    RESEND_BTN = 'button:has-text("Resend"), a:has-text("Resend"), span:has-text("Resend")'
 
-    await page.wait_for_url("**/Home.aspx**", timeout=30000)
-    await page.wait_for_load_state("networkidle")
-    print("  Logged in successfully.")
+    for attempt in range(3):
+        if attempt == 0:
+            otp = get_otp_from_gmail(sent_after=login_time)
+        else:
+            # Click resend and wait for a fresh OTP
+            print(f"  OTP attempt {attempt+1}: clicking Resend...")
+            resend_time = time.time()
+            try:
+                await page.locator(RESEND_BTN).first.click(timeout=5000)
+            except Exception:
+                print("  No Resend button found — retrying with same OTP")
+            await asyncio.sleep(3)
+            otp = get_otp_from_gmail(sent_after=resend_time)
+
+        print(f"  OTP attempt {attempt+1}: {otp}")
+        inp = page.locator(OTP_INPUT).first
+        await inp.triple_click()
+        await inp.fill(otp)
+        await asyncio.sleep(0.5)
+        await page.click('button:has-text("Validate")')
+
+        try:
+            await page.wait_for_url("**/Home.aspx**", timeout=15000)
+            await page.wait_for_load_state("networkidle")
+            print("  Logged in successfully.")
+            return
+        except PWTimeout:
+            # Check for error message on page
+            err_text = await page.locator(
+                'mat-error, .error-message, [class*="error"], [class*="invalid"]'
+            ).all_inner_texts()
+            print(f"  OTP failed (attempt {attempt+1}): {err_text}")
+            if attempt == 2:
+                raise RuntimeError(f"Login failed after 3 OTP attempts. Last errors: {err_text}")
 
 
 async def navigate_to_trade_details(page):
