@@ -51,7 +51,7 @@ def get_name_to_code(names: dict) -> dict:
 _cfg   = load_cfg()
 TOKEN  = _cfg['telegram_token']
 CHAT_IDS = {c.strip() for c in str(_cfg['allowed_chat_id']).split(',')}
-groq_client = Groq(api_key=_cfg['groq_api_key'])
+groq_client = Groq(api_key=_cfg.get('groq_api_key', ''))
 
 ALERTS_FILE  = os.path.join(BASE, 'price_alerts.json')
 _alerts_lock = threading.Lock()
@@ -416,8 +416,10 @@ def alert_poller():
                         price = fetch_single_cmp(sym_key)
                         if price is None:
                             continue
-                        target    = info['target']
-                        chat_id   = info['chat_id']
+                        target    = info.get('target')
+                        chat_id   = info.get('chat_id', '')
+                        if target is None or not chat_id:
+                            continue
                         direction = info.get('direction', 'above')
                         hit = (direction == 'above' and price >= target) or \
                               (direction == 'below' and price <= target)

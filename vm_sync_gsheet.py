@@ -461,8 +461,8 @@ def sync_to_gsheet(trades: list):
             'Qty':           g['buy_qty'].sum(),
             'Avg Buy Price': round((g['buy_price']*g['buy_qty']).sum() / g['buy_qty'].sum(), 2),
             'Invested (₹)': round((g['buy_price']*g['buy_qty']).sum(), 2),
-            'First Entry':   g['entry_date'].min().strftime('%Y-%m-%d'),
-            'Last Entry':    g['entry_date'].max().strftime('%Y-%m-%d'),
+            'First Entry':   g['entry_date'].min().strftime('%Y-%m-%d') if pd.notna(g['entry_date'].min()) else '',
+            'Last Entry':    g['entry_date'].max().strftime('%Y-%m-%d') if pd.notna(g['entry_date'].max()) else '',
         })).reset_index()
         grp['Client Name'] = grp['client'].map(CLIENT_NAMES)
         grp['Days Held']   = (pd.Timestamp.today() - pd.to_datetime(grp['First Entry'])).dt.days.astype(int)
