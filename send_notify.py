@@ -18,6 +18,13 @@ open_count   = sum(1 for t in trades if not t.get('exit_date'))
 closed_count = sum(1 for t in trades if t.get('exit_date'))
 today        = date.today().strftime('%d %b %Y')
 
+# Per-client open position counts (for health check footer)
+from collections import defaultdict as _dd
+_by_client = _dd(lambda: {'open': 0, 'closed': 0})
+for t in trades:
+    key = 'open' if not t.get('exit_date') else 'closed'
+    _by_client[t['client']][key] += 1
+
 
 def fmt(val: float) -> str:
     """Indian number format, blank if zero. e.g. -58,71,034"""
@@ -65,6 +72,18 @@ lines = [
 for name, d, m in rows_display:
     lines.append(f'`{row_line(name, d, m)}`')
 lines.append(f'`{sep}`')
+
+# ── Trade count footer ────────────────────────────────────────────────────────
+lines.append('')
+lines.append(f'`{"Trades":─<38}`')
+lines.append(f'`{"Client":<10}  {"Open":>5}  {"Closed":>6}`')
+for c in CLIENTS:
+    op = _by_client[c]['open']
+    cl = _by_client[c]['closed']
+    flag = '  ⚠' if op == 0 and cl == 0 else ''
+    lines.append(f'`{c:<10}  {op:>5}  {cl:>6}{flag}`')
+lines.append(f'`{"Total":<10}  {open_count:>5}  {closed_count:>6}`')
+lines.append(f'`{"":─<38}`')
 
 msg = '\n'.join(lines)
 

@@ -13,10 +13,14 @@ on:
         type: choice
         options: ['false', 'true']
 
+concurrency:
+  group: daily-run
+  cancel-in-progress: false   # never cancel a running pipeline; queue instead
+
 jobs:
   daily-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repo
@@ -60,6 +64,10 @@ jobs:
       - name: Import all CSVs → trades.json
         run: python import_all.py
 
+      # ── Step 2b: QA gate — fail fast if per-client counts look wrong ─────────
+      - name: QA — validate trade counts
+        run: python tests/test_import_counts.py
+
       # ── Step 3: Sync Google Sheet ────────────────────────────────────────────
       - name: Sync Google Sheet
         run: python vm_sync_gsheet.py
@@ -81,6 +89,17 @@ jobs:
           VMDIR="/home/opc/client-tracker-mofsl"
           $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
           rm /tmp/vm_key
+
+      # ── Step 6: Pipeline health alert ────────────────────────────────────────
+      - name: Send pipeline health alert
+        if: always()
+        env:
+          BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+        run: |
+          echo "$BOT_CONFIG" > bot_config.json
+          python tests/send_health_alert.py \
+            --status "${{ job.status }}" \
+            --full "${{ github.event.inputs.full_history || 'false' }}"
 
       - name: Cleanup credentials
         if: always()
