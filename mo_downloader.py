@@ -32,6 +32,11 @@ DATE_OPTION  = "Current Financial Year"
 
 FULL_MODE       = "--full" in sys.argv
 FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
+
+# Clients with no trades in a specific FY — skip that FY to avoid 90s timeout on CBOS
+NO_HISTORY_FY: dict[str, set] = {
+    "RIMK1247": {"2025-2026"},  # Srujana — new client, no FY25-26 history
+}
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -761,6 +766,9 @@ async def main():
         for fy in FINANCIAL_YEARS:
             print(f"\n{'='*40}\nFinancial Year: {fy}\n{'='*40}")
             for client in CLIENTS:
+                if fy in NO_HISTORY_FY.get(client, set()):
+                    print(f"  Skipping {client} [{fy}] — no history for this FY")
+                    continue
                 try:
                     await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=first)
                     first = False
