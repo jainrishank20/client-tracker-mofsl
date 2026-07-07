@@ -1,0 +1,68 @@
+name: Stale Data Alert
+
+on:
+  schedule:
+    # 3:45 PM UTC = 9:15 PM IST, Mon-Fri
+    # Fires 45 min after daily_run is due — alerts if no successful run today
+    - cron: '45 15 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for successful daily run today
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+        run: |
+          today=$(date -u +%Y-%m-%d)
+          echo "Checking for successful daily_run on $today..."
+
+          # Count successful runs of daily_run.yml created today
+          successful=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/daily_run.yml/runs?created=>=${today}T00:00:00Z&per_page=20" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length')
+
+          echo "Successful runs today: $successful"
+
+          if [ "$successful" = "0" ]; then
+            echo "No successful run today — sending stale-data alert"
+            echo "$BOT_CONFIG" > /tmp/bot_config.json
+            python3 - <<'PYEOF'
+import json, urllib.request, urllib.parse, os
+from datetime import datetime, timezone
+
+cfg      = json.load(open('/tmp/bot_config.json'))
+token    = cfg['telegram_token']
+chat_ids = [c.strip() for c in str(cfg['allowed_chat_id']).split(',')]
+
+now_ist = datetime.now(timezone.utc).strftime('%H:%M UTC')
+msg = (
+    "⚠️ *Stale Data Alert*\n"
+    f"`No successful daily run today \\({now_ist}\\)`\n\n"
+    "Pipeline may have missed the 8:30 PM schedule or failed\\.\n"
+    "Please check GitHub Actions and trigger manually if needed\\."
+)
+
+for chat_id in chat_ids:
+    data = urllib.parse.urlencode({
+        'chat_id':    chat_id,
+        'text':       msg,
+        'parse_mode': 'MarkdownV2',
+    }).encode()
+    try:
+        urllib.request.urlopen(
+            urllib.request.Request(
+                f"https://api.telegram.org/bot{token}/sendMessage", data=data
+            ),
+            timeout=15
+        )
+        print(f"Alert sent to {chat_id}")
+    except Exception as e:
+        print(f"Failed to send to {chat_id}: {e}")
+PYEOF
+            rm -f /tmp/bot_config.json
+          else
+            echo "Daily run succeeded today — no alert needed"
+          fi

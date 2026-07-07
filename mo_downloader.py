@@ -5,7 +5,7 @@ Usage:
     python mo_downloader.py           # current FY only (daily use)
     python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
-import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json
+import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hashlib
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
@@ -32,6 +32,25 @@ DATE_OPTION  = "Current Financial Year"
 
 FULL_MODE       = "--full" in sys.argv
 FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
+
+# Session-level registry: (client, fy) → md5 of saved CSV.
+# If two entries share the same hash → downloader gave one client the wrong file.
+_CSV_HASHES: dict[str, str] = {}
+
+
+def _assert_csv_unique(client: str, fy: str, csv_path: str) -> None:
+    """Raise immediately if this CSV is byte-identical to a previously saved one."""
+    h = hashlib.md5(open(csv_path, "rb").read()).hexdigest()
+    key = f"{client}_{fy}"
+    for prev_key, prev_hash in _CSV_HASHES.items():
+        if h == prev_hash:
+            raise RuntimeError(
+                f"DUPLICATE CSV DETECTED: {key} is byte-identical to {prev_key} "
+                f"(md5={h}) — downloader saved the wrong file for {client}. "
+                f"Aborting to prevent bad data from reaching QA / GSheet."
+            )
+    _CSV_HASHES[key] = h
+    print(f"  CSV integrity: unique (md5={h[:8]}…)")
 
 # Clients with no trades in a specific FY — skip that FY to avoid 90s timeout on CBOS
 # RIMK1205, 1209, 1215, 1220 joined FY25-26; all others joined FY26-27
@@ -618,6 +637,9 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         print(f"  Saved (Excel was open): {save_path}")
     finally:
         await close_download_modal(page)
+
+    # Verify this CSV isn't a duplicate of another client's file
+    _assert_csv_unique(client, fy, save_path)
 
 
 async def scrape_ledger_balances(page, home_url: str) -> dict:
