@@ -34,8 +34,14 @@ FULL_MODE       = "--full" in sys.argv
 FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
 
 # Clients with no trades in a specific FY — skip that FY to avoid 90s timeout on CBOS
+# RIMK1205, 1209, 1215, 1220 joined FY25-26; all others joined FY26-27
 NO_HISTORY_FY: dict[str, set] = {
-    "RIMK1247": {"2025-2026"},  # Srujana — new client, no FY25-26 history
+    "RIMK1238": {"2025-2026"},
+    "RIMK1247": {"2025-2026"},
+    "RIMK1248": {"2025-2026"},
+    "RIMK1249": {"2025-2026"},
+    "RIMK1252": {"2025-2026"},
+    "RIMK1256": {"2025-2026"},
 }
 # ─────────────────────────────────────────────────────────────────────────────
 
