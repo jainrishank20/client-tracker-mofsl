@@ -73,7 +73,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
                     email_ts = 0
 
                 print(f"  Email ts={email_ts:.0f} sent_after={sent_after:.0f} diff={(email_ts-sent_after):.0f}s")
-                if email_ts < sent_after - 30:  # 30s grace for clock drift only
+                if email_ts < sent_after - 30:  # 30s grace for clock drift
                     continue
 
                 body = ""
@@ -87,7 +87,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
                     body = msg.get_payload(decode=True).decode(errors="ignore")
 
                 m = re.search(r"\b(\d{6})\b", body)
-                if m and email_ts > best_time:
+                if m and email_ts >= best_time:
                     best_otp, best_time = m.group(1), email_ts
 
             mail.logout()
