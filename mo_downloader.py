@@ -422,21 +422,6 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if not date_set:
             raise RuntimeError(f"Could not set date to {DATE_OPTION}")
 
-    # ── Snapshot existing Download History rows BEFORE clicking Download ────────
-    # Must happen here, before the click — if we snapshot after, a fast CBOS
-    # response can put the fresh SUCCESS row into pre_set and we lose track of it,
-    # then accidentally pick up an old row from a previous client's session.
-    pre_sigs = await page.evaluate("""
-        () => {
-            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-            return Array.from(rows).map(r =>
-                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
-            );
-        }
-    """) or []
-    pre_set = set(pre_sigs)
-    print(f"  Pre-snapshot: {len(pre_set)} existing rows in Download History")
-
     # ── Click Download button (JS — bypasses main-section pointer intercept) ──
     await page.evaluate("""
         () => {
@@ -480,6 +465,25 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     print(f"  Modal: {modal_txt}")
     if modal_txt.startswith('error:'):
         raise RuntimeError(f"Validation — {modal_txt}")
+
+    # ── Snapshot existing rows IMMEDIATELY after modal opens, before sleeping ──
+    # The modal just appeared — CBOS is still processing our request so the new
+    # row is likely PROCESSING/PENDING, not SUCCESS yet.  Capturing here means
+    # pre_set = all rows that existed BEFORE our request completed.
+    # Secondary guard: track row count so a brand-new row at index 0 is always
+    # identifiable even if CBOS is so fast it skips PROCESSING entirely.
+    _snap_js = """
+        () => {
+            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+            return Array.from(rows).map(r =>
+                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
+            );
+        }
+    """
+    pre_sigs = await page.evaluate(_snap_js) or []
+    pre_set   = set(pre_sigs)
+    pre_count = len(pre_sigs)
+    print(f"  Pre-snapshot: {pre_count} existing rows in Download History")
     await asyncio.sleep(1)
 
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
@@ -496,7 +500,10 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             }
         """) or []
 
-        # Prefer a row that is PROCESSING/PENDING (definitely fresh)
+        # Identify the fresh row for THIS client:
+        # Priority 1 — PROCESSING/PENDING: unambiguously new (not yet complete)
+        # Priority 2 — row count grew: index-0 row is the newest addition
+        # Priority 3 — SUCCESS sig not seen at snapshot time
         found = None
         found_idx = None
         for i, cells in enumerate(all_rows):
@@ -504,11 +511,16 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
             if status in ('PROCESSING', 'PENDING'):
                 found, found_idx = cells, i
-                break  # unambiguously the new request
-            # A SUCCESS row not present before the click = our fresh completed download
-            if status == 'SUCCESS' and sig not in pre_set:
-                found, found_idx = cells, i
                 break
+            if status == 'SUCCESS':
+                # New row appeared (count grew) — must be index 0
+                if len(all_rows) > pre_count and i == 0:
+                    found, found_idx = cells, i
+                    break
+                # Sig not present at snapshot time
+                if sig not in pre_set:
+                    found, found_idx = cells, i
+                    break
 
         if found is not None:
             row_cells = found
