@@ -503,6 +503,24 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     pre_count = len(pre_sigs)
     print(f"  Pre-snapshot: {pre_count} rows (stable after {_total_ticks*0.1:.1f}s)")
 
+    # If AJAX hasn't returned any rows yet (first client — cold load),
+    # keep waiting until rows actually appear. Without this, pre_set is empty
+    # and the poll erroneously picks an old SUCCESS row from a previous client.
+    if pre_count == 0:
+        print("  Pre-snapshot 0 — AJAX still loading, waiting up to 15s for history rows...")
+        _ext = 0
+        while _ext < 150:  # 150 × 0.1s = 15s
+            _sigs = await page.evaluate(_snap_js) or []
+            if len(_sigs) > 0:
+                await asyncio.sleep(0.5)  # let any remaining rows arrive
+                break
+            _ext += 1
+            await asyncio.sleep(0.1)
+        pre_sigs  = await page.evaluate(_snap_js) or []
+        pre_set   = set(pre_sigs)
+        pre_count = len(pre_sigs)
+        print(f"  Pre-snapshot extended: {pre_count} rows (after {_ext*0.1:.1f}s additional wait)")
+
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
     row_cells = None
