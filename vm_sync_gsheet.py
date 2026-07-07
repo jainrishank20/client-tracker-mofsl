@@ -155,7 +155,14 @@ def sync_to_gsheet(trades: list):
     def write_df(ws, df):
         if df.empty:
             _retry(ws.clear)
-            ws.update([["No data"]], value_input_option='RAW')
+            try:
+                sh.batch_update({'requests': [{'updateCells': {
+                    'range': {'sheetId': ws.id},
+                    'fields': 'userEnteredFormat'
+                }}]})
+            except Exception:
+                pass
+            _retry(ws.update, [["No data"]], value_input_option='RAW')
             return
         df2 = df.copy()
         for c in df2.select_dtypes(include=['datetime64[ns]']).columns:
