@@ -479,23 +479,29 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             );
         }
     """
+    # Wait for history AJAX to finish: poll until row count is stable for 1.5s
+    # OR at least 3s have passed (first client — history table cold loads slowly)
     _prev_count = -1
-    _stable_for = 0
-    for _ in range(20):   # up to 4 seconds
+    _stable_ticks = 0
+    _total_ticks  = 0
+    _STABLE_NEED  = 15   # 15 × 0.1s = 1.5s stable
+    _MAX_TICKS    = 50   # 50 × 0.1s = 5s max wait
+    while _total_ticks < _MAX_TICKS:
         _sigs = await page.evaluate(_snap_js) or []
-        if len(_sigs) == _prev_count:
-            _stable_for += 1
-            if _stable_for >= 2:   # stable for 2 × 0.2s = 0.4s
+        _cur  = len(_sigs)
+        if _cur == _prev_count:
+            _stable_ticks += 1
+            if _stable_ticks >= _STABLE_NEED:
                 break
         else:
-            _stable_for = 0
-            _prev_count = len(_sigs)
-        await asyncio.sleep(0.2)
+            _stable_ticks = 0
+            _prev_count   = _cur
+        _total_ticks += 1
+        await asyncio.sleep(0.1)
     pre_sigs  = await page.evaluate(_snap_js) or []
     pre_set   = set(pre_sigs)
     pre_count = len(pre_sigs)
-    print(f"  Pre-snapshot: {pre_count} existing rows in Download History (stable)")
-    await asyncio.sleep(0.5)
+    print(f"  Pre-snapshot: {pre_count} rows (stable after {_total_ticks*0.1:.1f}s)")
 
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
