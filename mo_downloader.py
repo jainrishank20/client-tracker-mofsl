@@ -851,6 +851,16 @@ async def main():
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
                     first = False
+                    # Retry once after a short pause (handles CBOS throttle / transient timeout)
+                    print(f"  Retrying {client} [{fy}] in 30s...")
+                    await asyncio.sleep(30)
+                    try:
+                        await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=first)
+                        print(f"  Retry succeeded for {client} [{fy}]")
+                        first = False
+                    except Exception as e2:
+                        print(f"  Retry also failed for {client} [{fy}]: {e2}")
+                        await close_download_modal(page)
 
         await browser.close()
 
