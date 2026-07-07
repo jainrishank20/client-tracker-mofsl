@@ -422,6 +422,21 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if not date_set:
             raise RuntimeError(f"Could not set date to {DATE_OPTION}")
 
+    # ── Snapshot existing Download History rows BEFORE clicking Download ────────
+    # Must happen here, before the click — if we snapshot after, a fast CBOS
+    # response can put the fresh SUCCESS row into pre_set and we lose track of it,
+    # then accidentally pick up an old row from a previous client's session.
+    pre_sigs = await page.evaluate("""
+        () => {
+            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+            return Array.from(rows).map(r =>
+                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
+            );
+        }
+    """) or []
+    pre_set = set(pre_sigs)
+    print(f"  Pre-snapshot: {len(pre_set)} existing rows in Download History")
+
     # ── Click Download button (JS — bypasses main-section pointer intercept) ──
     await page.evaluate("""
         () => {
@@ -466,21 +481,6 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     if modal_txt.startswith('error:'):
         raise RuntimeError(f"Validation — {modal_txt}")
     await asyncio.sleep(1)
-
-    # ── Snapshot existing rows BEFORE triggering download ────────────────────
-    # CBOS Download History keeps all previous downloads visible.
-    # Always reading rows[0] grabs the previous client's stale SUCCESS entry.
-    # Fix: snapshot row signatures before the click; after the click, find the
-    # NEW row (status=PROCESSING/PENDING) and poll only that row.
-    pre_sigs = await page.evaluate("""
-        () => {
-            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-            return Array.from(rows).map(r =>
-                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
-            );
-        }
-    """) or []
-    pre_set = set(pre_sigs)
 
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
