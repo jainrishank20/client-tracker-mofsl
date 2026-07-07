@@ -165,8 +165,17 @@ def sync_to_gsheet(trades: list):
             try: return float(v) if '.' in v else int(v)
             except: return v
         data = [df2.columns.tolist()] + [[try_num(v) for v in r] for r in df2.values.tolist()]
-        # Clear immediately before write — minimises the empty-sheet window
+        # Clear data + ALL formatting immediately before write (single gap ~1s).
+        # Must clear formatting here — not in upsert_ws — so stale row styles
+        # (e.g. a previous total-row that is now a data row) don't persist.
         _retry(ws.clear)
+        try:
+            sh.batch_update({'requests': [{'updateCells': {
+                'range': {'sheetId': ws.id},
+                'fields': 'userEnteredFormat'
+            }}]})
+        except Exception:
+            pass
         _retry(ws.update, data, value_input_option='USER_ENTERED')
         _time.sleep(0.5)
 
