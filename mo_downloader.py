@@ -466,12 +466,11 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     if modal_txt.startswith('error:'):
         raise RuntimeError(f"Validation — {modal_txt}")
 
-    # ── Snapshot existing rows IMMEDIATELY after modal opens, before sleeping ──
-    # The modal just appeared — CBOS is still processing our request so the new
-    # row is likely PROCESSING/PENDING, not SUCCESS yet.  Capturing here means
-    # pre_set = all rows that existed BEFORE our request completed.
-    # Secondary guard: track row count so a brand-new row at index 0 is always
-    # identifiable even if CBOS is so fast it skips PROCESSING entirely.
+    # ── Wait for Download History AJAX to finish, then snapshot ─────────────────
+    # The modal loads its history rows via AJAX after opening.
+    # If we snapshot before AJAX completes, pre_set is empty and we mistake
+    # an old history row (e.g. RIMK1256's previous download) for our fresh one.
+    # Fix: poll until row count is stable for 1 second, THEN snapshot.
     _snap_js = """
         () => {
             const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
@@ -480,11 +479,23 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             );
         }
     """
-    pre_sigs = await page.evaluate(_snap_js) or []
+    _prev_count = -1
+    _stable_for = 0
+    for _ in range(20):   # up to 4 seconds
+        _sigs = await page.evaluate(_snap_js) or []
+        if len(_sigs) == _prev_count:
+            _stable_for += 1
+            if _stable_for >= 2:   # stable for 2 × 0.2s = 0.4s
+                break
+        else:
+            _stable_for = 0
+            _prev_count = len(_sigs)
+        await asyncio.sleep(0.2)
+    pre_sigs  = await page.evaluate(_snap_js) or []
     pre_set   = set(pre_sigs)
     pre_count = len(pre_sigs)
-    print(f"  Pre-snapshot: {pre_count} existing rows in Download History")
-    await asyncio.sleep(1)
+    print(f"  Pre-snapshot: {pre_count} existing rows in Download History (stable)")
+    await asyncio.sleep(0.5)
 
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
