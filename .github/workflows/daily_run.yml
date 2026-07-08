@@ -50,6 +50,17 @@ jobs:
           echo "$TICKER_OVERRIDES" > ticker_overrides.json
           mkdir -p mo_csvs
 
+      # ── Restore FY25-26 CSVs from cache (populated by a --full run) ──────────
+      # FY25-26 is a closed year — data never changes, safe to cache indefinitely.
+      # Daily run downloads FY26-27 fresh; this ensures import sees BOTH years
+      # so P&L reflects full history, not just the current year.
+      - name: Restore FY25-26 CSVs from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: mo_csvs
+          key: fy2526-csvs-v1
+          restore-keys: fy2526-csvs-v1
+
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
       - name: Download CSVs from CBOS (Playwright headless)
         run: |
@@ -59,6 +70,14 @@ jobs:
             python mo_downloader.py
           fi
         timeout-minutes: 20
+
+      # ── Cache FY25-26 CSVs after a full run so daily runs can reuse them ────
+      - name: Save FY25-26 CSVs to cache
+        if: github.event.inputs.full_history == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: mo_csvs
+          key: fy2526-csvs-v1
 
       # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
       - name: Import all CSVs → trades.json
