@@ -533,7 +533,7 @@ def ask_groq(question: str, context: str) -> str:
 
 
 def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> str:
-    """Return brokerage paid by a client, optionally filtered by month."""
+    """Return charges paid by a client, optionally filtered by month."""
     rows = [t for t in trades if t.get('client') == client]
     if not rows:
         return f"No trades found for {names.get(client, client)}."
@@ -555,41 +555,45 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         to_date   = today
         filter_label = today.strftime('%b %Y')
     else:
-        # Try to match month name e.g. "june", "july"
+        import calendar as _cal
         months = ['january','february','march','april','may','june',
                   'july','august','september','october','november','december']
         for i, mn in enumerate(months, 1):
             if mn in tl:
                 yr = today.year if i <= today.month else today.year - 1
                 from_date = datetime.date(yr, i, 1)
-                import calendar
-                to_date = datetime.date(yr, i, calendar.monthrange(yr, i)[1])
+                to_date   = datetime.date(yr, i, _cal.monthrange(yr, i)[1])
                 filter_label = from_date.strftime('%b %Y')
                 break
 
-    def _in_range(t):
+    def _date_in_range(d_str: str) -> bool:
         if from_date is None:
             return True
-        d_str = (t.get('entry_date') or t.get('exit_date') or '')[:10]
         if not d_str:
             return False
         try:
-            d = datetime.date.fromisoformat(d_str)
-            return from_date <= d <= to_date
+            return from_date <= datetime.date.fromisoformat(d_str[:10]) <= to_date
         except Exception:
             return False
 
-    filtered = [t for t in rows if _in_range(t)]
-    if not filtered:
+    # Buy charges → incurred on entry_date; sell charges → incurred on exit_date.
+    # A trade bought in May and sold in June contributes buy charges to May and
+    # sell charges (STT, brokerage etc.) to June — so we filter each side separately.
+    buy_filtered  = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
+    sell_filtered = [t for t in rows if t.get('exit_date') and
+                     _date_in_range(t.get('exit_date') or '')]
+
+    if not buy_filtered and not sell_filtered:
         return f"No trades found for {names.get(client, client)} in {filter_label}."
 
-    # trades.json stores buy/sell charges separately: buy_brokerage, sell_brokerage, etc.
-    def _sum(field): return sum((t.get(field, 0) or 0) for t in filtered)
-    total_brokerage = _sum('buy_brokerage') + _sum('sell_brokerage')
-    total_stt       = _sum('buy_stt')       + _sum('sell_stt')
-    total_gst       = _sum('buy_gst')       + _sum('sell_gst')
-    total_stamp     = _sum('buy_stamp')     + _sum('sell_stamp')
-    total_txn       = _sum('buy_txn')       + _sum('sell_txn')
+    def _sb(field): return sum((t.get(field, 0) or 0) for t in buy_filtered)
+    def _ss(field): return sum((t.get(field, 0) or 0) for t in sell_filtered)
+
+    total_brokerage = _sb('buy_brokerage') + _ss('sell_brokerage')
+    total_stt       = _sb('buy_stt')       + _ss('sell_stt')
+    total_gst       = _sb('buy_gst')       + _ss('sell_gst')
+    total_stamp     = _sb('buy_stamp')     + _ss('sell_stamp')
+    total_txn       = _sb('buy_txn')       + _ss('sell_txn')
     total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn
 
     name = names.get(client, client)
@@ -601,9 +605,26 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         f"`Stamp duty:  Rs {fmt_inr(total_stamp)}`\n"
         f"`Txn charges: Rs {fmt_inr(total_txn)}`\n"
         f"`─────────────────────────`\n"
-        f"`Total:       Rs {fmt_inr(total_all)}`\n"
-        f"_({len(filtered)} trade(s))_"
+        f"`Total:       Rs {fmt_inr(total_all)}`"
     )
+
+
+def capital_summary_for(client: str, trades: list, names: dict) -> str:
+    """Return capital deployed in open positions for a client."""
+    open_t = [t for t in trades if t.get('client') == client and not t.get('exit_date')]
+    name   = names.get(client, client)
+    if not open_t:
+        return f"{name} has no open positions currently."
+    total = sum((t.get('buy_qty', 0) or 0) * (t.get('buy_price', 0) or 0) for t in open_t)
+    w = max(len(t.get('script', '?')) for t in open_t)
+    lines = [f"*{name} — Capital Deployed*"]
+    for t in open_t:
+        cap = (t.get('buy_qty', 0) or 0) * (t.get('buy_price', 0) or 0)
+        lines.append(f"`{t.get('script','?'):<{w}}  Rs {fmt_inr(cap)}`")
+    lines.append(f"`{'─'*(w+18)}`")
+    lines.append(f"`{'TOTAL':<{w}}  Rs {fmt_inr(total)}`")
+    lines.append(f"_({len(open_t)} open positions)_")
+    return '\n'.join(lines)
 
 
 # ── Route messages ────────────────────────────────────────────────────────────
@@ -772,8 +793,13 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                 f"Delivery: Rs {fmt_inr(d.get('combined', 0))}\n"
                 f"MTF:      Rs {fmt_inr(d.get('mtf', 0))}"
             )
-        if 'brokerage' in tl or 'commission' in tl:
+        if any(w in tl for w in ('pnl', 'p&l', 'profit', 'loss', 'earn', 'return', 'realized', 'realised')):
+            return trades_summary_for(client, trades, names, overrides)
+        if any(w in tl for w in ('brokerage', 'commission', 'charge', 'charges', 'fee', 'fees',
+                                  'tax', 'taxes', 'stt', 'gst', 'stamp', 'cost', 'costs')):
             return brokerage_summary_for(client, trades, names, tl)
+        if any(w in tl for w in ('capital', 'invest', 'deploy', 'deployed', 'exposure', 'invested')):
+            return capital_summary_for(client, trades, names)
         # Free-form client question → Groq
         rows    = [t for t in trades if t.get('client') == client]
         context = (f"Client: {names.get(client, client)} ({client})\n"
