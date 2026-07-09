@@ -684,13 +684,18 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             'are', 'holding', 'hold', 'also', 'currently', 'how', 'many', 'tell',
             'me', 'about', 'position', 'positions', 'buy', 'bought', 'today',
             'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see', 'with'}
-    terms = [w for w in query.upper().split() if len(w) >= 4 and w.lower() not in stop]
+    # Known short tickers (3 chars or less) that are real NSE symbols
+    known_short = {t['script'].upper() for t in trades} | {
+        'ITC', 'BSE', 'LIC', 'PNB', 'NCC', 'REC', 'BEL', 'IEX', 'SCI',
+        'TCS', 'M&M', 'PFC', 'BEML', 'MRPL', 'IFCI', 'IDBI', 'NMDC', 'NTPC',
+    }
+    words = [re.sub(r'[^A-Z0-9&]', '', w) for w in query.upper().split()]
+    terms = [w for w in words if w and w.lower() not in stop and (len(w) >= 4 or w in known_short)]
     if not terms:
         return None
+    open_trades = [t for t in trades if not t.get('exit_date')]
     matches: dict[str, set] = {}
-    for t in trades:
-        if t.get('exit_date'):
-            continue
+    for t in open_trades:
         script = (t.get('script') or '').upper()
         if any(term in script for term in terms):
             matches.setdefault(t.get('client', ''), set()).add(script)
