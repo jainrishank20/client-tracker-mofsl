@@ -692,10 +692,15 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             matches.setdefault(t.get('client', ''), set()).add(script)
     if not matches:
         return f"No open positions found matching '{' '.join(terms)}'."
-    lines = [f"*Open positions — {' '.join(terms)}*"]
+    all_scripts = sorted(set(s for ss in matches.values() for s in ss))
+    lines = [f"*Open positions — {', '.join(all_scripts)}*"]
     for code, scripts in sorted(matches.items()):
         name = names.get(code, code)
-        lines.append(f"  {code} ({name}): {', '.join(sorted(scripts))}")
+        # Only show script names if they differ across clients (multi-stock search result)
+        if len(all_scripts) > 1:
+            lines.append(f"  {name} ({code}): {', '.join(sorted(scripts))}")
+        else:
+            lines.append(f"  {name} ({code})")
     return '\n'.join(lines)
 
 
