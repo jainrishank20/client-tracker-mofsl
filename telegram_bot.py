@@ -194,26 +194,29 @@ def fetch_cmp(symbols: list) -> dict:
     """Fetch live CMP for a list of NSE symbols. Returns {symbol: price}."""
     if not _YF or not symbols:
         return {}
-    symbols = list(dict.fromkeys(symbols))[:15]  # dedupe + cap
-    try:
-        tickers = [s + '.NS' for s in symbols]
-        data = yf.download(tickers, period='1d', interval='1m',
-                           progress=False, auto_adjust=True, timeout=10)
-        result = {}
-        if len(tickers) == 1:
-            try:
-                result[symbols[0]] = float(data['Close'].dropna().iloc[-1])
-            except Exception:
-                pass
-        else:
-            for s, t in zip(symbols, tickers):
+    symbols = list(dict.fromkeys(symbols))  # dedupe, no cap
+    result = {}
+    # yfinance handles up to ~100 tickers per call; batch in chunks of 50 to be safe
+    for i in range(0, len(symbols), 50):
+        chunk = symbols[i:i+50]
+        try:
+            tickers = [s + '.NS' for s in chunk]
+            data = yf.download(tickers, period='1d', interval='1m',
+                               progress=False, auto_adjust=True, timeout=15)
+            if len(tickers) == 1:
                 try:
-                    result[s] = float(data['Close'][t].dropna().iloc[-1])
+                    result[chunk[0]] = float(data['Close'].dropna().iloc[-1])
                 except Exception:
                     pass
-        return result
-    except Exception:
-        return {}
+            else:
+                for s, t in zip(chunk, tickers):
+                    try:
+                        result[s] = float(data['Close'][t].dropna().iloc[-1])
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    return result
 
 def fetch_single_cmp(symbol: str) -> Optional[float]:
     if not _YF:
@@ -295,10 +298,7 @@ def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) 
         lines.append(_table(headers, table_rows))
 
     if closed_t:
-        total_pnl = sum(
-            (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
-            for t in closed_t
-        )
+        total_pnl = sum(_net_pnl(t) for t in closed_t)
         lines.append(f"\nRealized P&L: *{arrow(total_pnl)} Rs {fmt_inr(abs(total_pnl))}*")
     return '\n'.join(lines)
 
@@ -395,6 +395,17 @@ def ledger_summary(ledger: dict, names: dict) -> str:
     return '\n'.join(out)
 
 
+def _net_pnl(t: dict) -> float:
+    """Net P&L for a closed trade — uses net_pnl if available, else gross."""
+    if t.get('net_pnl') not in (None, '', 0):
+        return float(t['net_pnl'])
+    gross = (float(t.get('sell_price', 0)) - float(t.get('buy_price', 0))) * float(t.get('sell_qty') or t.get('buy_qty', 0))
+    charges = sum(float(t.get(k, 0) or 0) for k in (
+        'buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn',
+        'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn'))
+    return gross - charges
+
+
 def pnl_summary(trades: list, names: dict) -> str:
     closed_t = [t for t in trades if t.get('exit_date')]
     rows, total = [], 0.0
@@ -402,8 +413,7 @@ def pnl_summary(trades: list, names: dict) -> str:
         ct = [t for t in closed_t if t.get('client') == code]
         if not ct:
             continue
-        pnl = sum((t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
-                  for t in ct)
+        pnl = sum(_net_pnl(t) for t in ct)
         total += pnl
         rows.append((code, pnl))
     if not rows:

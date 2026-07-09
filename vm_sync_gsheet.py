@@ -344,14 +344,7 @@ def sync_to_gsheet(trades: list):
                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held']].copy()
         show_op.columns = ['Client','Client Name','Symbol','Qty','Avg Buy Price',
                            'Invested (₹)','CMP','First Entry','Last Entry','Days Held']
-        def _pct(row):
-            cmp = cmp_map.get(row['Symbol'])
-            try:
-                return (float(cmp) - float(row['Avg Buy Price'])) / float(row['Avg Buy Price']) * 100
-            except Exception:
-                return float('-inf')
-        show_op['_sort_pct'] = show_op.apply(_pct, axis=1)
-        show_op = show_op.sort_values('_sort_pct', ascending=False).drop(columns='_sort_pct').reset_index(drop=True)
+        show_op = show_op.sort_values(['Client', 'Symbol']).reset_index(drop=True)
     else:
         show_op = pd.DataFrame(columns=['Client','Client Name','Symbol','Qty','Avg Buy Price',
                                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held'])
@@ -370,7 +363,7 @@ def sync_to_gsheet(trades: list):
             fml.append([f'=IF(ISNUMBER({g}),({g}-{e})*{d},"")',
                         f'=IF(ISNUMBER({g}),({g}-{e})/{e}*100,"")'])
         ws_op.update(fml, range_name=f'K2:L{nrows_op+1}', value_input_option='USER_ENTERED')
-        apply_num_cols(ws_op, [5,6,11], nrows_op)
+        apply_num_cols(ws_op, [5,6,7,11], nrows_op)
         format_cell_range(ws_op, f'L2:L{nrows_op+1}', pct_fmt)
         apply_pnl_conditional(ws_op, 11, nrows_op)
         apply_pnl_conditional(ws_op, 12, nrows_op)
@@ -478,6 +471,14 @@ def sync_to_gsheet(trades: list):
     write_df(ws_pnl, df_pnl)
     apply_header_fmt(ws_pnl, len(df_pnl.columns))
     nrows_pnl = len(df_pnl)
+    # Replace static Unrealized P&L (col I=9) and Total P&L (col J=10) with live SUMIF formulas
+    # Col I = SUMIF from Open Positions tab K (live GOOGLEFINANCE Unrealized P&L)
+    # Col J = Booked Net P&L (col H=8) + Unrealized (col I=9)
+    pnl_live_fmls = [[
+        f"=SUMIF('📋 Open Positions'!A:A,A{r},'📋 Open Positions'!K:K)",
+        f"=H{r}+I{r}"
+    ] for r in range(2, nrows_pnl+2)]
+    ws_pnl.update(pnl_live_fmls, range_name=f'I2:J{nrows_pnl+1}', value_input_option='USER_ENTERED')
     apply_num_cols(ws_pnl, [4,6,7,8,9,10,12,13], nrows_pnl)
     apply_pnl_conditional(ws_pnl, 8,  nrows_pnl)
     apply_pnl_conditional(ws_pnl, 9,  nrows_pnl)
@@ -486,7 +487,7 @@ def sync_to_gsheet(trades: list):
     apply_pnl_conditional(ws_pnl, 13, nrows_pnl)
     flush_pnl_rules(ws_pnl)
     add_totals_row(ws_pnl, df_pnl, [4,6,7,8,9,10,12,13], [11], nrows_pnl+1)
-    ws_pnl.update([['* Unrealized & Total P&L based on last CMP fetch. See Open Positions tab for live values.']],
+    ws_pnl.update([['* Unrealized & Total P&L are live (from Open Positions tab).']],
                   range_name=f'A{nrows_pnl+3}', value_input_option='USER_ENTERED')
     format_cell_range(ws_pnl, f'A{nrows_pnl+3}',
                       CellFormat(textFormat=TextFormat(italic=True, foregroundColor=Color(0.5,0.5,0.5))))
