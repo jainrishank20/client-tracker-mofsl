@@ -422,6 +422,74 @@ def pnl_summary(trades: list, names: dict) -> str:
     return '\n'.join(out)
 
 
+# ── /update — self-update from GitHub (no SSH needed) ────────────────────────
+
+def self_update(chat_id: str):
+    """Pull latest code from GitHub, set up systemd if needed, restart cleanly."""
+    import subprocess
+
+    def _run():
+        try:
+            send(chat_id, "Updating bot from GitHub...")
+            c     = load_cfg()
+            token = c.get('github_token', '')
+            repo  = c.get('github_repo', '')
+            if not token or not repo:
+                send(chat_id, "Error: github_token/github_repo missing from bot_config.json")
+                return
+
+            bot_dir = os.path.dirname(os.path.abspath(__file__))
+
+            # Download files from GitHub
+            for fname in ('telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json'):
+                url = f"https://api.github.com/repos/{repo}/contents/{fname}"
+                req = urllib.request.Request(url, headers={
+                    'Authorization': f'token {token}',
+                    'Accept': 'application/vnd.github.v3.raw',
+                })
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = r.read()
+                dest = os.path.join(bot_dir, fname)
+                with open(dest, 'wb') as f:
+                    f.write(data)
+
+            # Set up systemd service (idempotent)
+            svc = "client-tracker-bot"
+            unit = f"""[Unit]
+Description=Client Tracker MOFSL Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=opc
+WorkingDirectory={bot_dir}
+ExecStart=/usr/bin/python3 {os.path.join(bot_dir, 'telegram_bot.py')}
+Restart=always
+RestartSec=15
+StandardOutput=append:{os.path.join(bot_dir, 'bot.log')}
+StandardError=append:{os.path.join(bot_dir, 'bot.log')}
+
+[Install]
+WantedBy=multi-user.target
+"""
+            svc_tmp = '/tmp/client-tracker-bot.service'
+            with open(svc_tmp, 'w') as f:
+                f.write(unit)
+            subprocess.run(['sudo', 'cp', svc_tmp, f'/etc/systemd/system/{svc}.service'], check=False)
+            subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=False)
+            subprocess.run(['sudo', 'systemctl', 'enable', svc], check=False)
+
+            send(chat_id, "✅ Files updated. Restarting bot now...")
+            # systemd will restart us automatically after this exits
+            subprocess.Popen(['sudo', 'systemctl', 'restart', svc])
+
+        except Exception as e:
+            send(chat_id, f"Update failed: {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
 # ── /run — trigger daily pipeline ────────────────────────────────────────────
 
 def trigger_daily_run(chat_id: str):
@@ -671,6 +739,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             "/summary — snapshot\n"
             "/pnl — realized P&L by client\n"
             "/run — trigger daily pipeline\n"
+            "/update — pull latest bot code from GitHub & restart\n"
             "/alert SYM PRICE [above|below] — price alert\n"
             "/alerts — list active alerts\n"
             "/cancelalert SYM — remove alert\n"
@@ -740,6 +809,11 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         save_cfg(c)
         push_config_async(c)
         return f"Client {code} — {removed_name} removed. GitHub Secret updating in background."
+
+    # /update — pull latest code from GitHub and restart (no SSH needed)
+    if tl == '/update':
+        self_update(chat_id)
+        return None
 
     # /run
     if tl == '/run':
