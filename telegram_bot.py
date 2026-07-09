@@ -466,8 +466,13 @@ def self_update(chat_id: str):
                 os.replace(tmp, dest)
 
             send(chat_id, "Files updated. Restarting bot now...")
-            # tgbot is the live systemd service on the VM
-            subprocess.Popen(['sudo', 'systemctl', 'restart', 'tgbot'])
+            # os.execv replaces current process with fresh Python — works regardless of service name
+            # systemctl restart is a fallback in case execv somehow fails
+            time.sleep(1)
+            try:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception:
+                subprocess.Popen(['sudo', 'systemctl', 'restart', 'tgbot'])
 
         except Exception as e:
             send(chat_id, f"Update failed: {e}")
