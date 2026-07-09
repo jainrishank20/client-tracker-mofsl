@@ -1,0 +1,25 @@
+name: Deploy Bot to VM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy telegram_bot.py and restart bot
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          echo "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          VM="opc@152.67.164.204"
+          VMDIR="/home/opc/client-tracker-mofsl"
+          scp -i /tmp/vm_key -o StrictHostKeyChecking=no telegram_bot.py "$VM:$VMDIR/"
+          ssh -i /tmp/vm_key -o StrictHostKeyChecking=no "$VM" \
+            "pkill -f telegram_bot.py; sleep 2; cd $VMDIR && nohup python3 telegram_bot.py >> bot.log 2>&1 &"
+          rm /tmp/vm_key
+          echo "Bot deployed and restarted."
