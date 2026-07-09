@@ -20,6 +20,6 @@ jobs:
           VMDIR="/home/opc/client-tracker-mofsl"
           scp -i /tmp/vm_key -o StrictHostKeyChecking=no telegram_bot.py "$VM:$VMDIR/"
           ssh -i /tmp/vm_key -o StrictHostKeyChecking=no "$VM" \
-            "pkill -f telegram_bot.py; sleep 2; cd $VMDIR && nohup python3 telegram_bot.py >> bot.log 2>&1 &"
+            "pkill -f telegram_bot.py || true; sleep 2; cd $VMDIR && nohup python3 telegram_bot.py >> bot.log 2>&1 & disown; echo deployed"
           rm /tmp/vm_key
           echo "Bot deployed and restarted."
