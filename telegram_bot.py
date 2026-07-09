@@ -680,8 +680,11 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
 def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     """Find all clients with open positions matching keywords in the query."""
     stop = {'which', 'all', 'clients', 'client', 'have', 'has', 'who', 'the',
-            'a', 'an', 'in', 'on', 'for', 'and', 'any', 'open', 'stock', 'share'}
-    terms = [w for w in query.upper().split() if len(w) >= 3 and w.lower() not in stop]
+            'a', 'an', 'in', 'on', 'for', 'and', 'any', 'open', 'stock', 'share',
+            'are', 'holding', 'hold', 'also', 'currently', 'how', 'many', 'tell',
+            'me', 'about', 'position', 'positions', 'buy', 'bought', 'today',
+            'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see'}
+    terms = [w for w in query.upper().split() if len(w) >= 4 and w.lower() not in stop]
     if not terms:
         return None
     matches: dict[str, set] = {}

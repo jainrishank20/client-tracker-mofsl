@@ -49,7 +49,7 @@ def sync_to_gsheet(trades: list):
     """Push all trade data to Google Sheets — tabs with formatting, CMP formulas, conditional colors."""
     import gspread
     from gspread_formatting import (
-        CellFormat, Color, TextFormat, BooleanCondition, BooleanRule,
+        CellFormat, Color, TextFormat, NumberFormat, BooleanCondition, BooleanRule,
         ConditionalFormatRule, GridRange, format_cell_range, format_cell_ranges,
         set_frozen, get_conditional_format_rules, set_column_width
     )
@@ -370,7 +370,10 @@ def sync_to_gsheet(trades: list):
             fml.append([f'=IF(ISNUMBER({g}),({g}-{e})*{d},"")',
                         f'=IF(ISNUMBER({g}),({g}-{e})/{e}*100,"")'])
         ws_op.update(fml, range_name=f'K2:L{nrows_op+1}', value_input_option='USER_ENTERED')
-        apply_num_cols(ws_op, [5,6,11], nrows_op)
+        apply_num_cols(ws_op, [5,6], nrows_op)
+        # Unrealized P&L — show ▲ for gain, ▼ for loss (color handled by conditional fmt)
+        arrow_fmt = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='"▲ "#,##0.00;"▼ "#,##0.00;"-"'))
+        format_cell_range(ws_op, f'K2:K{nrows_op+1}', arrow_fmt)
         format_cell_range(ws_op, f'L2:L{nrows_op+1}', pct_fmt)
         apply_pnl_conditional(ws_op, 11, nrows_op)
         apply_pnl_conditional(ws_op, 12, nrows_op)
@@ -383,6 +386,7 @@ def sync_to_gsheet(trades: list):
         tot[5] = f'=SUM(F2:F{nrows_op+1})'
         ws_op.update([tot], range_name=f'A{tr}:L{tr}', value_input_option='USER_ENTERED')
         format_cell_range(ws_op, f'A{tr}:L{tr}', tot_fmt)
+        format_cell_range(ws_op, f'K{tr}', arrow_fmt)
         format_cell_range(ws_op, f'L{tr}', pct_fmt)
     set_frozen(ws_op, rows=1, cols=3)
 
