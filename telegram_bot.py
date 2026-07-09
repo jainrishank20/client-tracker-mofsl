@@ -440,7 +440,7 @@ def self_update(chat_id: str):
 
             bot_dir = os.path.dirname(os.path.abspath(__file__))
 
-            # Download files from GitHub
+            # Download files from GitHub — write to .tmp first, syntax-check before replacing
             for fname in ('telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json'):
                 url = f"https://api.github.com/repos/{repo}/contents/{fname}"
                 req = urllib.request.Request(url, headers={
@@ -450,39 +450,24 @@ def self_update(chat_id: str):
                 with urllib.request.urlopen(req, timeout=30) as r:
                     data = r.read()
                 dest = os.path.join(bot_dir, fname)
-                with open(dest, 'wb') as f:
+                tmp  = dest + '.tmp'
+                with open(tmp, 'wb') as f:
                     f.write(data)
+                # Syntax-check Python files before replacing live copy
+                if fname.endswith('.py'):
+                    result = subprocess.run(
+                        ['python3', '-m', 'py_compile', tmp],
+                        capture_output=True, text=True
+                    )
+                    if result.returncode != 0:
+                        os.remove(tmp)
+                        send(chat_id, f"Update aborted — syntax error in {fname}:\n{result.stderr}")
+                        return
+                os.replace(tmp, dest)
 
-            # Set up systemd service (idempotent)
-            svc = "client-tracker-bot"
-            unit = f"""[Unit]
-Description=Client Tracker MOFSL Telegram Bot
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=opc
-WorkingDirectory={bot_dir}
-ExecStart=/usr/bin/python3 {os.path.join(bot_dir, 'telegram_bot.py')}
-Restart=always
-RestartSec=15
-StandardOutput=append:{os.path.join(bot_dir, 'bot.log')}
-StandardError=append:{os.path.join(bot_dir, 'bot.log')}
-
-[Install]
-WantedBy=multi-user.target
-"""
-            svc_tmp = '/tmp/client-tracker-bot.service'
-            with open(svc_tmp, 'w') as f:
-                f.write(unit)
-            subprocess.run(['sudo', 'cp', svc_tmp, f'/etc/systemd/system/{svc}.service'], check=False)
-            subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=False)
-            subprocess.run(['sudo', 'systemctl', 'enable', svc], check=False)
-
-            send(chat_id, "✅ Files updated. Restarting bot now...")
-            # systemd will restart us automatically after this exits
-            subprocess.Popen(['sudo', 'systemctl', 'restart', svc])
+            send(chat_id, "Files updated. Restarting bot now...")
+            # tgbot is the live systemd service on the VM
+            subprocess.Popen(['sudo', 'systemctl', 'restart', 'tgbot'])
 
         except Exception as e:
             send(chat_id, f"Update failed: {e}")
