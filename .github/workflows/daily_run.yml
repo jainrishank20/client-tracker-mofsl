@@ -2,8 +2,10 @@ name: Daily Trade Download
 
 on:
   schedule:
-    # 3:00 PM UTC = 8:30 PM IST, Mon-Fri
+    # 3:00 PM UTC = 8:30 PM IST, Mon-Fri — daily incremental
     - cron: '0 15 * * 1-5'
+    # 2:00 AM UTC = 7:30 AM IST, Sunday — weekly full re-download to fix any ghost positions
+    - cron: '0 2 * * 0'
   workflow_dispatch:
     inputs:
       full_history:
@@ -62,9 +64,13 @@ jobs:
           restore-keys: fy2526-csvs-v1
 
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
+      # Full history runs on: Sunday auto-schedule OR manual trigger with full_history=true
       - name: Download CSVs from CBOS (Playwright headless)
         run: |
-          if [ "${{ github.event.inputs.full_history }}" = "true" ]; then
+          IS_SUNDAY_RUN="${{ github.event.schedule == '0 2 * * 0' }}"
+          IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
+          if [ "$IS_SUNDAY_RUN" = "true" ] || [ "$IS_MANUAL_FULL" = "true" ]; then
+            echo "Running FULL history download..."
             python mo_downloader.py --full
           else
             python mo_downloader.py
@@ -73,7 +79,7 @@ jobs:
 
       # ── Cache FY25-26 CSVs after a full run so daily runs can reuse them ────
       - name: Save FY25-26 CSVs to cache
-        if: github.event.inputs.full_history == 'true'
+        if: github.event.inputs.full_history == 'true' || github.event.schedule == '0 2 * * 0'
         uses: actions/cache/save@v4
         with:
           path: mo_csvs
@@ -116,9 +122,12 @@ jobs:
           BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
         run: |
           echo "$BOT_CONFIG" > bot_config.json
+          IS_FULL="false"
+          [ "${{ github.event.inputs.full_history }}" = "true" ] && IS_FULL="true"
+          [ "${{ github.event.schedule }}" = "0 2 * * 0" ] && IS_FULL="true"
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
-            --full "${{ github.event.inputs.full_history || 'false' }}"
+            --full "$IS_FULL"
 
       - name: Cleanup credentials
         if: always()
