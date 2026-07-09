@@ -19,38 +19,12 @@ jobs:
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
 
-          # systemd unit — auto-restarts bot on crash or VM reboot
-          cat > /tmp/client-tracker-bot.service << 'UNIT'
-          [Unit]
-          Description=Client Tracker MOFSL Telegram Bot
-          After=network-online.target
-          Wants=network-online.target
-
-          [Service]
-          Type=simple
-          User=opc
-          WorkingDirectory=/home/opc/client-tracker-mofsl
-          ExecStart=/usr/bin/python3 /home/opc/client-tracker-mofsl/telegram_bot.py
-          Restart=always
-          RestartSec=15
-          StandardOutput=append:/home/opc/client-tracker-mofsl/bot.log
-          StandardError=append:/home/opc/client-tracker-mofsl/bot.log
-
-          [Install]
-          WantedBy=multi-user.target
-          UNIT
-
-          # deploy script — idempotent: sets up systemd if not present, then restarts
+          # deploy script — refreshes files then restarts the live systemd service
           cat > /tmp/deploy.sh << 'SCRIPT'
           #!/bin/bash
           set -e
           VMDIR="/home/opc/client-tracker-mofsl"
-          SVC="client-tracker-bot"
-
-          # Install/refresh systemd unit
-          sudo cp /tmp/client-tracker-bot.service /etc/systemd/system/${SVC}.service
-          sudo systemctl daemon-reload
-          sudo systemctl enable ${SVC}
+          SVC="tgbot"   # existing systemd service on VM
 
           # Restart via systemd (kills old process cleanly, starts fresh)
           sudo systemctl restart ${SVC}
@@ -65,7 +39,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             echo "=== SSH attempt $attempt ==="
             if $SCP telegram_bot.py symbol_map.py ticker_overrides.json \
-                    /tmp/client-tracker-bot.service /tmp/deploy.sh \
+                    /tmp/deploy.sh \
                     "$VM:$VMDIR/"; then
               echo "SCP succeeded"
               $SSH "$VM" "bash $VMDIR/deploy.sh" && echo "Deploy complete." && break
