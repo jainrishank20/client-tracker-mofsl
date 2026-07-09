@@ -10,7 +10,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Deploy telegram_bot.py and restart bot
+      - name: Deploy bot files and ensure systemd service
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
@@ -19,25 +19,56 @@ jobs:
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
 
-          cat > /tmp/restart_bot.sh << 'SCRIPT'
+          # systemd unit — auto-restarts bot on crash or VM reboot
+          cat > /tmp/client-tracker-bot.service << 'UNIT'
+          [Unit]
+          Description=Client Tracker MOFSL Telegram Bot
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User=opc
+          WorkingDirectory=/home/opc/client-tracker-mofsl
+          ExecStart=/usr/bin/python3 /home/opc/client-tracker-mofsl/telegram_bot.py
+          Restart=always
+          RestartSec=15
+          StandardOutput=append:/home/opc/client-tracker-mofsl/bot.log
+          StandardError=append:/home/opc/client-tracker-mofsl/bot.log
+
+          [Install]
+          WantedBy=multi-user.target
+          UNIT
+
+          # deploy script — idempotent: sets up systemd if not present, then restarts
+          cat > /tmp/deploy.sh << 'SCRIPT'
           #!/bin/bash
-          pkill -f telegram_bot.py || true
-          sleep 2
-          cd /home/opc/client-tracker-mofsl
-          nohup python3 telegram_bot.py >> bot.log 2>&1 &
-          disown
-          echo "Bot restarted OK"
+          set -e
+          VMDIR="/home/opc/client-tracker-mofsl"
+          SVC="client-tracker-bot"
+
+          # Install/refresh systemd unit
+          sudo cp /tmp/client-tracker-bot.service /etc/systemd/system/${SVC}.service
+          sudo systemctl daemon-reload
+          sudo systemctl enable ${SVC}
+
+          # Restart via systemd (kills old process cleanly, starts fresh)
+          sudo systemctl restart ${SVC}
+          sleep 3
+          sudo systemctl is-active ${SVC} && echo "Bot running via systemd OK" || echo "WARNING: systemd start failed"
           SCRIPT
 
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
 
-          # Oracle Cloud SSH can be intermittently blocked — retry up to 5 times
+          # Oracle Cloud SSH is intermittently blocked — retry up to 5 times
           for attempt in 1 2 3 4 5; do
             echo "=== SSH attempt $attempt ==="
-            if $SCP telegram_bot.py /tmp/restart_bot.sh "$VM:$VMDIR/"; then
+            if $SCP telegram_bot.py symbol_map.py ticker_overrides.json \
+                    /tmp/client-tracker-bot.service /tmp/deploy.sh \
+                    "$VM:$VMDIR/"; then
               echo "SCP succeeded"
-              $SSH "$VM" "bash $VMDIR/restart_bot.sh" && echo "Bot deployed and restarted." && break
+              $SSH "$VM" "bash $VMDIR/deploy.sh" && echo "Deploy complete." && break
             fi
             echo "Attempt $attempt failed, waiting 30s before retry..."
             sleep 30

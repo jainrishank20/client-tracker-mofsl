@@ -83,12 +83,14 @@ def sym(script: str, overrides: dict) -> str:
 
 def load_alerts() -> dict:
     with _alerts_lock:
+        # price_alerts.json is the live source (written by save_alerts at runtime).
+        # bot_config.json['alerts'] is the backup restored on VM reboot — fallback only.
         try:
-            return load_cfg().get('alerts', {})
+            return json.load(open(ALERTS_FILE))
         except Exception:
             pass
         try:
-            return json.load(open(ALERTS_FILE))
+            return load_cfg().get('alerts', {})
         except Exception:
             return {}
 
