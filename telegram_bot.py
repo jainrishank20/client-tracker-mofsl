@@ -583,13 +583,14 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
     if not filtered:
         return f"No trades found for {names.get(client, client)} in {filter_label}."
 
-    total_brokerage = sum(t.get('brokerage', 0) or 0 for t in filtered)
-    total_stt       = sum(t.get('stt', 0) or 0 for t in filtered)
-    total_gst       = sum(t.get('gst', 0) or 0 for t in filtered)
-    total_stamp     = sum(t.get('stamp', 0) or 0 for t in filtered)
-    total_txn       = sum(t.get('txn_chrg', 0) or 0 for t in filtered)
-    total_other     = sum(t.get('other', 0) or 0 for t in filtered)
-    total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn + total_other
+    # trades.json stores buy/sell charges separately: buy_brokerage, sell_brokerage, etc.
+    def _sum(field): return sum((t.get(field, 0) or 0) for t in filtered)
+    total_brokerage = _sum('buy_brokerage') + _sum('sell_brokerage')
+    total_stt       = _sum('buy_stt')       + _sum('sell_stt')
+    total_gst       = _sum('buy_gst')       + _sum('sell_gst')
+    total_stamp     = _sum('buy_stamp')     + _sum('sell_stamp')
+    total_txn       = _sum('buy_txn')       + _sum('sell_txn')
+    total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn
 
     name = names.get(client, client)
     return (
@@ -599,7 +600,6 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         f"`GST:         Rs {fmt_inr(total_gst)}`\n"
         f"`Stamp duty:  Rs {fmt_inr(total_stamp)}`\n"
         f"`Txn charges: Rs {fmt_inr(total_txn)}`\n"
-        f"`Other:       Rs {fmt_inr(total_other)}`\n"
         f"`─────────────────────────`\n"
         f"`Total:       Rs {fmt_inr(total_all)}`\n"
         f"_({len(filtered)} trade(s))_"
