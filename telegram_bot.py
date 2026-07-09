@@ -169,6 +169,10 @@ def detect_client(text: str, names: dict) -> Optional[str]:
             return name_to_code[name]
     return None
 
+def arrow(val: float) -> str:
+    """Return ▲ for positive, ▼ for negative."""
+    return '▲' if val >= 0 else '▼'
+
 def fmt_inr(val: float) -> str:
     if val == 0:
         return '0'
@@ -284,9 +288,8 @@ def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) 
             avg = d['avg']
             pnl_str = ''
             if sc in cmp_data:
-                unreal = (cmp_data[sc] - avg) * qty
-                sign   = '+' if unreal >= 0 else ''
-                pnl_str = f"{sign}Rs{fmt_inr(unreal)}"
+                unreal  = (cmp_data[sc] - avg) * qty
+                pnl_str = f"{arrow(unreal)} Rs {fmt_inr(abs(unreal))}"
             table_rows.append([i, sc, qty, f"{avg:.2f}", pnl_str])
         headers = ['#', 'Script', 'Qty', 'Avg Price', 'Unreal P&L']
         lines.append(_table(headers, table_rows))
@@ -296,8 +299,7 @@ def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) 
             (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
             for t in closed_t
         )
-        sign = '+' if total_pnl >= 0 else ''
-        lines.append(f"\nRealized P&L: *{sign}Rs {fmt_inr(total_pnl)}*")
+        lines.append(f"\nRealized P&L: *{arrow(total_pnl)} Rs {fmt_inr(abs(total_pnl))}*")
     return '\n'.join(lines)
 
 
@@ -407,18 +409,17 @@ def pnl_summary(trades: list, names: dict) -> str:
     if not rows:
         return "No closed trades yet."
     w0  = max(len(r[0]) for r in rows)
-    w1  = max(len('P&L'), max(len(fmt_inr(r[1])) + 1 for r in rows))
+    w1  = max(len('P&L'), max(len(fmt_inr(abs(r[1]))) + 3 for r in rows))
     sep = '─' * (w0 + w1 + 2)
     def row_line(c, p):
-        s = ('+' if p >= 0 else '') + fmt_inr(p)
+        s = f"{arrow(p)} {fmt_inr(abs(p))}"
         return f"{c:<{w0}}  {s:>{w1}}"
     out = ["*Realized P&L*", f"`{sep}`",
            f"`{'Client':<{w0}}  {'P&L':>{w1}}`", f"`{sep}`"]
     for code, pnl in rows:
         out.append(f"`{row_line(code, pnl)}`")
     out.append(f"`{sep}`")
-    sign = '+' if total >= 0 else ''
-    out.append(f"`{'TOTAL':<{w0}}  {sign+fmt_inr(total):>{w1}}`")
+    out.append(f"`{'TOTAL':<{w0}}  {arrow(total)} {fmt_inr(abs(total)):>{w1-2}}`")
     return '\n'.join(out)
 
 
