@@ -217,6 +217,9 @@ if __name__ == '__main__':
                         qty      = min(buy['qty'], sell_rem)
                         frac_buy = qty / buy['qty'] if buy['qty'] else 0
                         frac_sel = qty / row['qty'] if row['qty'] else 0
+                        _b_chg = round(buy['brokerage'] * frac_buy, 2) + round(buy['stt'] * frac_buy, 2) + round(buy['gst'] * frac_buy, 2) + round(buy['stamp'] * frac_buy, 2) + round(buy['txn_chrg'] * frac_buy, 2) + round(buy.get('other', 0) * frac_buy, 2)
+                        _s_chg = round(row['brokerage'] * frac_sel, 2) + round(row['stt'] * frac_sel, 2) + round(row['gst'] * frac_sel, 2) + round(row['stamp'] * frac_sel, 2) + round(row['txn_chrg'] * frac_sel, 2) + round(row.get('other', 0) * frac_sel, 2)
+                        _gross = round((float(row['price']) - float(buy['price'])) * qty, 2)
                         all_trades.append({
                             'id':            trade_id,
                             'client':        client,
@@ -235,11 +238,15 @@ if __name__ == '__main__':
                             'buy_gst':       round(buy['gst']       * frac_buy, 2),
                             'buy_stamp':     round(buy['stamp']     * frac_buy, 2),
                             'buy_txn':       round(buy['txn_chrg']  * frac_buy, 2),
+                            'buy_other':     round(buy.get('other', 0) * frac_buy, 2),
                             'sell_brokerage':round(row['brokerage'] * frac_sel, 2),
                             'sell_stt':      round(row['stt']       * frac_sel, 2),
                             'sell_gst':      round(row['gst']       * frac_sel, 2),
                             'sell_stamp':    round(row['stamp']     * frac_sel, 2),
                             'sell_txn':      round(row['txn_chrg']  * frac_sel, 2),
+                            'sell_other':    round(row.get('other', 0) * frac_sel, 2),
+                            'gross_pnl':     _gross,
+                            'net_pnl':       round(_gross - _b_chg - _s_chg, 2),
                             'product':       buy.get('product', 'DELIVERY'),
                             'notes':         'imported',
                         })

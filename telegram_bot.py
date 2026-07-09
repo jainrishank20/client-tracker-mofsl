@@ -396,13 +396,13 @@ def ledger_summary(ledger: dict, names: dict) -> str:
 
 
 def _net_pnl(t: dict) -> float:
-    """Net P&L for a closed trade — uses net_pnl if available, else gross."""
+    """Net P&L for a closed trade — uses net_pnl if available, else gross minus all charges."""
     if t.get('net_pnl') not in (None, '', 0):
         return float(t['net_pnl'])
     gross = (float(t.get('sell_price', 0)) - float(t.get('buy_price', 0))) * float(t.get('sell_qty') or t.get('buy_qty', 0))
     charges = sum(float(t.get(k, 0) or 0) for k in (
-        'buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn',
-        'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn'))
+        'buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn','buy_other',
+        'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn','sell_other'))
     return gross - charges
 
 

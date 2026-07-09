@@ -125,7 +125,7 @@ def sync_to_gsheet(trades: list):
 
     def total_charges(row, prefix):
         keys = [f'{prefix}_brokerage', f'{prefix}_stt', f'{prefix}_gst',
-                f'{prefix}_stamp', f'{prefix}_txn']
+                f'{prefix}_stamp', f'{prefix}_txn', f'{prefix}_other']
         return sum(float(row.get(k, 0) or 0) for k in keys)
 
     HEADER_BG   = Color(0.13, 0.13, 0.18)
@@ -537,15 +537,24 @@ def sync_to_gsheet(trades: list):
     if not closed_df.empty:
         _mn_df = closed_df.copy()
         _mn_df["Month"] = _mn_df["exit_date"].dt.to_period("M").astype(str)
+        # Compute net per trade = gross - all charges (buy + sell side)
+        _charge_cols = ['buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn','buy_other',
+                        'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn','sell_other']
+        for _cc in _charge_cols:
+            if _cc not in _mn_df.columns:
+                _mn_df[_cc] = 0
+            _mn_df[_cc] = pd.to_numeric(_mn_df[_cc], errors='coerce').fillna(0)
+        _mn_df["_total_charges"] = _mn_df[[c for c in _charge_cols if c in _mn_df.columns]].sum(axis=1)
+        _mn_df["_net_pnl"]       = _mn_df["pnl"] - _mn_df["_total_charges"]
         _mn_rows = []
         for _month, _mg in _mn_df.groupby("Month"):
             _row = {"Month": _month}
             _row["All Clients Gross"] = round(_mg["pnl"].sum(), 2)
-            _row["All Clients Net"]   = round(_mg["net_pnl"].sum(), 2)
+            _row["All Clients Net"]   = round(_mg["_net_pnl"].sum(), 2)
             _row["Trades"]            = len(_mg)
             for _c in CLIENTS:
                 _cg = _mg[_mg["client"] == _c]
-                _row[f"{CLIENT_NAMES[_c]} Net"] = round(_cg["net_pnl"].sum(), 2) if not _cg.empty else 0
+                _row[f"{CLIENT_NAMES[_c]} Net"] = round(_cg["_net_pnl"].sum(), 2) if not _cg.empty else 0
             _mn_rows.append(_row)
         df_monthly = pd.DataFrame(_mn_rows).sort_values("Month", ascending=False)
         ws_mn = upsert_ws("📆 Monthly P&L", rows=max(len(df_monthly)+20, 50),
