@@ -576,24 +576,19 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         except Exception:
             return False
 
-    # Buy charges → incurred on entry_date; sell charges → incurred on exit_date.
-    # A trade bought in May and sold in June contributes buy charges to May and
-    # sell charges (STT, brokerage etc.) to June — so we filter each side separately.
-    buy_filtered  = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
-    sell_filtered = [t for t in rows if t.get('exit_date') and
-                     _date_in_range(t.get('exit_date') or '')]
+    # Filter by entry_date — "brokerage last month" means trades opened that month.
+    filtered = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
 
-    if not buy_filtered and not sell_filtered:
+    if not filtered:
         return f"No trades found for {names.get(client, client)} in {filter_label}."
 
-    def _sb(field): return sum((t.get(field, 0) or 0) for t in buy_filtered)
-    def _ss(field): return sum((t.get(field, 0) or 0) for t in sell_filtered)
+    def _sum(field): return sum((t.get(field, 0) or 0) for t in filtered)
 
-    total_brokerage = _sb('buy_brokerage') + _ss('sell_brokerage')
-    total_stt       = _sb('buy_stt')       + _ss('sell_stt')
-    total_gst       = _sb('buy_gst')       + _ss('sell_gst')
-    total_stamp     = _sb('buy_stamp')     + _ss('sell_stamp')
-    total_txn       = _sb('buy_txn')       + _ss('sell_txn')
+    total_brokerage = _sum('buy_brokerage') + _sum('sell_brokerage')
+    total_stt       = _sum('buy_stt')       + _sum('sell_stt')
+    total_gst       = _sum('buy_gst')       + _sum('sell_gst')
+    total_stamp     = _sum('buy_stamp')     + _sum('sell_stamp')
+    total_txn       = _sum('buy_txn')       + _sum('sell_txn')
     total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn
 
     name = names.get(client, client)
@@ -607,6 +602,29 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         f"`─────────────────────────`\n"
         f"`Total:       Rs {fmt_inr(total_all)}`"
     )
+
+
+def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
+    """Find all clients with open positions matching keywords in the query."""
+    stop = {'which', 'all', 'clients', 'client', 'have', 'has', 'who', 'the',
+            'a', 'an', 'in', 'on', 'for', 'and', 'any', 'open', 'stock', 'share'}
+    terms = [w for w in query.upper().split() if len(w) >= 3 and w.lower() not in stop]
+    if not terms:
+        return None
+    matches: dict[str, set] = {}
+    for t in trades:
+        if t.get('exit_date'):
+            continue
+        script = (t.get('script') or '').upper()
+        if any(term in script for term in terms):
+            matches.setdefault(t.get('client', ''), set()).add(script)
+    if not matches:
+        return f"No open positions found matching '{' '.join(terms)}'."
+    lines = [f"*Open positions — {' '.join(terms)}*"]
+    for code, scripts in sorted(matches.items()):
+        name = names.get(code, code)
+        lines.append(f"  {code} ({name}): {', '.join(sorted(scripts))}")
+    return '\n'.join(lines)
 
 
 def capital_summary_for(client: str, trades: list, names: dict) -> str:
@@ -806,6 +824,12 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                    f"Trades: {json.dumps(_slim(rows[:25]))}\n"
                    f"Ledger: {json.dumps(ledger.get(client, {}))}")
         return ask_groq(text, context)
+
+    # "Which clients have X" / "who has X" → direct script search across all trades
+    if any(w in tl for w in ('which', 'who has', 'who have', 'clients with', 'clients have', 'hold')):
+        result = search_by_script(text, trades, names)
+        if result:
+            return result
 
     # General free-form → Groq
     open_t   = [t for t in trades if not t.get('exit_date')]
