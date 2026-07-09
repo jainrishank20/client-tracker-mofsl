@@ -576,19 +576,22 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         except Exception:
             return False
 
-    # Filter by entry_date — "brokerage last month" means trades opened that month.
-    filtered = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
+    # Buy charges incurred on entry_date; sell charges incurred on exit_date.
+    # e.g. bought in May, sold in June → buy charges count in May, sell charges count in June.
+    buy_filtered  = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
+    sell_filtered = [t for t in rows if t.get('exit_date') and _date_in_range(t.get('exit_date') or '')]
 
-    if not filtered:
+    if not buy_filtered and not sell_filtered:
         return f"No trades found for {names.get(client, client)} in {filter_label}."
 
-    def _sum(field): return sum((t.get(field, 0) or 0) for t in filtered)
+    def _sb(field): return sum((t.get(field, 0) or 0) for t in buy_filtered)
+    def _ss(field): return sum((t.get(field, 0) or 0) for t in sell_filtered)
 
-    total_brokerage = _sum('buy_brokerage') + _sum('sell_brokerage')
-    total_stt       = _sum('buy_stt')       + _sum('sell_stt')
-    total_gst       = _sum('buy_gst')       + _sum('sell_gst')
-    total_stamp     = _sum('buy_stamp')     + _sum('sell_stamp')
-    total_txn       = _sum('buy_txn')       + _sum('sell_txn')
+    total_brokerage = _sb('buy_brokerage') + _ss('sell_brokerage')
+    total_stt       = _sb('buy_stt')       + _ss('sell_stt')
+    total_gst       = _sb('buy_gst')       + _ss('sell_gst')
+    total_stamp     = _sb('buy_stamp')     + _ss('sell_stamp')
+    total_txn       = _sb('buy_txn')       + _ss('sell_txn')
     total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn
 
     name = names.get(client, client)
