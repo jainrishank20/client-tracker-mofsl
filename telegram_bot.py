@@ -532,6 +532,80 @@ def ask_groq(question: str, context: str) -> str:
         return f"Could not get answer: {e}"
 
 
+def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> str:
+    """Return brokerage paid by a client, optionally filtered by month."""
+    rows = [t for t in trades if t.get('client') == client]
+    if not rows:
+        return f"No trades found for {names.get(client, client)}."
+
+    # Detect month filter from query text
+    today = datetime.date.today()
+    filter_label = 'All time'
+    from_date = None
+    to_date   = None
+
+    if 'last month' in tl:
+        first_this = today.replace(day=1)
+        last_month_end = first_this - datetime.timedelta(days=1)
+        from_date = last_month_end.replace(day=1)
+        to_date   = last_month_end
+        filter_label = from_date.strftime('%b %Y')
+    elif 'this month' in tl:
+        from_date = today.replace(day=1)
+        to_date   = today
+        filter_label = today.strftime('%b %Y')
+    else:
+        # Try to match month name e.g. "june", "july"
+        months = ['january','february','march','april','may','june',
+                  'july','august','september','october','november','december']
+        for i, mn in enumerate(months, 1):
+            if mn in tl:
+                yr = today.year if i <= today.month else today.year - 1
+                from_date = datetime.date(yr, i, 1)
+                import calendar
+                to_date = datetime.date(yr, i, calendar.monthrange(yr, i)[1])
+                filter_label = from_date.strftime('%b %Y')
+                break
+
+    def _in_range(t):
+        if from_date is None:
+            return True
+        d_str = (t.get('entry_date') or t.get('exit_date') or '')[:10]
+        if not d_str:
+            return False
+        try:
+            d = datetime.date.fromisoformat(d_str)
+            return from_date <= d <= to_date
+        except Exception:
+            return False
+
+    filtered = [t for t in rows if _in_range(t)]
+    if not filtered:
+        return f"No trades found for {names.get(client, client)} in {filter_label}."
+
+    total_brokerage = sum(t.get('brokerage', 0) or 0 for t in filtered)
+    total_stt       = sum(t.get('stt', 0) or 0 for t in filtered)
+    total_gst       = sum(t.get('gst', 0) or 0 for t in filtered)
+    total_stamp     = sum(t.get('stamp', 0) or 0 for t in filtered)
+    total_txn       = sum(t.get('txn_chrg', 0) or 0 for t in filtered)
+    total_other     = sum(t.get('other', 0) or 0 for t in filtered)
+    total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn + total_other
+
+    name = names.get(client, client)
+    return (
+        f"*{name} — Charges ({filter_label})*\n"
+        f"`Brokerage:   Rs {fmt_inr(total_brokerage)}`\n"
+        f"`STT:         Rs {fmt_inr(total_stt)}`\n"
+        f"`GST:         Rs {fmt_inr(total_gst)}`\n"
+        f"`Stamp duty:  Rs {fmt_inr(total_stamp)}`\n"
+        f"`Txn charges: Rs {fmt_inr(total_txn)}`\n"
+        f"`Other:       Rs {fmt_inr(total_other)}`\n"
+        f"`─────────────────────────`\n"
+        f"`Total:       Rs {fmt_inr(total_all)}`\n"
+        f"_({len(filtered)} trade(s))_"
+    )
+
+
 # ── Route messages ────────────────────────────────────────────────────────────
 
 def handle(text: str, chat_id: str) -> Optional[str]:
@@ -698,6 +772,8 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                 f"Delivery: Rs {fmt_inr(d.get('combined', 0))}\n"
                 f"MTF:      Rs {fmt_inr(d.get('mtf', 0))}"
             )
+        if 'brokerage' in tl or 'commission' in tl:
+            return brokerage_summary_for(client, trades, names, tl)
         # Free-form client question → Groq
         rows    = [t for t in trades if t.get('client') == client]
         context = (f"Client: {names.get(client, client)} ({client})\n"
