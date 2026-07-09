@@ -692,15 +692,25 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             matches.setdefault(t.get('client', ''), set()).add(script)
     if not matches:
         return f"No open positions found matching '{' '.join(terms)}'."
+    # Build qty per client per script
+    qty_map: dict[str, dict[str, float]] = {}
+    for t in open_trades:
+        script = (t.get('script') or '').upper()
+        if any(term in script for term in terms):
+            c = t.get('client', '')
+            qty_map.setdefault(c, {})
+            qty_map[c][script] = qty_map[c].get(script, 0) + (t.get('buy_qty') or 0)
+
     all_scripts = sorted(set(s for ss in matches.values() for s in ss))
     lines = [f"*Open positions — {', '.join(all_scripts)}*"]
     for code, scripts in sorted(matches.items()):
         name = names.get(code, code)
-        # Only show script names if they differ across clients (multi-stock search result)
         if len(all_scripts) > 1:
-            lines.append(f"  {name} ({code}): {', '.join(sorted(scripts))}")
+            parts = [f"{s} ({int(qty_map.get(code,{}).get(s,0))} qty)" for s in sorted(scripts)]
+            lines.append(f"  {name} ({code}): {', '.join(parts)}")
         else:
-            lines.append(f"  {name} ({code})")
+            qty = int(sum(qty_map.get(code, {}).values()))
+            lines.append(f"  {name} ({code}) — {qty} qty")
     return '\n'.join(lines)
 
 
