@@ -683,7 +683,7 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             'a', 'an', 'in', 'on', 'for', 'and', 'any', 'open', 'stock', 'share',
             'are', 'holding', 'hold', 'also', 'currently', 'how', 'many', 'tell',
             'me', 'about', 'position', 'positions', 'buy', 'bought', 'today',
-            'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see'}
+            'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see', 'with'}
     terms = [w for w in query.upper().split() if len(w) >= 4 and w.lower() not in stop]
     if not terms:
         return None
