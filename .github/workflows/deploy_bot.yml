@@ -19,7 +19,6 @@ jobs:
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
 
-          # Write restart script locally, SCP it alongside the bot file
           cat > /tmp/restart_bot.sh << 'SCRIPT'
           #!/bin/bash
           pkill -f telegram_bot.py || true
@@ -30,10 +29,18 @@ jobs:
           echo "Bot restarted OK"
           SCRIPT
 
-          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes"
-          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=15"
+          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
 
-          $SCP telegram_bot.py /tmp/restart_bot.sh "$VM:$VMDIR/"
-          $SSH "$VM" "bash $VMDIR/restart_bot.sh"
-          rm /tmp/vm_key
-          echo "Bot deployed and restarted."
+          # Oracle Cloud SSH can be intermittently blocked — retry up to 5 times
+          for attempt in 1 2 3 4 5; do
+            echo "=== SSH attempt $attempt ==="
+            if $SCP telegram_bot.py /tmp/restart_bot.sh "$VM:$VMDIR/"; then
+              echo "SCP succeeded"
+              $SSH "$VM" "bash $VMDIR/restart_bot.sh" && echo "Bot deployed and restarted." && break
+            fi
+            echo "Attempt $attempt failed, waiting 30s before retry..."
+            sleep 30
+          done
+
+          rm -f /tmp/vm_key
