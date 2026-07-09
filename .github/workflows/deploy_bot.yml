@@ -18,8 +18,22 @@ jobs:
           chmod 600 /tmp/vm_key
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
-          scp -i /tmp/vm_key -o StrictHostKeyChecking=no telegram_bot.py "$VM:$VMDIR/"
-          ssh -i /tmp/vm_key -o StrictHostKeyChecking=no "$VM" \
-            "pkill -f telegram_bot.py || true; sleep 2; cd $VMDIR && nohup python3 telegram_bot.py >> bot.log 2>&1 & disown; echo deployed"
+
+          # Write restart script locally, SCP it alongside the bot file
+          cat > /tmp/restart_bot.sh << 'SCRIPT'
+          #!/bin/bash
+          pkill -f telegram_bot.py || true
+          sleep 2
+          cd /home/opc/client-tracker-mofsl
+          nohup python3 telegram_bot.py >> bot.log 2>&1 &
+          disown
+          echo "Bot restarted OK"
+          SCRIPT
+
+          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes"
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=15"
+
+          $SCP telegram_bot.py /tmp/restart_bot.sh "$VM:$VMDIR/"
+          $SSH "$VM" "bash $VMDIR/restart_bot.sh"
           rm /tmp/vm_key
           echo "Bot deployed and restarted."
