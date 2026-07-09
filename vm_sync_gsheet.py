@@ -2,11 +2,20 @@
 Standalone GSheet sync. Run: python3 vm_sync_gsheet.py
 sync_to_gsheet is copied verbatim from app.py — no Streamlit needed.
 """
-import json, os, sys
+import json, os, sys, time
 import pandas as pd
 from datetime import datetime, date
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+
+# Guard: refuse to sync if trades.json is older than 6 hours — stale data corrupts the sheet.
+# GitHub Actions always has fresh data; local runs almost never do.
+_trades_path = os.path.join(BASE, "trades.json")
+_age_hours = (time.time() - os.path.getmtime(_trades_path)) / 3600
+if _age_hours > 6:
+    print(f"ERROR: trades.json is {_age_hours:.1f}h old. Run daily pipeline first or use GitHub Actions.")
+    print("Refusing to sync — stale trades.json would corrupt the GSheet.")
+    sys.exit(1)
 
 GSHEET_KEY = os.path.join(BASE, "gsheet_key.json")
 GSHEET_ID  = "1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo"
