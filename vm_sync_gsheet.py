@@ -116,6 +116,14 @@ def sync_to_gsheet(trades: list):
     for _col in ["buy_price", "sell_price", "buy_qty", "sell_qty"]:
         closed_df[_col] = pd.to_numeric(closed_df[_col], errors="coerce").fillna(0)
         open_df[_col]   = pd.to_numeric(open_df[_col],   errors="coerce").fillna(0)
+    # Charge columns may be absent on open-trade rows (open trades have no sell_other/buy_other).
+    # Fill NaN → 0 on df_all so total_charges() never gets NaN from pandas .get() on a Series.
+    _charge_fill = ['buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn','buy_other',
+                    'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn','sell_other']
+    for _col in _charge_fill:
+        if _col not in df_all.columns:
+            df_all[_col] = 0.0
+        df_all[_col] = pd.to_numeric(df_all[_col], errors='coerce').fillna(0)
     closed_df["pnl"] = (closed_df["sell_price"] - closed_df["buy_price"]) * closed_df["buy_qty"]
     if "net_pnl" in closed_df.columns:
         closed_df["net_pnl"] = pd.to_numeric(closed_df["net_pnl"], errors="coerce").fillna(0)
