@@ -655,3 +655,55 @@ with open(trades_file) as f:
 print(f"Loaded {len(trades)} trades. Syncing to Google Sheet...")
 result = sync_to_gsheet(trades)
 print(f"Done: {result}")
+
+# ── GSheet QA: alert on any #N/A in CMP column ───────────────────────────────
+try:
+    import gspread, urllib.parse, urllib.request
+    from oauth2client.service_account import ServiceAccountCredentials
+
+    _scope  = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    _creds  = ServiceAccountCredentials.from_json_keyfile_name(GSHEET_KEY, _scope)
+    _gc     = gspread.authorize(_creds)
+    _sh     = _gc.open_by_key(GSHEET_ID)
+    _ws_op  = _sh.worksheet("📋 Open Positions")
+    _vals   = _ws_op.get_all_values()
+
+    _bad = []
+    if len(_vals) > 1:
+        _header = _vals[0]
+        _ci = {h: i for i, h in enumerate(_header)}
+        _sym_i    = _ci.get('Symbol', 2)
+        _client_i = _ci.get('Client', 0)
+        _cmp_i    = _ci.get('CMP', 6)
+        for _row in _vals[1:]:
+            if len(_row) > _cmp_i and str(_row[_cmp_i]).strip() in ('#N/A', '#ERROR!', '#REF!', '#VALUE!', ''):
+                _sym = _row[_sym_i] if len(_row) > _sym_i else '?'
+                _cli = _row[_client_i] if len(_row) > _client_i else '?'
+                if _sym:
+                    _bad.append(f"{_sym} ({_cli})")
+
+    if _bad:
+        _bad_unique = list(dict.fromkeys(_bad))
+        _msg = (
+            "⚠️ *GSheet QA Alert — Missing CMP mapping*\n\n"
+            + "\n".join(f"• {b}" for b in _bad_unique)
+            + "\n\nAdd these to `symbol_map.py` to fix #N/A in Open Positions."
+        )
+        _token    = _cfg.get("telegram_token", "")
+        _chat_ids = str(_cfg.get("allowed_chat_id", "")).split(",")
+        for _cid in _chat_ids:
+            _cid = _cid.strip()
+            if not _cid:
+                continue
+            _data = urllib.parse.urlencode({
+                "chat_id": _cid, "text": _msg, "parse_mode": "Markdown"
+            }).encode()
+            urllib.request.urlopen(
+                urllib.request.Request(f"https://api.telegram.org/bot{_token}/sendMessage", data=_data),
+                timeout=15
+            )
+        print(f"QA ALERT sent: {len(_bad_unique)} missing CMP mapping(s): {', '.join(_bad_unique)}")
+    else:
+        print("QA: All CMP values OK — no #N/A found.")
+except Exception as _qa_err:
+    print(f"QA check failed (non-fatal): {_qa_err}")
