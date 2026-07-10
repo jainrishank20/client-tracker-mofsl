@@ -880,10 +880,27 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 print(f"    COMBINED row not found")
 
             # Re-navigate to Financial Summary to guarantee clean page state for MTF.
-            # Bootstrap's modal state after force-close can block the next modal from opening.
             await _nav_fin_summary(page)
             await asyncio.sleep(1)
             await _dismiss_alert(page)
+
+            # DEBUG: dump page state before MTF click so we can see what's happening
+            dbg = await page.evaluate("""
+                () => {
+                    const modals = Array.from(document.querySelectorAll('.modal')).map(m => ({
+                        cls: m.className,
+                        disp: window.getComputedStyle(m).display,
+                        vis: window.getComputedStyle(m).visibility,
+                        txt: (m.innerText||'').slice(0,80).replace(/\\n/g,' ')
+                    }));
+                    const rows = Array.from(document.querySelectorAll('tr td:first-child'))
+                        .map(td => td.textContent.trim()).filter(Boolean).slice(0, 15);
+                    return {url: window.location.href.slice(-60), modals, rows};
+                }
+            """)
+            print(f"    DEBUG MTF pre-click: url={dbg['url']}")
+            print(f"    DEBUG modals: {dbg['modals']}")
+            print(f"    DEBUG table rows: {dbg['rows']}")
 
             mtf_bal = 0.0
             if await _click_segment(page, 'MTF'):
