@@ -679,36 +679,39 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         return result['found']
 
     async def _read_popup_balance(pg, seg_label):
-        """Wait for the Voucher Date Ledger popup to appear, read BALANCE, close it."""
-        # CBOS uses Bootstrap modal with class 'modal-popu' — confirmed from logs
-        # Keep selector tight: only real modal containers, not page-level overlays
-        POPUP_SEL = '.modal, .ui-dialog, [role="dialog"]'
+        """Wait for the correct Voucher Date Ledger popup, read BALANCE, close it.
+        Confirmed from CBOS logs: popup text always contains the segment name,
+        e.g. 'Voucher Date Ledger - COMBINED' or 'Voucher Date Ledger - MTF'.
+        We match on text content so we never read the wrong popup.
+        """
+        seg_upper = seg_label.upper()
 
-        # Wait up to 8s for a visible popup to appear
-        for _ in range(16):
+        # Wait up to 10s for a visible .modal whose innerText contains our segment name
+        for _ in range(20):
             await asyncio.sleep(0.5)
-            visible = await pg.evaluate("""
-                (sel) => {
-                    for (const el of document.querySelectorAll(sel)) {
+            found = await pg.evaluate("""
+                (seg) => {
+                    for (const el of document.querySelectorAll('.modal')) {
                         const s = window.getComputedStyle(el);
-                        if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0)
-                            return true;
+                        if (s.display === 'none' || s.visibility === 'hidden') continue;
+                        if ((el.innerText || '').toUpperCase().includes(seg)) return true;
                     }
                     return false;
                 }
-            """, POPUP_SEL)
-            if visible:
+            """, seg_upper)
+            if found:
                 break
         else:
-            print(f"    WARNING: no popup appeared after clicking {seg_label}")
+            print(f"    WARNING: no {seg_label} popup appeared within 10s")
             return 0.0
 
-        # Read BALANCE column from the visible popup
+        # Read BALANCE column — only from the modal that contains our segment name
         val = await pg.evaluate("""
-            (sel) => {
-                for (const modal of document.querySelectorAll(sel)) {
+            (seg) => {
+                for (const modal of document.querySelectorAll('.modal')) {
                     const s = window.getComputedStyle(modal);
-                    if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) continue;
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    if (!(modal.innerText || '').toUpperCase().includes(seg)) continue;
                     for (const tbl of modal.querySelectorAll('table')) {
                         let balIdx = -1;
                         const hdrs = Array.from(tbl.querySelectorAll('th'))
@@ -733,55 +736,50 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 }
                 return null;
             }
-        """, POPUP_SEL)
+        """, seg_upper)
 
-        # Close popup via jQuery modal('hide') — scoped to .modal only (not all POPUP_SEL)
-        # to avoid accidentally hiding unrelated dialogs
+        # Close via jQuery — Bootstrap handles animation and removes backdrop itself
         await pg.evaluate("""
             () => {
                 if (typeof $ !== 'undefined') {
                     $('.modal.show').modal('hide');
                 } else {
-                    const b = document.querySelector('.modal.show [data-dismiss="modal"], .modal.show button.close, .modal.show .btn-close');
+                    const b = document.querySelector('.modal.show [data-dismiss="modal"], .modal.show button.close');
                     if (b) b.click();
                 }
             }
         """)
-        await asyncio.sleep(0.4)  # Let Bootstrap fade animation start
 
-        # Wait for the popup to fully disappear
-        # Wait up to 4s for modal to close (Bootstrap fade ~300ms)
-        for _ in range(10):
+        # Wait up to 5s for modal + backdrop to fully clear (Bootstrap fade ~300ms + backdrop ~150ms)
+        for _ in range(12):
             await asyncio.sleep(0.4)
             gone = await pg.evaluate("""
-                (sel) => {
-                    for (const modal of document.querySelectorAll(sel)) {
-                        const s = window.getComputedStyle(modal);
-                        if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0) return false;
+                () => {
+                    for (const m of document.querySelectorAll('.modal')) {
+                        const s = window.getComputedStyle(m);
+                        if (s.display !== 'none' && s.visibility !== 'hidden') return false;
                     }
-                    return true;
+                    return !document.querySelector('.modal-backdrop');
                 }
-            """, POPUP_SEL)
+            """)
             if gone:
                 break
         else:
-            print(f"    WARNING: popup for {seg_label} did not close in time")
-
-        # Always clean up backdrop + body state — Bootstrap's backdrop fades separately
-        # and can block subsequent clicks if not removed before we proceed
-        await pg.evaluate("""
-            (sel) => {
-                for (const el of document.querySelectorAll(sel)) {
-                    el.style.display = 'none';
-                    el.classList.remove('show');
+            # Bootstrap didn't clean up — force-remove only what's lingering
+            print(f"    WARNING: {seg_label} modal/backdrop didn't clear — force removing")
+            await pg.evaluate("""
+                () => {
+                    document.querySelectorAll('.modal.show').forEach(m => {
+                        m.style.display = 'none';
+                        m.classList.remove('show');
+                    });
+                    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
                 }
-                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-            }
-        """, POPUP_SEL)
-        await asyncio.sleep(0.3)  # Let DOM settle before next click
+            """)
+            await asyncio.sleep(0.4)
 
         return _parse_indian(val or '0')
 
