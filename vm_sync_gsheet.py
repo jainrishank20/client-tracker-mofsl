@@ -254,7 +254,7 @@ def sync_to_gsheet(trades: list):
 
     def gfinance_formula(script):
         sym = resolve_symbol(script)
-        return f'=GOOGLEFINANCE("NSE:{sym}","price")'
+        return f'=IFERROR(GOOGLEFINANCE("NSE:{sym}","price"),"—")'
 
     cmp_map = {}
     if not open_df.empty:
