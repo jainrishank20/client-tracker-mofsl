@@ -678,38 +678,52 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         return result['found']
 
     async def _read_popup_balance(pg, seg_label):
-        """Wait for the Voucher Date Ledger popup for seg_label to appear,
-        read the BALANCE of the first data row, then close the popup."""
-        # Wait up to 6s for the popup to appear with the correct title
-        for _ in range(12):
+        """Wait for any visible popup after clicking seg_label, read BALANCE, close it."""
+        # Broad selector — catches Bootstrap modal, jQuery UI dialog, and custom CBOS popups
+        POPUP_SEL = '.modal, .ui-dialog, [role="dialog"], [class*="popup"], [class*="Popup"], [class*="overlay"], [class*="Overlay"]'
+
+        # Wait up to 8s for any visible popup to appear
+        for _ in range(16):
             await asyncio.sleep(0.5)
-            title = await pg.evaluate("""
-                () => {
-                    for (const el of document.querySelectorAll(
-                            '.modal-title, .modal-header h4, .modal-header h3, .ui-dialog-title')) {
+            visible = await pg.evaluate("""
+                (sel) => {
+                    for (const el of document.querySelectorAll(sel)) {
                         const s = window.getComputedStyle(el);
-                        if (s.display !== 'none' && el.textContent.trim())
-                            return el.textContent.trim().toUpperCase();
+                        if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0')
+                            return true;
                     }
-                    return '';
+                    return false;
                 }
-            """)
-            if title:
-                print(f"    popup title seen: '{title}'")
-            if seg_label.upper() in title:
+            """, POPUP_SEL)
+            if visible:
                 break
         else:
-            print(f"    WARNING: popup for {seg_label} did not appear (last title seen: '{title}')")
+            print(f"    WARNING: no popup appeared after clicking {seg_label}")
             return 0.0
 
-        # Read first data row's BALANCE column — only within the visible modal
+        # Debug: print popup outer HTML summary to identify its structure
+        debug_info = await pg.evaluate("""
+            (sel) => {
+                for (const el of document.querySelectorAll(sel)) {
+                    const s = window.getComputedStyle(el);
+                    if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0') {
+                        const txt = (el.innerText || '').trim().substring(0, 200);
+                        return el.tagName + '.' + el.className.trim().replace(/\\s+/g,'.') + ' | ' + txt;
+                    }
+                }
+                return 'none';
+            }
+        """, POPUP_SEL)
+        print(f"    popup visible for {seg_label}: {debug_info[:300]}")
+
+        # Read BALANCE column from the visible popup
         val = await pg.evaluate("""
-            () => {
-                // find visible modal container
-                for (const modal of document.querySelectorAll('.modal, .ui-dialog, [role="dialog"]')) {
+            (sel) => {
+                for (const modal of document.querySelectorAll(sel)) {
                     const s = window.getComputedStyle(modal);
-                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') continue;
                     for (const tbl of modal.querySelectorAll('table')) {
+                        // find BALANCE column index
                         let balIdx = -1;
                         const hdrs = Array.from(tbl.querySelectorAll('th'))
                             .map(h => h.textContent.trim().toUpperCase());
@@ -733,34 +747,52 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 }
                 return null;
             }
-        """)
+        """, POPUP_SEL)
+        print(f"    raw BALANCE value for {seg_label}: {val!r}")
 
-        # Close popup
+        # Close popup — try every common close mechanism
         await pg.evaluate("""
-            () => {
-                for (const b of document.querySelectorAll(
-                        '.modal .close, .modal [data-dismiss="modal"], .ui-dialog-titlebar-close')) {
-                    const s = window.getComputedStyle(b);
-                    if (s.display !== 'none' && s.visibility !== 'hidden') { b.click(); return; }
+            (sel) => {
+                // Try close buttons inside any visible popup
+                for (const modal of document.querySelectorAll(sel)) {
+                    const s = window.getComputedStyle(modal);
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    for (const b of modal.querySelectorAll(
+                            'button.close, [data-dismiss="modal"], .ui-dialog-titlebar-close, button[aria-label="Close"], .close')) {
+                        const bs = window.getComputedStyle(b);
+                        if (bs.display !== 'none' && bs.visibility !== 'hidden') { b.click(); return; }
+                    }
                 }
             }
-        """)
+        """, POPUP_SEL)
         await pg.keyboard.press("Escape")
 
-        # Wait for popup to fully disappear before returning
-        for _ in range(10):
+        # Wait for the popup to fully disappear before returning
+        for _ in range(14):
             await asyncio.sleep(0.4)
             gone = await pg.evaluate("""
-                () => {
-                    for (const modal of document.querySelectorAll('.modal, .ui-dialog, [role="dialog"]')) {
+                (sel) => {
+                    for (const modal of document.querySelectorAll(sel)) {
                         const s = window.getComputedStyle(modal);
-                        if (s.display !== 'none' && s.visibility !== 'hidden') return false;
+                        if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0') return false;
                     }
                     return true;
                 }
-            """)
+            """, POPUP_SEL)
             if gone:
                 break
+        else:
+            print(f"    WARNING: popup for {seg_label} did not close — forcing via JS")
+            await pg.evaluate("""
+                (sel) => {
+                    for (const el of document.querySelectorAll(sel)) {
+                        el.style.display = 'none';
+                    }
+                    const bd = document.querySelector('.modal-backdrop');
+                    if (bd) bd.remove();
+                    document.body.classList.remove('modal-open');
+                }
+            """, POPUP_SEL)
 
         return _parse_indian(val or '0')
 
