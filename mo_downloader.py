@@ -656,65 +656,44 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         except ValueError:
             return 0.0
 
-    async def _get_popup_balance(pg):
-        await asyncio.sleep(2.5)
-        val = await pg.evaluate("""
+    async def _read_ledger_summary(pg):
+        """Read COMBINED and MTF Voucher Ledger values directly from the
+        Ledger Summary table on the Financial Summary page — no popups needed."""
+        await asyncio.sleep(1.5)
+        result = await pg.evaluate("""
             () => {
+                const out = {combined: null, mtf: null};
                 for (const tbl of document.querySelectorAll('table')) {
                     const s = window.getComputedStyle(tbl);
                     if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    let balIdx = -1;
-                    const ths = tbl.querySelectorAll('th');
-                    if (ths.length) {
-                        const hdrs = Array.from(ths).map(h => h.textContent.trim().toUpperCase());
-                        balIdx = hdrs.indexOf('BALANCE');
-                    }
-                    if (balIdx < 0) {
-                        const firstTr = tbl.querySelector('tr');
-                        if (firstTr) {
-                            const cells = Array.from(firstTr.querySelectorAll('th,td'))
-                                               .map(c => c.textContent.trim().toUpperCase());
-                            balIdx = cells.indexOf('BALANCE');
-                        }
-                    }
-                    if (balIdx < 0) continue;
                     const rows = Array.from(tbl.querySelectorAll('tr'));
-                    for (let i = 1; i < rows.length; i++) {
-                        const cells = rows[i].querySelectorAll('td');
-                        if (cells.length > balIdx && cells[balIdx].textContent.trim())
-                            return cells[balIdx].textContent.trim();
+                    // find the header row that contains 'VOUCHER LEDGER'
+                    let voucherIdx = -1;
+                    for (const row of rows) {
+                        const cells = Array.from(row.querySelectorAll('th,td'))
+                            .map(c => c.textContent.trim().toUpperCase().replace(/\\s+/g, ' '));
+                        const idx = cells.findIndex(c => c.includes('VOUCHER LEDGER'));
+                        if (idx >= 0) { voucherIdx = idx; break; }
                     }
+                    if (voucherIdx < 0) continue;
+                    // read COMBINED and MTF rows
+                    for (const row of rows) {
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        if (!cells.length) continue;
+                        const seg = cells[0].textContent.trim().toUpperCase();
+                        if (seg === 'COMBINED' && cells[voucherIdx])
+                            out.combined = cells[voucherIdx].textContent.trim();
+                        if (seg === 'MTF' && cells[voucherIdx])
+                            out.mtf = cells[voucherIdx].textContent.trim();
+                    }
+                    if (out.combined !== null || out.mtf !== null) return out;
                 }
-                return null;
+                return out;
             }
         """)
-        return _parse_indian(val or '0')
-
-    async def _close_popup(pg):
-        await pg.evaluate("""
-            () => {
-                for (const b of document.querySelectorAll(
-                        '.close, [data-dismiss="modal"], .modal-header .close')) {
-                    if (window.getComputedStyle(b).display !== 'none') { b.click(); return; }
-                }
-            }
-        """)
-        await pg.keyboard.press("Escape")
-        await asyncio.sleep(0.8)
-
-    async def _click_segment(pg, seg):
-        return await pg.evaluate("""
-            (seg) => {
-                for (const row of document.querySelectorAll('tr')) {
-                    const cells = row.querySelectorAll('td');
-                    if (!cells.length || cells[0].textContent.trim().toUpperCase() !== seg) continue;
-                    const link = row.querySelector('a');
-                    if (link) { link.click(); return true; }
-                    if (cells[1]) { cells[1].click(); return true; }
-                }
-                return false;
-            }
-        """, seg)
+        combined = _parse_indian(result.get('combined') or '0')
+        mtf      = _parse_indian(result.get('mtf') or '0')
+        return combined, mtf
 
     async def _nav_fin_summary(pg):
         found = await pg.evaluate("""
@@ -787,31 +766,8 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             await asyncio.sleep(1)
             await _dismiss_alert(page)
 
-            combined_bal = 0.0
-            if await _click_segment(page, 'COMBINED'):
-                combined_bal = await _get_popup_balance(page)
-                # Retry once if 0 — popup may not have loaded in time (common for first client)
-                if combined_bal == 0.0:
-                    await asyncio.sleep(2)
-                    combined_bal = await _get_popup_balance(page)
-                print(f"    COMBINED = {combined_bal:,.2f}")
-                await _close_popup(page)
-            else:
-                print(f"    COMBINED not found")
-
-            await asyncio.sleep(0.5)
-
-            mtf_bal = 0.0
-            if await _click_segment(page, 'MTF'):
-                mtf_bal = await _get_popup_balance(page)
-                if mtf_bal == 0.0:
-                    await asyncio.sleep(2)
-                    mtf_bal = await _get_popup_balance(page)
-                print(f"    MTF      = {mtf_bal:,.2f}")
-                await _close_popup(page)
-            else:
-                print(f"    MTF      = 0")
-
+            combined_bal, mtf_bal = await _read_ledger_summary(page)
+            print(f"    COMBINED = {combined_bal:,.2f}  MTF = {mtf_bal:,.2f}")
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
 
         except Exception as e:
