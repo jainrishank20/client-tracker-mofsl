@@ -656,44 +656,106 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         except ValueError:
             return 0.0
 
-    async def _read_ledger_summary(pg):
-        """Read COMBINED and MTF Voucher Ledger values directly from the
-        Ledger Summary table on the Financial Summary page — no popups needed."""
-        await asyncio.sleep(1.5)
-        result = await pg.evaluate("""
-            () => {
-                const out = {combined: null, mtf: null};
-                for (const tbl of document.querySelectorAll('table')) {
-                    const s = window.getComputedStyle(tbl);
-                    if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    const rows = Array.from(tbl.querySelectorAll('tr'));
-                    // find the header row that contains 'VOUCHER LEDGER'
-                    let voucherIdx = -1;
-                    for (const row of rows) {
-                        const cells = Array.from(row.querySelectorAll('th,td'))
-                            .map(c => c.textContent.trim().toUpperCase().replace(/\\s+/g, ' '));
-                        const idx = cells.findIndex(c => c.includes('VOUCHER LEDGER'));
-                        if (idx >= 0) { voucherIdx = idx; break; }
-                    }
-                    if (voucherIdx < 0) continue;
-                    // read COMBINED and MTF rows
-                    for (const row of rows) {
-                        const cells = Array.from(row.querySelectorAll('td'));
-                        if (!cells.length) continue;
-                        const seg = cells[0].textContent.trim().toUpperCase();
-                        if (seg === 'COMBINED' && cells[voucherIdx])
-                            out.combined = cells[voucherIdx].textContent.trim();
-                        if (seg === 'MTF' && cells[voucherIdx])
-                            out.mtf = cells[voucherIdx].textContent.trim();
-                    }
-                    if (out.combined !== null || out.mtf !== null) return out;
+    async def _click_segment(pg, seg):
+        """Click the COMBINED or MTF row link on the Financial Summary page."""
+        return await pg.evaluate("""
+            (seg) => {
+                for (const row of document.querySelectorAll('tr')) {
+                    const cells = row.querySelectorAll('td');
+                    if (!cells.length) continue;
+                    if (cells[0].textContent.trim().toUpperCase() !== seg) continue;
+                    const link = row.querySelector('a');
+                    if (link) { link.click(); return true; }
+                    if (cells[1]) { cells[1].click(); return true; }
                 }
-                return out;
+                return false;
+            }
+        """, seg)
+
+    async def _read_popup_balance(pg, seg_label):
+        """Wait for the Voucher Date Ledger popup for seg_label to appear,
+        read the BALANCE of the first data row, then close the popup."""
+        # Wait up to 6s for the popup to appear with the correct title
+        for _ in range(12):
+            await asyncio.sleep(0.5)
+            title = await pg.evaluate("""
+                () => {
+                    for (const el of document.querySelectorAll(
+                            '.modal-title, .modal-header h4, .modal-header h3, .ui-dialog-title')) {
+                        const s = window.getComputedStyle(el);
+                        if (s.display !== 'none' && el.textContent.trim())
+                            return el.textContent.trim().toUpperCase();
+                    }
+                    return '';
+                }
+            """)
+            if seg_label.upper() in title:
+                break
+        else:
+            print(f"    WARNING: popup for {seg_label} did not appear")
+            return 0.0
+
+        # Read first data row's BALANCE column — only within the visible modal
+        val = await pg.evaluate("""
+            () => {
+                // find visible modal container
+                for (const modal of document.querySelectorAll('.modal, .ui-dialog, [role="dialog"]')) {
+                    const s = window.getComputedStyle(modal);
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    for (const tbl of modal.querySelectorAll('table')) {
+                        let balIdx = -1;
+                        const hdrs = Array.from(tbl.querySelectorAll('th'))
+                            .map(h => h.textContent.trim().toUpperCase());
+                        balIdx = hdrs.indexOf('BALANCE');
+                        if (balIdx < 0) {
+                            const firstTr = tbl.querySelector('tr');
+                            if (firstTr) {
+                                const cells = Array.from(firstTr.querySelectorAll('th,td'))
+                                    .map(c => c.textContent.trim().toUpperCase());
+                                balIdx = cells.indexOf('BALANCE');
+                            }
+                        }
+                        if (balIdx < 0) continue;
+                        const rows = Array.from(tbl.querySelectorAll('tr'));
+                        for (let i = 1; i < rows.length; i++) {
+                            const cells = rows[i].querySelectorAll('td');
+                            if (cells.length > balIdx && cells[balIdx].textContent.trim())
+                                return cells[balIdx].textContent.trim();
+                        }
+                    }
+                }
+                return null;
             }
         """)
-        combined = _parse_indian(result.get('combined') or '0')
-        mtf      = _parse_indian(result.get('mtf') or '0')
-        return combined, mtf
+
+        # Close popup
+        await pg.evaluate("""
+            () => {
+                for (const b of document.querySelectorAll(
+                        '.modal .close, .modal [data-dismiss="modal"], .ui-dialog-titlebar-close')) {
+                    const s = window.getComputedStyle(b);
+                    if (s.display !== 'none' && s.visibility !== 'hidden') { b.click(); return; }
+                }
+            }
+        """)
+        await pg.keyboard.press("Escape")
+
+        # Wait for popup to fully disappear before returning
+        for _ in range(10):
+            await asyncio.sleep(0.4)
+            gone = await pg.evaluate("""
+                () => {
+                    for (const modal of document.querySelectorAll('.modal, .ui-dialog, [role="dialog"]')) {
+                        const s = window.getComputedStyle(modal);
+                        if (s.display !== 'none' && s.visibility !== 'hidden') return false;
+                    }
+                    return true;
+                }
+            """)
+            if gone:
+                break
+
+        return _parse_indian(val or '0')
 
     async def _nav_fin_summary(pg):
         found = await pg.evaluate("""
@@ -766,8 +828,20 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             await asyncio.sleep(1)
             await _dismiss_alert(page)
 
-            combined_bal, mtf_bal = await _read_ledger_summary(page)
-            print(f"    COMBINED = {combined_bal:,.2f}  MTF = {mtf_bal:,.2f}")
+            combined_bal = 0.0
+            if await _click_segment(page, 'COMBINED'):
+                combined_bal = await _read_popup_balance(page, 'COMBINED')
+                print(f"    COMBINED = {combined_bal:,.2f}")
+            else:
+                print(f"    COMBINED row not found")
+
+            mtf_bal = 0.0
+            if await _click_segment(page, 'MTF'):
+                mtf_bal = await _read_popup_balance(page, 'MTF')
+                print(f"    MTF      = {mtf_bal:,.2f}")
+            else:
+                print(f"    MTF row not found")
+
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
 
         except Exception as e:
