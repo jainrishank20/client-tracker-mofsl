@@ -750,34 +750,32 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             }
         """)
 
-        # Wait up to 5s for OUR modal (containing seg_upper in text) + backdrop to clear.
-        # Only check our specific modal — CBOS has other permanent .modal elements in DOM
-        # that are never display:none, so checking all .modal always returns false.
+        # Wait up to 5s for OUR modal (the one with seg_upper in its text) to close.
+        # Only check our modal — CBOS has permanent .modal elements that are never display:none.
+        # Backdrop is handled separately below — don't include it in this check.
         for _ in range(12):
             await asyncio.sleep(0.4)
-            gone = await pg.evaluate("""
+            modal_gone = await pg.evaluate("""
                 (seg) => {
                     for (const m of document.querySelectorAll('.modal')) {
                         const s = window.getComputedStyle(m);
                         if (s.display === 'none' || s.visibility === 'hidden') continue;
                         if ((m.innerText || '').toUpperCase().includes(seg)) return false;
                     }
-                    return !document.querySelector('.modal-backdrop');
+                    return true;
                 }
             """, seg_upper)
-            if gone:
+            if modal_gone:
                 break
         else:
-            # Bootstrap didn't clean up our modal — force-remove ONLY our modal + backdrop.
-            # Do NOT touch other modals to avoid corrupting Bootstrap's state for next popup.
-            print(f"    WARNING: {seg_label} modal/backdrop didn't clear — force removing")
+            # Bootstrap didn't close our modal — force-hide it and reset Bootstrap's internal state
+            print(f"    WARNING: {seg_label} modal didn't close — force hiding")
             await pg.evaluate("""
                 (seg) => {
                     for (const m of document.querySelectorAll('.modal')) {
                         if (!(m.innerText || '').toUpperCase().includes(seg)) continue;
                         m.style.display = 'none';
                         m.classList.remove('show');
-                        // Reset Bootstrap 4 internal state so next modal('show') isn't blocked
                         try {
                             if (typeof $ !== 'undefined') {
                                 const inst = $(m).data('bs.modal');
@@ -785,13 +783,21 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                             }
                         } catch(e) {}
                     }
-                    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-                    document.body.classList.remove('modal-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
                 }
             """, seg_upper)
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.3)
+
+        # Always clean backdrop + body — Bootstrap often leaves backdrop even after modal closes.
+        # This is safe because we re-navigate to Fin Summary before the next popup anyway.
+        await pg.evaluate("""
+            () => {
+                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+        """)
+        await asyncio.sleep(0.2)
 
         return _parse_indian(val or '0')
 
@@ -872,6 +878,12 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 print(f"    COMBINED = {combined_bal:,.2f}")
             else:
                 print(f"    COMBINED row not found")
+
+            # Re-navigate to Financial Summary to guarantee clean page state for MTF.
+            # Bootstrap's modal state after force-close can block the next modal from opening.
+            await _nav_fin_summary(page)
+            await asyncio.sleep(1)
+            await _dismiss_alert(page)
 
             mtf_bal = 0.0
             if await _click_segment(page, 'MTF'):
