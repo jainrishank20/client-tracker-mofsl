@@ -110,8 +110,24 @@ jobs:
           echo "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no"
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no"
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
+          # Merge VM's ticker_overrides (has /addticker entries) with runner's (has secret entries)
+          # VM entries take priority so manual fixes are never lost
+          $SCP "$VM:$VMDIR/ticker_overrides.json" /tmp/vm_overrides.json 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
+          python3 -c "
+import json
+try:
+    runner = json.load(open('ticker_overrides.json'))
+except: runner = {}
+try:
+    vm = json.load(open('/tmp/vm_overrides.json'))
+except: vm = {}
+merged = {**runner, **vm}
+json.dump(merged, open('ticker_overrides.json','w'), indent=2)
+print(f'Merged overrides: {len(runner)} runner + {len(vm)} VM = {len(merged)} total')
+"
           $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
           rm /tmp/vm_key
 

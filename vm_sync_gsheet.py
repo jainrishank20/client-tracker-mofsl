@@ -677,7 +677,7 @@ try:
         _client_i = _ci.get('Client', 0)
         _cmp_i    = _ci.get('CMP', 6)
         for _row in _vals[1:]:
-            if len(_row) > _cmp_i and str(_row[_cmp_i]).strip() in ('#N/A', '#ERROR!', '#REF!', '#VALUE!', ''):
+            if len(_row) > _cmp_i and str(_row[_cmp_i]).strip() in ('#N/A', '#ERROR!', '#REF!', '#VALUE!', '—'):
                 _sym = _row[_sym_i].strip() if len(_row) > _sym_i else ''
                 _cli = _row[_client_i].strip() if len(_row) > _client_i else '?'
                 if _sym:

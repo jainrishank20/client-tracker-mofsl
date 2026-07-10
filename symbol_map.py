@@ -158,17 +158,20 @@ def resolve(script: str, overrides: dict) -> str:
     Check order: overrides → SYMBOL_MAP → suffix-stripped SYMBOL_MAP → strip non-alphanum.
     """
     s = script.strip()
-    # 1. User overrides take priority
-    if s in overrides:
-        v = overrides[s]
+    su = s.upper()
+    # Build case-insensitive overrides lookup
+    overrides_upper = {k.upper(): v for k, v in overrides.items()}
+    # 1. User overrides take priority (case-insensitive)
+    if su in overrides_upper:
+        v = overrides_upper[su]
         if v:
             return v.strip().upper().replace(".NS", "")
     # 2. Direct map lookup
-    if s in SYMBOL_MAP:
-        return SYMBOL_MAP[s]
+    if su in SYMBOL_MAP:
+        return SYMBOL_MAP[su]
     # 3. Suffix-stripped lookup
-    stripped = _SUFFIX_RE.sub('', s).strip()
-    if stripped != s and stripped in SYMBOL_MAP:
+    stripped = _SUFFIX_RE.sub('', su).strip()
+    if stripped != su and stripped in SYMBOL_MAP:
         return SYMBOL_MAP[stripped]
     # 4. Fallback: strip all non-alphanumeric (keep &)
-    return _re.sub(r'[^A-Z0-9&]', '', s.upper())
+    return _re.sub(r'[^A-Z0-9&]', '', su)
