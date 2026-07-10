@@ -750,13 +750,14 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         await asyncio.sleep(0.4)  # Let Bootstrap fade animation start
 
         # Wait for the popup to fully disappear
-        for _ in range(14):
+        # Wait up to 4s for modal to close (Bootstrap fade ~300ms)
+        for _ in range(10):
             await asyncio.sleep(0.4)
             gone = await pg.evaluate("""
                 (sel) => {
                     for (const modal of document.querySelectorAll(sel)) {
                         const s = window.getComputedStyle(modal);
-                        if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0') return false;
+                        if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0) return false;
                     }
                     return true;
                 }
@@ -764,20 +765,23 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             if gone:
                 break
         else:
-            print(f"    WARNING: popup for {seg_label} did not close — forcing via JS + cleanup")
-            await pg.evaluate("""
-                (sel) => {
-                    for (const el of document.querySelectorAll(sel)) {
-                        el.style.display = 'none';
-                        el.classList.remove('show');
-                    }
-                    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-                    document.body.classList.remove('modal-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
+            print(f"    WARNING: popup for {seg_label} did not close in time")
+
+        # Always clean up backdrop + body state — Bootstrap's backdrop fades separately
+        # and can block subsequent clicks if not removed before we proceed
+        await pg.evaluate("""
+            (sel) => {
+                for (const el of document.querySelectorAll(sel)) {
+                    el.style.display = 'none';
+                    el.classList.remove('show');
                 }
-            """, POPUP_SEL)
-            await asyncio.sleep(1)
+                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+        """, POPUP_SEL)
+        await asyncio.sleep(0.3)  # Let DOM settle before next click
 
         return _parse_indian(val or '0')
 
