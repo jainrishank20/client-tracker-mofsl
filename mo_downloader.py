@@ -750,32 +750,25 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         """, POPUP_SEL)
         print(f"    raw BALANCE value for {seg_label}: {val!r}")
 
-        # Close popup — try every close button variant, then Escape, then force via JS
-        close_result = await pg.evaluate("""
+        # Close popup via jQuery modal('hide') — same as close_download_modal, works reliably
+        await pg.evaluate("""
             (sel) => {
-                for (const modal of document.querySelectorAll(sel)) {
-                    const s = window.getComputedStyle(modal);
-                    if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    // Try every possible close button selector
-                    for (const cs of ['button.close','[data-dismiss="modal"]','.btn-close',
-                                      'button[aria-label="Close"]','span.close',
-                                      '.ui-dialog-titlebar-close','.modal-header button',
-                                      'button[title="Close"]','button:has(span.sr-only)']) {
-                        for (const b of modal.querySelectorAll(cs)) {
-                            const bs = window.getComputedStyle(b);
-                            if (bs.display !== 'none' && bs.visibility !== 'hidden') {
-                                b.click(); return 'clicked:' + cs;
-                            }
-                        }
+                if (typeof $ !== 'undefined') {
+                    $(sel).filter(':visible').modal('hide');
+                } else {
+                    // Fallback: click data-dismiss button
+                    for (const modal of document.querySelectorAll(sel)) {
+                        const s = window.getComputedStyle(modal);
+                        if (s.display === 'none' || s.visibility === 'hidden') continue;
+                        const b = modal.querySelector('[data-dismiss="modal"], button.close, .btn-close');
+                        if (b) b.click();
                     }
                 }
-                return 'no-btn';
             }
         """, POPUP_SEL)
-        print(f"    close attempt for {seg_label}: {close_result}")
-        await pg.keyboard.press("Escape")
+        await asyncio.sleep(0.4)  # Let Bootstrap fade animation start
 
-        # Wait for the popup to fully disappear before returning
+        # Wait for the popup to fully disappear
         for _ in range(14):
             await asyncio.sleep(0.4)
             gone = await pg.evaluate("""
@@ -803,7 +796,7 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                     document.body.style.paddingRight = '';
                 }
             """, POPUP_SEL)
-            await asyncio.sleep(1)  # Let page settle after force-close
+            await asyncio.sleep(1)
 
         return _parse_indian(val or '0')
 
