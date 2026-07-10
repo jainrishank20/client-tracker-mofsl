@@ -658,19 +658,24 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
 
     async def _click_segment(pg, seg):
         """Click the COMBINED or MTF row link on the Financial Summary page."""
-        return await pg.evaluate("""
+        result = await pg.evaluate("""
             (seg) => {
+                const allCells0 = [];
                 for (const row of document.querySelectorAll('tr')) {
                     const cells = row.querySelectorAll('td');
                     if (!cells.length) continue;
-                    if (cells[0].textContent.trim().toUpperCase() !== seg) continue;
+                    const txt = cells[0].textContent.trim().toUpperCase();
+                    allCells0.push(txt);
+                    if (txt !== seg) continue;
                     const link = row.querySelector('a');
-                    if (link) { link.click(); return true; }
-                    if (cells[1]) { cells[1].click(); return true; }
+                    if (link) { link.click(); return {found: true, rows: allCells0}; }
+                    if (cells[1]) { cells[1].click(); return {found: true, rows: allCells0}; }
                 }
-                return false;
+                return {found: false, rows: allCells0};
             }
         """, seg)
+        print(f"    _click_segment({seg}): found={result['found']} table_rows={result['rows'][:10]}")
+        return result['found']
 
     async def _read_popup_balance(pg, seg_label):
         """Wait for the Voucher Date Ledger popup for seg_label to appear,
@@ -689,10 +694,12 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                     return '';
                 }
             """)
+            if title:
+                print(f"    popup title seen: '{title}'")
             if seg_label.upper() in title:
                 break
         else:
-            print(f"    WARNING: popup for {seg_label} did not appear")
+            print(f"    WARNING: popup for {seg_label} did not appear (last title seen: '{title}')")
             return 0.0
 
         # Read first data row's BALANCE column — only within the visible modal
