@@ -656,9 +656,9 @@ print(f"Loaded {len(trades)} trades. Syncing to Google Sheet...")
 result = sync_to_gsheet(trades)
 print(f"Done: {result}")
 
-# ── GSheet QA: alert on any #N/A in CMP column ───────────────────────────────
+# ── GSheet QA: auto-resolve #N/A CMP symbols via yfinance ────────────────────
 try:
-    import gspread, urllib.parse, urllib.request
+    import gspread, urllib.parse, urllib.request, yfinance as yf
     from oauth2client.service_account import ServiceAccountCredentials
 
     _scope  = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -668,29 +668,83 @@ try:
     _ws_op  = _sh.worksheet("📋 Open Positions")
     _vals   = _ws_op.get_all_values()
 
-    _bad = []
+    # Collect unique symbols with #N/A CMP
+    _na_symbols = {}   # symbol → [client, ...]
     if len(_vals) > 1:
-        _header = _vals[0]
-        _ci = {h: i for i, h in enumerate(_header)}
+        _header   = _vals[0]
+        _ci       = {h: i for i, h in enumerate(_header)}
         _sym_i    = _ci.get('Symbol', 2)
         _client_i = _ci.get('Client', 0)
         _cmp_i    = _ci.get('CMP', 6)
         for _row in _vals[1:]:
             if len(_row) > _cmp_i and str(_row[_cmp_i]).strip() in ('#N/A', '#ERROR!', '#REF!', '#VALUE!', ''):
-                _sym = _row[_sym_i] if len(_row) > _sym_i else '?'
-                _cli = _row[_client_i] if len(_row) > _client_i else '?'
+                _sym = _row[_sym_i].strip() if len(_row) > _sym_i else ''
+                _cli = _row[_client_i].strip() if len(_row) > _client_i else '?'
                 if _sym:
-                    _bad.append(f"{_sym} ({_cli})")
+                    _na_symbols.setdefault(_sym, []).append(_cli)
 
-    if _bad:
-        _bad_unique = list(dict.fromkeys(_bad))
-        _msg = (
-            "⚠️ *GSheet QA Alert — Missing CMP mapping*\n\n"
-            + "\n".join(f"• {b}" for b in _bad_unique)
-            + "\n\nAdd these to `symbol_map.py` to fix #N/A in Open Positions."
-        )
+    if _na_symbols:
+        _overrides = load_ticker_overrides()
+        _auto_fixed   = {}   # symbol → resolved ticker
+        _still_broken = []   # symbols we couldn't resolve
+
+        def _try_resolve(raw_sym):
+            """Try common NSE ticker derivations for a raw CBOS symbol name."""
+            candidates = []
+            # 1. strip spaces / common suffixes
+            clean = raw_sym.replace(' ', '').upper()
+            candidates.append(clean)
+            # 2. drop "INDIA" / "LTD" / "LIMITED" suffix variants
+            for suffix in ('INDIA', 'LTD', 'LIMITED', 'INDUSTRIES', 'INFRA'):
+                if clean.endswith(suffix) and len(clean) > len(suffix) + 3:
+                    candidates.append(clean[:-len(suffix)])
+            # dedupe preserving order
+            seen = set()
+            unique = [c for c in candidates if not (c in seen or seen.add(c))]
+            for ticker in unique:
+                try:
+                    info = yf.Ticker(ticker + '.NS').fast_info
+                    if info.get('lastPrice') or info.get('regularMarketPreviousClose'):
+                        return ticker
+                except Exception:
+                    pass
+            return None
+
+        for _sym in _na_symbols:
+            _resolved = _try_resolve(_sym)
+            if _resolved:
+                _overrides[_sym] = _resolved
+                _auto_fixed[_sym] = _resolved
+                print(f"QA auto-fixed: {_sym} → {_resolved}")
+            else:
+                _still_broken.append(_sym)
+                print(f"QA could not resolve: {_sym}")
+
+        # Persist resolved tickers to ticker_overrides.json
+        if _auto_fixed:
+            with open(TICKER_OVERRIDES_FILE, 'w') as _f:
+                json.dump(_overrides, _f, indent=2)
+            # Re-run sync so the sheet gets updated CMP values immediately
+            print("Re-syncing GSheet with auto-resolved tickers...")
+            result2 = sync_to_gsheet(trades)
+            print(f"Re-sync done: {result2}")
+
+        # Send Telegram summary
         _token    = _cfg.get("telegram_token", "")
         _chat_ids = str(_cfg.get("allowed_chat_id", "")).split(",")
+        _lines = ["⚠️ *GSheet QA — CMP #N/A detected*\n"]
+        if _auto_fixed:
+            _lines.append("✅ *Auto-fixed:*")
+            for s, t in _auto_fixed.items():
+                clients = ', '.join(dict.fromkeys(_na_symbols[s]))
+                _lines.append(f"  • {s} → `{t}` ({clients})")
+        if _still_broken:
+            _lines.append("\n❌ *Could not resolve (fix manually):*")
+            for s in _still_broken:
+                clients = ', '.join(dict.fromkeys(_na_symbols[s]))
+                _lines.append(f"  • {s} ({clients})")
+            _lines.append("\nAdd to `symbol_map.py` and redeploy.")
+        _msg = '\n'.join(_lines)
         for _cid in _chat_ids:
             _cid = _cid.strip()
             if not _cid:
@@ -702,7 +756,6 @@ try:
                 urllib.request.Request(f"https://api.telegram.org/bot{_token}/sendMessage", data=_data),
                 timeout=15
             )
-        print(f"QA ALERT sent: {len(_bad_unique)} missing CMP mapping(s): {', '.join(_bad_unique)}")
     else:
         print("QA: All CMP values OK — no #N/A found.")
 except Exception as _qa_err:
