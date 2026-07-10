@@ -750,21 +750,29 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         """, POPUP_SEL)
         print(f"    raw BALANCE value for {seg_label}: {val!r}")
 
-        # Close popup — try every common close mechanism
-        await pg.evaluate("""
+        # Close popup — try every close button variant, then Escape, then force via JS
+        close_result = await pg.evaluate("""
             (sel) => {
-                // Try close buttons inside any visible popup
                 for (const modal of document.querySelectorAll(sel)) {
                     const s = window.getComputedStyle(modal);
                     if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    for (const b of modal.querySelectorAll(
-                            'button.close, [data-dismiss="modal"], .ui-dialog-titlebar-close, button[aria-label="Close"], .close')) {
-                        const bs = window.getComputedStyle(b);
-                        if (bs.display !== 'none' && bs.visibility !== 'hidden') { b.click(); return; }
+                    // Try every possible close button selector
+                    for (const cs of ['button.close','[data-dismiss="modal"]','.btn-close',
+                                      'button[aria-label="Close"]','span.close',
+                                      '.ui-dialog-titlebar-close','.modal-header button',
+                                      'button[title="Close"]','button:has(span.sr-only)']) {
+                        for (const b of modal.querySelectorAll(cs)) {
+                            const bs = window.getComputedStyle(b);
+                            if (bs.display !== 'none' && bs.visibility !== 'hidden') {
+                                b.click(); return 'clicked:' + cs;
+                            }
+                        }
                     }
                 }
+                return 'no-btn';
             }
         """, POPUP_SEL)
+        print(f"    close attempt for {seg_label}: {close_result}")
         await pg.keyboard.press("Escape")
 
         # Wait for the popup to fully disappear before returning
@@ -782,17 +790,20 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             if gone:
                 break
         else:
-            print(f"    WARNING: popup for {seg_label} did not close — forcing via JS")
+            print(f"    WARNING: popup for {seg_label} did not close — forcing via JS + cleanup")
             await pg.evaluate("""
                 (sel) => {
                     for (const el of document.querySelectorAll(sel)) {
                         el.style.display = 'none';
+                        el.classList.remove('show');
                     }
-                    const bd = document.querySelector('.modal-backdrop');
-                    if (bd) bd.remove();
+                    document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
                     document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
                 }
             """, POPUP_SEL)
+            await asyncio.sleep(1)  # Let page settle after force-close
 
         return _parse_indian(val or '0')
 
