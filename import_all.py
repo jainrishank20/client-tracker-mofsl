@@ -126,7 +126,7 @@ def load_csv(path):
     # ISIN is exchange-agnostic — use it as the primary FIFO key to handle
     # NSE/BSE name mismatches (e.g. "SUN PHARMACEUTICAL IND L" vs "SUN PHARMACEUTICAL INDUSTRIES")
     if 'ISIN' in df.columns:
-        df['ISIN'] = df['ISIN'].str.strip()
+        df['ISIN'] = df['ISIN'].str.strip().fillna('')  # NaN ISIN would collapse all blank-ISIN trades into one FIFO bucket
     else:
         df['ISIN'] = ''
     return df

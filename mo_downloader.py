@@ -829,6 +829,12 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         except Exception as e:
             print(f"    ERROR: {e}")
             ledger[client] = {'combined': 0.0, 'mtf': 0.0}
+            # Reset to home page so go_back() for the next client starts from a known state
+            try:
+                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
+                await asyncio.sleep(1)
+            except Exception:
+                pass
 
     out_path = os.path.join(BASE, 'ledger.json')
     with open(out_path, 'w') as f:
