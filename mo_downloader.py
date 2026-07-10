@@ -790,6 +790,10 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             combined_bal = 0.0
             if await _click_segment(page, 'COMBINED'):
                 combined_bal = await _get_popup_balance(page)
+                # Retry once if 0 — popup may not have loaded in time (common for first client)
+                if combined_bal == 0.0:
+                    await asyncio.sleep(2)
+                    combined_bal = await _get_popup_balance(page)
                 print(f"    COMBINED = {combined_bal:,.2f}")
                 await _close_popup(page)
             else:
@@ -800,6 +804,9 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             mtf_bal = 0.0
             if await _click_segment(page, 'MTF'):
                 mtf_bal = await _get_popup_balance(page)
+                if mtf_bal == 0.0:
+                    await asyncio.sleep(2)
+                    mtf_bal = await _get_popup_balance(page)
                 print(f"    MTF      = {mtf_bal:,.2f}")
                 await _close_popup(page)
             else:
