@@ -750,35 +750,47 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             }
         """)
 
-        # Wait up to 5s for modal + backdrop to fully clear (Bootstrap fade ~300ms + backdrop ~150ms)
+        # Wait up to 5s for OUR modal (containing seg_upper in text) + backdrop to clear.
+        # Only check our specific modal — CBOS has other permanent .modal elements in DOM
+        # that are never display:none, so checking all .modal always returns false.
         for _ in range(12):
             await asyncio.sleep(0.4)
             gone = await pg.evaluate("""
-                () => {
+                (seg) => {
                     for (const m of document.querySelectorAll('.modal')) {
                         const s = window.getComputedStyle(m);
-                        if (s.display !== 'none' && s.visibility !== 'hidden') return false;
+                        if (s.display === 'none' || s.visibility === 'hidden') continue;
+                        if ((m.innerText || '').toUpperCase().includes(seg)) return false;
                     }
                     return !document.querySelector('.modal-backdrop');
                 }
-            """)
+            """, seg_upper)
             if gone:
                 break
         else:
-            # Bootstrap didn't clean up — force-remove only what's lingering
+            # Bootstrap didn't clean up our modal — force-remove ONLY our modal + backdrop.
+            # Do NOT touch other modals to avoid corrupting Bootstrap's state for next popup.
             print(f"    WARNING: {seg_label} modal/backdrop didn't clear — force removing")
             await pg.evaluate("""
-                () => {
-                    document.querySelectorAll('.modal.show').forEach(m => {
+                (seg) => {
+                    for (const m of document.querySelectorAll('.modal')) {
+                        if (!(m.innerText || '').toUpperCase().includes(seg)) continue;
                         m.style.display = 'none';
                         m.classList.remove('show');
-                    });
+                        // Reset Bootstrap 4 internal state so next modal('show') isn't blocked
+                        try {
+                            if (typeof $ !== 'undefined') {
+                                const inst = $(m).data('bs.modal');
+                                if (inst) { inst._isShown = false; inst._isTransitioning = false; }
+                            }
+                        } catch(e) {}
+                    }
                     document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
                     document.body.classList.remove('modal-open');
                     document.body.style.overflow = '';
                     document.body.style.paddingRight = '';
                 }
-            """)
+            """, seg_upper)
             await asyncio.sleep(0.4)
 
         return _parse_indian(val or '0')
