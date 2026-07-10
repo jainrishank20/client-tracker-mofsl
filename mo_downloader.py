@@ -678,128 +678,53 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             print(f"    WARNING: _click_segment({seg}) not found. Table rows seen: {result['rows'][:10]}")
         return result['found']
 
-    async def _read_popup_balance(pg, seg_label):
-        """Wait for the correct Voucher Date Ledger popup, read BALANCE, close it.
-        Confirmed from CBOS logs: popup text always contains the segment name,
-        e.g. 'Voucher Date Ledger - COMBINED' or 'Voucher Date Ledger - MTF'.
-        We match on text content so we never read the wrong popup.
-        """
-        seg_upper = seg_label.upper()
-
-        # Wait up to 10s for a visible .modal whose innerText contains our segment name
-        for _ in range(20):
-            await asyncio.sleep(0.5)
-            found = await pg.evaluate("""
-                (seg) => {
-                    for (const el of document.querySelectorAll('.modal')) {
-                        const s = window.getComputedStyle(el);
-                        if (s.display === 'none' || s.visibility === 'hidden') continue;
-                        if ((el.innerText || '').toUpperCase().includes(seg)) return true;
-                    }
-                    return false;
-                }
-            """, seg_upper)
-            if found:
-                break
-        else:
-            print(f"    WARNING: no {seg_label} popup appeared within 10s")
-            return 0.0
-
-        # Read BALANCE column — only from the modal that contains our segment name
+    async def _get_popup_balance(pg):
+        """Read BALANCE column from any visible table — called after clicking COMBINED/MTF link."""
+        await asyncio.sleep(2.5)
         val = await pg.evaluate("""
-            (seg) => {
-                for (const modal of document.querySelectorAll('.modal')) {
-                    const s = window.getComputedStyle(modal);
+            () => {
+                for (const tbl of document.querySelectorAll('table')) {
+                    const s = window.getComputedStyle(tbl);
                     if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    if (!(modal.innerText || '').toUpperCase().includes(seg)) continue;
-                    for (const tbl of modal.querySelectorAll('table')) {
-                        let balIdx = -1;
-                        const hdrs = Array.from(tbl.querySelectorAll('th'))
-                            .map(h => h.textContent.trim().toUpperCase());
+                    let balIdx = -1;
+                    const ths = tbl.querySelectorAll('th');
+                    if (ths.length) {
+                        const hdrs = Array.from(ths).map(h => h.textContent.trim().toUpperCase());
                         balIdx = hdrs.indexOf('BALANCE');
-                        if (balIdx < 0) {
-                            const firstTr = tbl.querySelector('tr');
-                            if (firstTr) {
-                                const cells = Array.from(firstTr.querySelectorAll('th,td'))
-                                    .map(c => c.textContent.trim().toUpperCase());
-                                balIdx = cells.indexOf('BALANCE');
-                            }
+                    }
+                    if (balIdx < 0) {
+                        const firstTr = tbl.querySelector('tr');
+                        if (firstTr) {
+                            const cells = Array.from(firstTr.querySelectorAll('th,td'))
+                                               .map(c => c.textContent.trim().toUpperCase());
+                            balIdx = cells.indexOf('BALANCE');
                         }
-                        if (balIdx < 0) continue;
-                        const rows = Array.from(tbl.querySelectorAll('tr'));
-                        for (let i = 1; i < rows.length; i++) {
-                            const cells = rows[i].querySelectorAll('td');
-                            if (cells.length > balIdx && cells[balIdx].textContent.trim())
-                                return cells[balIdx].textContent.trim();
-                        }
+                    }
+                    if (balIdx < 0) continue;
+                    const rows = Array.from(tbl.querySelectorAll('tr'));
+                    for (let i = 1; i < rows.length; i++) {
+                        const cells = rows[i].querySelectorAll('td');
+                        if (cells.length > balIdx && cells[balIdx].textContent.trim())
+                            return cells[balIdx].textContent.trim();
                     }
                 }
                 return null;
             }
-        """, seg_upper)
-
-        # Close via jQuery — Bootstrap handles animation and removes backdrop itself
-        await pg.evaluate("""
-            () => {
-                if (typeof $ !== 'undefined') {
-                    $('.modal.show').modal('hide');
-                } else {
-                    const b = document.querySelector('.modal.show [data-dismiss="modal"], .modal.show button.close');
-                    if (b) b.click();
-                }
-            }
         """)
-
-        # Wait up to 5s for OUR modal (the one with seg_upper in its text) to close.
-        # Only check our modal — CBOS has permanent .modal elements that are never display:none.
-        # Backdrop is handled separately below — don't include it in this check.
-        for _ in range(12):
-            await asyncio.sleep(0.4)
-            modal_gone = await pg.evaluate("""
-                (seg) => {
-                    for (const m of document.querySelectorAll('.modal')) {
-                        const s = window.getComputedStyle(m);
-                        if (s.display === 'none' || s.visibility === 'hidden') continue;
-                        if ((m.innerText || '').toUpperCase().includes(seg)) return false;
-                    }
-                    return true;
-                }
-            """, seg_upper)
-            if modal_gone:
-                break
-        else:
-            # Bootstrap didn't close our modal — force-hide it and reset Bootstrap's internal state
-            print(f"    WARNING: {seg_label} modal didn't close — force hiding")
-            await pg.evaluate("""
-                (seg) => {
-                    for (const m of document.querySelectorAll('.modal')) {
-                        if (!(m.innerText || '').toUpperCase().includes(seg)) continue;
-                        m.style.display = 'none';
-                        m.classList.remove('show');
-                        try {
-                            if (typeof $ !== 'undefined') {
-                                const inst = $(m).data('bs.modal');
-                                if (inst) { inst._isShown = false; inst._isTransitioning = false; }
-                            }
-                        } catch(e) {}
-                    }
-                }
-            """, seg_upper)
-            await asyncio.sleep(0.3)
-
-        # Always clean backdrop + body — Bootstrap often leaves backdrop even after modal closes.
-        # This is safe because we re-navigate to Fin Summary before the next popup anyway.
-        await pg.evaluate("""
-            () => {
-                document.querySelectorAll('.modal-backdrop').forEach(e => e.remove());
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-            }
-        """)
-        await asyncio.sleep(0.2)
-
         return _parse_indian(val or '0')
+
+    async def _close_popup(pg):
+        """Close any open popup by clicking its close button, then pressing Escape."""
+        await pg.evaluate("""
+            () => {
+                for (const b of document.querySelectorAll(
+                        '.close, [data-dismiss="modal"], .modal-header .close')) {
+                    if (window.getComputedStyle(b).display !== 'none') { b.click(); return; }
+                }
+            }
+        """)
+        await pg.keyboard.press("Escape")
+        await asyncio.sleep(0.8)
 
     async def _nav_fin_summary(pg):
         found = await pg.evaluate("""
@@ -874,38 +799,25 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
 
             combined_bal = 0.0
             if await _click_segment(page, 'COMBINED'):
-                combined_bal = await _read_popup_balance(page, 'COMBINED')
+                combined_bal = await _get_popup_balance(page)
+                if combined_bal == 0.0:
+                    await asyncio.sleep(2)
+                    combined_bal = await _get_popup_balance(page)
                 print(f"    COMBINED = {combined_bal:,.2f}")
+                await _close_popup(page)
             else:
                 print(f"    COMBINED row not found")
 
-            # Re-navigate to Financial Summary to guarantee clean page state for MTF.
-            await _nav_fin_summary(page)
-            await asyncio.sleep(1)
-            await _dismiss_alert(page)
-
-            # DEBUG: dump page state before MTF click so we can see what's happening
-            dbg = await page.evaluate("""
-                () => {
-                    const modals = Array.from(document.querySelectorAll('.modal')).map(m => ({
-                        cls: m.className,
-                        disp: window.getComputedStyle(m).display,
-                        vis: window.getComputedStyle(m).visibility,
-                        txt: (m.innerText||'').slice(0,80).replace(/\\n/g,' ')
-                    }));
-                    const rows = Array.from(document.querySelectorAll('tr td:first-child'))
-                        .map(td => td.textContent.trim()).filter(Boolean).slice(0, 15);
-                    return {url: window.location.href.slice(-60), modals, rows};
-                }
-            """)
-            print(f"    DEBUG MTF pre-click: url={dbg['url']}")
-            print(f"    DEBUG modals: {dbg['modals']}")
-            print(f"    DEBUG table rows: {dbg['rows']}")
+            await asyncio.sleep(0.5)
 
             mtf_bal = 0.0
             if await _click_segment(page, 'MTF'):
-                mtf_bal = await _read_popup_balance(page, 'MTF')
+                mtf_bal = await _get_popup_balance(page)
+                if mtf_bal == 0.0:
+                    await asyncio.sleep(2)
+                    mtf_bal = await _get_popup_balance(page)
                 print(f"    MTF      = {mtf_bal:,.2f}")
+                await _close_popup(page)
             else:
                 print(f"    MTF row not found")
 
