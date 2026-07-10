@@ -674,22 +674,24 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 return {found: false, rows: allCells0};
             }
         """, seg)
-        print(f"    _click_segment({seg}): found={result['found']} table_rows={result['rows'][:10]}")
+        if not result['found']:
+            print(f"    WARNING: _click_segment({seg}) not found. Table rows seen: {result['rows'][:10]}")
         return result['found']
 
     async def _read_popup_balance(pg, seg_label):
-        """Wait for any visible popup after clicking seg_label, read BALANCE, close it."""
-        # Broad selector — catches Bootstrap modal, jQuery UI dialog, and custom CBOS popups
-        POPUP_SEL = '.modal, .ui-dialog, [role="dialog"], [class*="popup"], [class*="Popup"], [class*="overlay"], [class*="Overlay"]'
+        """Wait for the Voucher Date Ledger popup to appear, read BALANCE, close it."""
+        # CBOS uses Bootstrap modal with class 'modal-popu' — confirmed from logs
+        # Keep selector tight: only real modal containers, not page-level overlays
+        POPUP_SEL = '.modal, .ui-dialog, [role="dialog"]'
 
-        # Wait up to 8s for any visible popup to appear
+        # Wait up to 8s for a visible popup to appear
         for _ in range(16):
             await asyncio.sleep(0.5)
             visible = await pg.evaluate("""
                 (sel) => {
                     for (const el of document.querySelectorAll(sel)) {
                         const s = window.getComputedStyle(el);
-                        if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0')
+                        if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0)
                             return true;
                     }
                     return false;
@@ -701,29 +703,13 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             print(f"    WARNING: no popup appeared after clicking {seg_label}")
             return 0.0
 
-        # Debug: print popup outer HTML summary to identify its structure
-        debug_info = await pg.evaluate("""
-            (sel) => {
-                for (const el of document.querySelectorAll(sel)) {
-                    const s = window.getComputedStyle(el);
-                    if (s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0') {
-                        const txt = (el.innerText || '').trim().substring(0, 200);
-                        return el.tagName + '.' + el.className.trim().replace(/\\s+/g,'.') + ' | ' + txt;
-                    }
-                }
-                return 'none';
-            }
-        """, POPUP_SEL)
-        print(f"    popup visible for {seg_label}: {debug_info[:300]}")
-
         # Read BALANCE column from the visible popup
         val = await pg.evaluate("""
             (sel) => {
                 for (const modal of document.querySelectorAll(sel)) {
                     const s = window.getComputedStyle(modal);
-                    if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') continue;
+                    if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) continue;
                     for (const tbl of modal.querySelectorAll('table')) {
-                        // find BALANCE column index
                         let balIdx = -1;
                         const hdrs = Array.from(tbl.querySelectorAll('th'))
                             .map(h => h.textContent.trim().toUpperCase());
@@ -748,24 +734,19 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 return null;
             }
         """, POPUP_SEL)
-        print(f"    raw BALANCE value for {seg_label}: {val!r}")
 
-        # Close popup via jQuery modal('hide') — same as close_download_modal, works reliably
+        # Close popup via jQuery modal('hide') — scoped to .modal only (not all POPUP_SEL)
+        # to avoid accidentally hiding unrelated dialogs
         await pg.evaluate("""
-            (sel) => {
+            () => {
                 if (typeof $ !== 'undefined') {
-                    $(sel).filter(':visible').modal('hide');
+                    $('.modal.show').modal('hide');
                 } else {
-                    // Fallback: click data-dismiss button
-                    for (const modal of document.querySelectorAll(sel)) {
-                        const s = window.getComputedStyle(modal);
-                        if (s.display === 'none' || s.visibility === 'hidden') continue;
-                        const b = modal.querySelector('[data-dismiss="modal"], button.close, .btn-close');
-                        if (b) b.click();
-                    }
+                    const b = document.querySelector('.modal.show [data-dismiss="modal"], .modal.show button.close, .modal.show .btn-close');
+                    if (b) b.click();
                 }
             }
-        """, POPUP_SEL)
+        """)
         await asyncio.sleep(0.4)  # Let Bootstrap fade animation start
 
         # Wait for the popup to fully disappear
