@@ -669,7 +669,6 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                     if (txt !== seg) continue;
                     const link = row.querySelector('a');
                     if (link) { link.click(); return {found: true, rows: allCells0}; }
-                    if (cells[1]) { cells[1].click(); return {found: true, rows: allCells0}; }
                 }
                 return {found: false, rows: allCells0};
             }
