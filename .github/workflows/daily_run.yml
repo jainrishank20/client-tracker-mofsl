@@ -116,19 +116,9 @@ jobs:
           VMDIR="/home/opc/client-tracker-mofsl"
           # Merge VM's ticker_overrides (has /addticker entries) with runner's (has secret entries)
           # VM entries take priority so manual fixes are never lost
-          $SCP "$VM:$VMDIR/ticker_overrides.json" /tmp/vm_overrides.json 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
-          python3 -c "
-import json, os
-try:
-    v = json.load(open('/tmp/vm_overrides.json')) if os.path.exists('/tmp/vm_overrides.json') else {}
-except Exception as e:
-    print(f'Warning: VM ticker_overrides unreadable ({e}), using empty dict')
-    v = {}
-r = json.load(open('ticker_overrides.json')) if os.path.exists('ticker_overrides.json') else {}
-m = {**r, **v}
-json.dump(m, open('ticker_overrides.json', 'w'), indent=2)
-print(f'Merged overrides: {len(r)} runner + {len(v)} VM = {len(m)} total')
-"
+          $SCP "$VM:$VMDIR/ticker_overrides.json" /tmp/vm_overrides.json 2>/dev/null || true
+          python3 -c "import json,sys; json.load(open('/tmp/vm_overrides.json'))" 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
+          python3 -c "import json,os; r=json.load(open('ticker_overrides.json')) if os.path.exists('ticker_overrides.json') else {}; v=json.load(open('/tmp/vm_overrides.json')) if os.path.exists('/tmp/vm_overrides.json') else {}; m={**r,**v}; json.dump(m,open('ticker_overrides.json','w'),indent=2); print(f'Merged overrides: {len(r)} runner + {len(v)} VM = {len(m)} total')"
           $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
 
       # ── Step 6: Pipeline health alert ────────────────────────────────────────
