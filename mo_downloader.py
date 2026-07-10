@@ -790,6 +790,9 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
 
             fs_loaded = await _nav_fin_summary(page)
             if not fs_loaded:
+                await asyncio.sleep(2)
+                fs_loaded = await _nav_fin_summary(page)
+            if not fs_loaded:
                 print(f"    Financial Summary not found")
                 ledger[client] = {'combined': 0.0, 'mtf': 0.0}
                 continue
