@@ -846,14 +846,15 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         raw_sym = m_at.group(1).upper().strip()
         nse_ticker = m_at.group(2).upper().strip()
         try:
-            overrides = load_ticker_overrides()
-            overrides[raw_sym] = nse_ticker
-            with open(TICKER_OVERRIDES_FILE, 'w') as _f:
-                json.dump(overrides, _f, indent=2)
-            send(chat_id, f"✅ Saved: `{raw_sym}` → `{nse_ticker}`\n\nTriggering GSheet re-sync...", parse_mode='Markdown')
+            overrides_path = os.path.join(BASE, 'ticker_overrides.json')
+            ovr = load_overrides()
+            ovr[raw_sym] = nse_ticker
+            with open(overrides_path, 'w') as _f:
+                json.dump(ovr, _f, indent=2)
+            send(chat_id, f"Saved: {raw_sym} -> {nse_ticker}\n\nTriggering GSheet re-sync...")
             trigger_daily_run(chat_id)
         except Exception as e:
-            send(chat_id, f"❌ Failed to save ticker override: {e}")
+            send(chat_id, f"Failed to save ticker override: {e}")
         return None
 
     # /run
