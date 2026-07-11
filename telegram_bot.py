@@ -954,7 +954,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         return ask_groq(text, context)
 
     # "Which clients have X" / "who has X" → direct script search across all trades
-    if any(w in tl for w in ('which', 'who has', 'who have', 'clients with', 'clients have', 'hold')):
+    if any(w in tl for w in ('which', 'who has', 'who have', 'who all', 'who ', 'clients with', 'clients have', 'hold')):
         result = search_by_script(text, trades, names)
         if result:
             return result
