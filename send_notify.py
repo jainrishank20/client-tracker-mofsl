@@ -89,7 +89,8 @@ def _calc_unrealized_pnl() -> dict:
             df = yf.download(ns_tickers, period='1d', interval='1m',
                              progress=False, auto_adjust=True, timeout=20)
             try:
-                cmp_data[unique[0]] = float(df['Close'].dropna().iloc[-1])
+                # yfinance ≥0.2.18 returns MultiIndex even for one ticker
+                cmp_data[unique[0]] = float(df['Close'].squeeze().dropna().iloc[-1])
             except Exception:
                 pass
         else:
@@ -171,8 +172,9 @@ def _pnl_movement_lines() -> list:
         total_delta = sum(today_pnl.get(c, 0) for c in CLIENTS)
         header_txt  = 'Unrealized P&L (today)'
 
+    total_str = fmt_signed(total_delta) or '0'
     w0 = max(len(r[0]) for r in rows)
-    w1 = max(len(r[2]) for r in rows if r[2]) or 1
+    w1 = max(len(total_str), max((len(r[2]) for r in rows if r[2]), default=0)) or 1
     sep = '─' * (w0 + w1 + 5)
 
     out = ['', f'`{header_txt}`', f'`{sep}`']
@@ -181,7 +183,7 @@ def _pnl_movement_lines() -> list:
             out.append(f'`{c:<{w0}}  {arrow} {val:>{w1}}`')
     out.append(f'`{sep}`')
     t_arrow = '▲' if total_delta >= 0 else '▼'
-    out.append(f'`{"Total":<{w0}}  {t_arrow} {fmt_signed(total_delta):>{w1}}`')
+    out.append(f'`{"Total":<{w0}}  {t_arrow} {total_str:>{w1}}`')
     return out
 
 
