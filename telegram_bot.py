@@ -717,6 +717,7 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             cost_map[c][script] = cost_map[c].get(script, 0) + qty * bp
 
     all_scripts = sorted(set(s for ss in matches.values() for s in ss))
+    single = len(all_scripts) == 1
     lines = [f"*Open positions — {', '.join(all_scripts)}*"]
     for code, scripts in sorted(matches.items()):
         name = names.get(code, code)
@@ -725,7 +726,9 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             qty  = qty_map.get(code, {}).get(s, 0)
             cost = cost_map.get(code, {}).get(s, 0)
             avg  = cost / qty if qty else 0
-            parts.append(f"{s}: {int(qty)} qty @ Rs {avg:,.0f}")
+            # Only prefix script name when multiple stocks in result
+            prefix = f"{s}: " if not single else ""
+            parts.append(f"{prefix}{int(qty)} qty @ Rs {avg:,.0f}")
         lines.append(f"  {name} ({code}) — {', '.join(parts)}")
     return '\n'.join(lines)
 
