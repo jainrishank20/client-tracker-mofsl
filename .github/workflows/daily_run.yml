@@ -112,6 +112,33 @@ jobs:
       - name: Send Telegram notification
         run: python send_notify.py
 
+      # ── Step 4b: Sync clients list from secret into VM's bot_config.json ────
+      - name: Sync clients to VM bot_config
+        continue-on-error: true
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+        run: |
+          echo "$VM_SSH_KEY" > /tmp/vm_key_cfg
+          chmod 600 /tmp/vm_key_cfg
+          python3 -c "
+          import json, os
+          cfg = json.loads(os.environ['BOT_CONFIG'])
+          clients = cfg.get('clients', {})
+          print(json.dumps(clients))
+          " > /tmp/new_clients.json
+          SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no opc@152.67.164.204"
+          $SSH "python3 -c \"
+          import json
+          path='/home/opc/client-tracker-mofsl/bot_config.json'
+          c=json.load(open(path))
+          new=json.load(open('/dev/stdin'))
+          c['clients']=new
+          json.dump(c,open(path,'w'),indent=2)
+          print('Clients synced:', list(new.keys()))
+          \"" < /tmp/new_clients.json
+          rm -f /tmp/vm_key_cfg /tmp/new_clients.json
+
       # ── Step 5: Push trades.json + ledger.json to VM (bot reads these) ──────
       - name: Push data files to VM
         continue-on-error: true   # VM unreachable = skip, don't fail whole run

@@ -814,27 +814,33 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     m = re.match(r'^/addclient\s+([A-Z0-9]+)\s+(.+)$', text.strip(), re.IGNORECASE)
     if m:
         code = m.group(1).upper()
-        name = m.group(2).strip()
-        c = load_cfg()
-        c.setdefault('clients', {})
-        if code in c['clients']:
-            return f"Client {code} already exists as {c['clients'][code]}."
-        c['clients'][code] = name
-        save_cfg(c)
-        push_config_async(c)
-        return f"Client {code} — {name} added. GitHub Secret updating in background."
+        cname = m.group(2).strip()
+        try:
+            c = load_cfg()
+            c.setdefault('clients', {})
+            if code in c['clients']:
+                return f"Client {code} already exists as {c['clients'][code]}."
+            c['clients'][code] = cname
+            save_cfg(c)
+            push_config_async(c)
+            return f"Client {code} ({cname}) added successfully."
+        except Exception as e:
+            return f"addclient failed: {e}"
 
     # /removeclient CODE
     m = re.match(r'^/removeclient\s+([A-Z0-9]+)$', text.strip(), re.IGNORECASE)
     if m:
         code = m.group(1).upper()
-        c = load_cfg()
-        if code not in c.get('clients', {}):
-            return f"Client {code} not found."
-        removed_name = c['clients'].pop(code)
-        save_cfg(c)
-        push_config_async(c)
-        return f"Client {code} — {removed_name} removed. GitHub Secret updating in background."
+        try:
+            c = load_cfg()
+            if code not in c.get('clients', {}):
+                return f"Client {code} not found."
+            removed_name = c['clients'].pop(code)
+            save_cfg(c)
+            push_config_async(c)
+            return f"Client {code} ({removed_name}) removed."
+        except Exception as e:
+            return f"removeclient failed: {e}"
 
     # /update — pull latest code from GitHub and restart (no SSH needed)
     if tl == '/update':
