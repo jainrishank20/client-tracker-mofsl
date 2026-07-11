@@ -953,11 +953,11 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                    f"Ledger: {json.dumps(ledger.get(client, {}))}")
         return ask_groq(text, context)
 
-    # "Which clients have X" / "who has X" → direct script search across all trades
-    if any(w in tl for w in ('which', 'who has', 'who have', 'who all', 'who ', 'clients with', 'clients have', 'hold')):
-        result = search_by_script(text, trades, names)
-        if result:
-            return result
+    # Try stock/script search for any query — catches "who has X", "anyone holding X",
+    # "does anyone have X", "show clients with X", etc. without needing exact trigger words
+    result = search_by_script(text, trades, names)
+    if result and not result.startswith('No open positions'):
+        return result
 
     # General free-form → Groq
     open_t   = [t for t in trades if not t.get('exit_date')]
