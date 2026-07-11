@@ -762,6 +762,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             "/ledger — ledger balances\n"
             "/summary — snapshot\n"
             "/pnl — realized P&L by client\n"
+            "/today — all trades entered/exited today\n"
             "/run — trigger daily pipeline\n"
             "/update — pull latest bot code from GitHub & restart\n"
             "/addticker SYMBOL TICKER — fix #N/A CMP (e.g. /addticker EIMCOELECONINDIA EIMCOELECO)\n"
@@ -903,7 +904,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         return f"No alert found for {sym_key}."
 
     # "today's trades" with no client → show ALL clients
-    if 'today' in tl and any(w in tl for w in ('trade', 'bought', 'sold', 'taken')):
+    if tl == '/today' or ('today' in tl and any(w in tl for w in ('trade', 'bought', 'sold', 'taken'))):
         today_str  = datetime.date.today().isoformat()
         today_disp = datetime.date.today().strftime('%d %b %Y')
         parts = [f"*All Trades — {today_disp}*"]
