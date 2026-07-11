@@ -702,25 +702,31 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
             matches.setdefault(t.get('client', ''), set()).add(script)
     if not matches:
         return f"No open positions found matching '{' '.join(terms)}'."
-    # Build qty per client per script
-    qty_map: dict[str, dict[str, float]] = {}
+    # Build qty + weighted avg buy price per client per script
+    qty_map:   dict[str, dict[str, float]] = {}
+    cost_map:  dict[str, dict[str, float]] = {}  # total cost (qty * price)
     for t in open_trades:
         script = (t.get('script') or '').upper()
         if any(term in script for term in terms):
-            c = t.get('client', '')
+            c   = t.get('client', '')
+            qty = float(t.get('buy_qty') or 0)
+            bp  = float(t.get('buy_price') or 0)
             qty_map.setdefault(c, {})
-            qty_map[c][script] = qty_map[c].get(script, 0) + (t.get('buy_qty') or 0)
+            cost_map.setdefault(c, {})
+            qty_map[c][script]  = qty_map[c].get(script, 0)  + qty
+            cost_map[c][script] = cost_map[c].get(script, 0) + qty * bp
 
     all_scripts = sorted(set(s for ss in matches.values() for s in ss))
     lines = [f"*Open positions — {', '.join(all_scripts)}*"]
     for code, scripts in sorted(matches.items()):
         name = names.get(code, code)
-        if len(all_scripts) > 1:
-            parts = [f"{s} ({int(qty_map.get(code,{}).get(s,0))} qty)" for s in sorted(scripts)]
-            lines.append(f"  {name} ({code}): {', '.join(parts)}")
-        else:
-            qty = int(sum(qty_map.get(code, {}).values()))
-            lines.append(f"  {name} ({code}) — {qty} qty")
+        parts = []
+        for s in sorted(scripts):
+            qty  = qty_map.get(code, {}).get(s, 0)
+            cost = cost_map.get(code, {}).get(s, 0)
+            avg  = cost / qty if qty else 0
+            parts.append(f"{s}: {int(qty)} qty @ Rs {avg:,.0f}")
+        lines.append(f"  {name} ({code}) — {', '.join(parts)}")
     return '\n'.join(lines)
 
 
