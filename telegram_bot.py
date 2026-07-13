@@ -628,7 +628,7 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
 
     # Month-wise breakdown requested
     if any(w in tl for w in ('month wise', 'month-wise', 'monthly', 'each month', 'per month', 'month by month')):
-        # Collect all months that appear in entry/exit dates
+        # Collect brokerage only per month (buy_brokerage on entry_date, sell_brokerage on exit_date)
         month_totals = {}
         for t in rows:
             for field, date_str in [('buy', t.get('entry_date') or ''), ('sell', t.get('exit_date') or '')]:
@@ -637,25 +637,20 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
                 try:
                     d = datetime.date.fromisoformat(date_str[:10])
                     key = (d.year, d.month)
-                    if key not in month_totals:
-                        month_totals[key] = 0.0
-                    brk_field = f'{field}_brokerage'
-                    month_totals[key] += float(t.get(brk_field, 0) or 0)
-                    for cf in (f'{field}_stt', f'{field}_gst', f'{field}_stamp', f'{field}_txn'):
-                        month_totals[key] += float(t.get(cf, 0) or 0)
+                    month_totals[key] = month_totals.get(key, 0.0) + float(t.get(f'{field}_brokerage', 0) or 0)
                 except Exception:
                     pass
         if not month_totals:
-            return f"No trade charges data found for {name}."
-        lines = [f"*{name} — Brokerage Month-Wise*", "`Month       Total Charges`", "`────────────────────────`"]
+            return f"No brokerage data found for {name}."
+        lines = [f"*{name} — Brokerage Month-Wise*", "`Month        Brokerage`", "`─────────────────────`"]
         grand = 0.0
         for (yr, mo) in sorted(month_totals):
             label = datetime.date(yr, mo, 1).strftime('%b %Y')
             val   = month_totals[(yr, mo)]
             grand += val
-            lines.append(f"`{label:<12} Rs {fmt_inr(val):>10}`")
-        lines.append("`────────────────────────`")
-        lines.append(f"`{'Total':<12} Rs {fmt_inr(grand):>10}`")
+            lines.append(f"`{label:<12} Rs {fmt_inr(val):>8}`")
+        lines.append("`─────────────────────`")
+        lines.append(f"`{'Total':<12} Rs {fmt_inr(grand):>8}`")
         return '\n'.join(lines)
 
     # Single-period filter
