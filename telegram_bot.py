@@ -772,6 +772,52 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     return '\n'.join(lines)
 
 
+def transaction_history_for(client: str, trades: list, names: dict) -> str:
+    """Full trade-by-trade history for a client, sorted by entry date descending.
+    Reads directly from trades.json — no Groq involved."""
+    rows = sorted(
+        [t for t in trades if t.get('client') == client],
+        key=lambda t: t.get('entry_date') or '',
+        reverse=True
+    )
+    name = names.get(client, client)
+    if not rows:
+        return f"No trades found for {name}."
+
+    MAX_MSG = 3500  # Telegram message limit ~4096 chars; leave headroom
+    header = f"*{name} — Transaction History ({len(rows)} trades)*\n"
+    lines = []
+    for t in rows:
+        script   = t.get('script', '?')
+        qty      = int(t.get('buy_qty') or 0)
+        bp       = float(t.get('buy_price') or 0)
+        entry    = (t.get('entry_date') or '')[:10]
+        invested = fmt_inr(qty * bp)
+        if t.get('exit_date'):
+            sp     = float(t.get('sell_price') or 0)
+            exit_d = t.get('exit_date', '')[:10]
+            pnl    = (sp - bp) * qty
+            sign   = '+' if pnl >= 0 else ''
+            lines.append(
+                f"`{entry}  {script[:20]:<20}  {qty:>5} qty @ {bp:>8,.0f}`\n"
+                f"`{'':>10}  Sold {exit_d} @ {sp:>8,.0f}  P&L {sign}{fmt_inr(pnl)}`"
+            )
+        else:
+            lines.append(
+                f"`{entry}  {script[:20]:<20}  {qty:>5} qty @ {bp:>8,.0f}  [OPEN]`"
+            )
+
+    # Split into chunks if too long for one message
+    chunks, current = [], header
+    for line in lines:
+        if len(current) + len(line) + 2 > MAX_MSG:
+            chunks.append(current)
+            current = f"*{name} — (contd.)*\n"
+        current += line + '\n'
+    chunks.append(current)
+    return '\n---SPLIT---\n'.join(chunks)
+
+
 def capital_summary_for(client: str, trades: list, names: dict) -> str:
     """Return capital deployed in open positions for a client."""
     open_t = [t for t in trades if t.get('client') == client and not t.get('exit_date')]
@@ -1002,6 +1048,15 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             return brokerage_summary_for(client, trades, names, tl)
         if any(w in tl for w in ('capital', 'invest', 'deploy', 'deployed', 'exposure', 'invested')):
             return capital_summary_for(client, trades, names)
+        if any(w in tl for w in ('transaction', 'history', 'all trade', 'trade history', 'full history',
+                                  'all transaction', 'transactions', 'statement', 'account statement')):
+            result = transaction_history_for(client, trades, names)
+            if '---SPLIT---' in result:
+                for chunk in result.split('---SPLIT---'):
+                    if chunk.strip():
+                        send(chat_id, chunk.strip())
+                return None
+            return result
         # Free-form client question → Groq
         rows    = [t for t in trades if t.get('client') == client]
         context = (f"Client: {names.get(client, client)} ({client})\n"
