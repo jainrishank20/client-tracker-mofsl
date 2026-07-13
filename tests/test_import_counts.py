@@ -68,7 +68,10 @@ for c, ts in open_by_client.items():
     sig = frozenset(t['script'] for t in ts)
     if sig in open_sig:
         other = open_sig[sig]
-        fail(
+        # Downgrade to warning — family accounts can legitimately share identical
+        # portfolios. The real duplicate-CSV bug is caught earlier by _assert_csv_unique
+        # (byte-level hash check in mo_downloader.py).
+        warn(
             f"DUPLICATE DATA: {c} and {other} have IDENTICAL open positions "
             f"({len(sig)} scripts) — downloader likely gave {c} the wrong CSV. "
             f"Scripts: {sorted(sig)[:5]}"
