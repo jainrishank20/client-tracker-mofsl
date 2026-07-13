@@ -736,9 +736,25 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 return false;
             }
         """)
-        if found:
-            await asyncio.sleep(2)
-        return found
+        if not found:
+            return False
+        # Wait up to 8s for COMBINED/MTF row to appear (page renders async)
+        for _ in range(8):
+            await asyncio.sleep(1)
+            ready = await pg.evaluate("""
+                () => {
+                    for (const row of document.querySelectorAll('tr')) {
+                        const cells = row.querySelectorAll('td');
+                        if (!cells.length) continue;
+                        const txt = cells[0].textContent.trim().toUpperCase();
+                        if (txt === 'COMBINED' || txt === 'MTF') return true;
+                    }
+                    return false;
+                }
+            """)
+            if ready:
+                break
+        return True
 
     async def _dismiss_alert(pg):
         await pg.evaluate("""
