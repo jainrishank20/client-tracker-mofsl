@@ -169,6 +169,19 @@ def detect_client(text: str, names: dict) -> Optional[str]:
             return name_to_code[name]
     return None
 
+def detect_all_clients(text: str, names: dict) -> list:
+    """Detect ALL client codes mentioned in text (returns list, deduped, in order)."""
+    name_to_code = get_name_to_code(names)
+    t = text.lower()
+    seen, result = set(), []
+    for name in sorted(name_to_code.keys(), key=len, reverse=True):
+        if name in t:
+            code = name_to_code[name]
+            if code not in seen:
+                seen.add(code)
+                result.append(code)
+    return result
+
 def arrow(val: float) -> str:
     """Return ▲ for positive, ▼ for negative."""
     return '▲' if val >= 0 else '▼'
@@ -604,13 +617,48 @@ def ask_groq(question: str, context: str) -> str:
 
 
 def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> str:
-    """Return charges paid by a client, optionally filtered by month."""
+    """Return charges paid by a client, optionally filtered by month or shown month-wise."""
+    import calendar as _cal
     rows = [t for t in trades if t.get('client') == client]
     if not rows:
         return f"No trades found for {names.get(client, client)}."
 
-    # Detect month filter from query text
     today = datetime.date.today()
+    name  = names.get(client, client)
+
+    # Month-wise breakdown requested
+    if any(w in tl for w in ('month wise', 'month-wise', 'monthly', 'each month', 'per month', 'month by month')):
+        # Collect all months that appear in entry/exit dates
+        month_totals = {}
+        for t in rows:
+            for field, date_str in [('buy', t.get('entry_date') or ''), ('sell', t.get('exit_date') or '')]:
+                if not date_str:
+                    continue
+                try:
+                    d = datetime.date.fromisoformat(date_str[:10])
+                    key = (d.year, d.month)
+                    if key not in month_totals:
+                        month_totals[key] = 0.0
+                    brk_field = f'{field}_brokerage'
+                    month_totals[key] += float(t.get(brk_field, 0) or 0)
+                    for cf in (f'{field}_stt', f'{field}_gst', f'{field}_stamp', f'{field}_txn'):
+                        month_totals[key] += float(t.get(cf, 0) or 0)
+                except Exception:
+                    pass
+        if not month_totals:
+            return f"No trade charges data found for {name}."
+        lines = [f"*{name} — Brokerage Month-Wise*", "`Month       Total Charges`", "`────────────────────────`"]
+        grand = 0.0
+        for (yr, mo) in sorted(month_totals):
+            label = datetime.date(yr, mo, 1).strftime('%b %Y')
+            val   = month_totals[(yr, mo)]
+            grand += val
+            lines.append(f"`{label:<12} Rs {fmt_inr(val):>10}`")
+        lines.append("`────────────────────────`")
+        lines.append(f"`{'Total':<12} Rs {fmt_inr(grand):>10}`")
+        return '\n'.join(lines)
+
+    # Single-period filter
     filter_label = 'All time'
     from_date = None
     to_date   = None
@@ -626,7 +674,6 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         to_date   = today
         filter_label = today.strftime('%b %Y')
     else:
-        import calendar as _cal
         months = ['january','february','march','april','may','june',
                   'july','august','september','october','november','december']
         for i, mn in enumerate(months, 1):
@@ -647,13 +694,11 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
         except Exception:
             return False
 
-    # Buy charges incurred on entry_date; sell charges incurred on exit_date.
-    # e.g. bought in May, sold in June → buy charges count in May, sell charges count in June.
     buy_filtered  = [t for t in rows if _date_in_range(t.get('entry_date') or '')]
     sell_filtered = [t for t in rows if t.get('exit_date') and _date_in_range(t.get('exit_date') or '')]
 
     if not buy_filtered and not sell_filtered:
-        return f"No trades found for {names.get(client, client)} in {filter_label}."
+        return f"No trades found for {name} in {filter_label}."
 
     def _sb(field): return sum((t.get(field, 0) or 0) for t in buy_filtered)
     def _ss(field): return sum((t.get(field, 0) or 0) for t in sell_filtered)
@@ -665,7 +710,6 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
     total_txn       = _sb('buy_txn')       + _ss('sell_txn')
     total_all       = total_brokerage + total_stt + total_gst + total_stamp + total_txn
 
-    name = names.get(client, client)
     return (
         f"*{name} — Charges ({filter_label})*\n"
         f"`Brokerage:   Rs {fmt_inr(total_brokerage)}`\n"
@@ -933,6 +977,15 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             return f"No trades recorded for any client today ({today_disp})."
         return '\n'.join(parts)
 
+    # Multi-client brokerage query (e.g. "brokerage for RIMK1252 and RIMK1256 month wise")
+    is_brokerage_q = any(w in tl for w in ('brokerage', 'commission', 'charge', 'charges', 'fee', 'fees',
+                                             'tax', 'taxes', 'stt', 'gst', 'stamp', 'cost', 'costs'))
+    if is_brokerage_q:
+        all_clients = detect_all_clients(text, names)
+        if len(all_clients) > 1:
+            parts = [brokerage_summary_for(c, trades, names, tl) for c in all_clients]
+            return '\n\n'.join(parts)
+
     # Client-specific query
     client = detect_client(text, names)
     if client:
@@ -950,8 +1003,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             )
         if any(w in tl for w in ('pnl', 'p&l', 'profit', 'loss', 'earn', 'return', 'realized', 'realised')):
             return trades_summary_for(client, trades, names, overrides)
-        if any(w in tl for w in ('brokerage', 'commission', 'charge', 'charges', 'fee', 'fees',
-                                  'tax', 'taxes', 'stt', 'gst', 'stamp', 'cost', 'costs')):
+        if is_brokerage_q:
             return brokerage_summary_for(client, trades, names, tl)
         if any(w in tl for w in ('capital', 'invest', 'deploy', 'deployed', 'exposure', 'invested')):
             return capital_summary_for(client, trades, names)
