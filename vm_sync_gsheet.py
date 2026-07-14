@@ -33,10 +33,12 @@ from symbol_map import SYMBOL_MAP
 def load_ticker_overrides():
     if os.path.exists(TICKER_OVERRIDES_FILE):
         try:
-            with open(TICKER_OVERRIDES_FILE) as f:
-                return json.load(f)
-        except Exception:
-            pass
+            with open(TICKER_OVERRIDES_FILE, encoding="utf-8-sig") as f:
+                data = json.load(f)
+                print(f"  load_ticker_overrides: {len(data)} entries, sample keys: {list(data.keys())[:5]}")
+                return data
+        except Exception as e:
+            print(f"  load_ticker_overrides FAILED: {e}")
     return {}
 
 
@@ -49,6 +51,10 @@ def fetch_cmp(scripts):
         sys.path.insert(0, BASE)
         from symbol_map import resolve as _resolve
         ticker_map = {s: _resolve(s, overrides) for s in scripts}
+        # Debug: show resolution for known problem symbols
+        for dbg in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'INDIANBANK', 'IONEXCHANGEINDIA']:
+            if dbg in ticker_map:
+                print(f"  fetch_cmp resolve: {dbg} -> {ticker_map[dbg]}")
         unique_tickers = list(set(ticker_map.values()))
         ns_tickers = [t + '.NS' for t in unique_tickers]
         if not ns_tickers:
