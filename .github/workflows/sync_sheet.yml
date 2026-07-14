@@ -46,12 +46,17 @@ jobs:
       - name: Merge ticker overrides (repo wins for new entries)
         run: |
           python3 -c "
-          import json, os
+          import json, os, sys
+          sys.path.insert(0, '.')
           repo = json.load(open('ticker_overrides.json'))
           sec  = json.load(open('ticker_overrides_secret.json')) if os.path.exists('ticker_overrides_secret.json') else {}
           merged = {**sec, **repo}
           json.dump(merged, open('ticker_overrides.json', 'w'), indent=2)
           print(f'Merged: {len(merged)} overrides')
+          # Debug: test resolution of known problem symbols
+          from symbol_map import resolve
+          for s in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'IONEXCHANGEINDIA', 'INDIANBANK']:
+              print(f'  resolve({s}) -> {resolve(s, merged)}')
           "
 
       - name: Sync Google Sheet
