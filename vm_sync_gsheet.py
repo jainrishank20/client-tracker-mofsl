@@ -58,10 +58,10 @@ def fetch_cmp(scripts):
         sys.path.insert(0, BASE)
         from symbol_map import resolve as _resolve
         ticker_map = {s: _resolve(s, overrides) for s in scripts}
-        # Debug: show resolution for known problem symbols
-        for dbg in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'INDIANBANK', 'IONEXCHANGEINDIA']:
-            if dbg in ticker_map:
-                print(f"  fetch_cmp resolve: {dbg} -> {ticker_map[dbg]}")
+        # Debug: print scripts where resolved name == original (no override applied)
+        unresolved = [s for s, t in ticker_map.items() if t.upper() == s.upper().replace(' ','').replace('.','')]
+        if unresolved:
+            print(f"  fetch_cmp unresolved scripts (raw name → raw name): {sorted(unresolved)}")
         unique_tickers = list(set(ticker_map.values()))
         ns_tickers = [t + '.NS' for t in unique_tickers]
         if not ns_tickers:
