@@ -40,6 +40,8 @@ jobs:
           $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/trades.json .
           $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/ledger.json . || true
           rm -f /tmp/vm_key
+          if [ ! -f trades.json ]; then echo "ERROR: trades.json not pulled from VM"; exit 1; fi
+          echo "trades.json: $(wc -l < trades.json) lines"
 
       - name: Merge ticker overrides (repo wins for new entries)
         run: |
