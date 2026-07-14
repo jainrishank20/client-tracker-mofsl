@@ -296,6 +296,45 @@ def sync_to_gsheet(trades: list):
         sym = resolve_symbol(script)
         return f'=IFERROR(GOOGLEFINANCE("NSE:{sym}","price"),"—")'
 
+    # ── Manual CMP tab — read existing entries, create tab if missing ────────────
+    def read_manual_cmp(sh):
+        """Read the Manual CMP tab → {script_upper: price}. Never overwrites user entries."""
+        try:
+            try:
+                ws_manual = sh.worksheet("✏️ Manual CMP")
+            except Exception:
+                # First time — create the tab with headers
+                ws_manual = sh.add_worksheet("✏️ Manual CMP", rows=50, cols=3)
+                ws_manual.update([['Script (exact name from trades)', 'CMP (manual)', 'Note']],
+                                 range_name='A1:C1', value_input_option='USER_ENTERED')
+                format_cell_range(ws_manual, 'A1:C1', header_fmt)
+                set_column_width(ws_manual, 'A', 240)
+                set_column_width(ws_manual, 'B', 120)
+                set_column_width(ws_manual, 'C', 200)
+                return {}
+            rows = ws_manual.get_all_values()
+            result = {}
+            for row in rows[1:]:  # skip header
+                if len(row) >= 2 and row[0].strip() and row[1].strip():
+                    try:
+                        result[row[0].strip().upper()] = float(str(row[1]).replace(',', ''))
+                    except ValueError:
+                        pass
+            return result
+        except Exception as e:
+            print(f"  Manual CMP read failed: {e}")
+            return {}
+
+    manual_cmp = read_manual_cmp(sh)
+
+    def cmp_value_or_formula(script):
+        """Return static value if yfinance got it or manual entry exists; else GOOGLEFINANCE formula."""
+        if script in cmp_map:
+            return cmp_map[script]
+        if script.upper() in manual_cmp:
+            return manual_cmp[script.upper()]
+        return gfinance_formula(script)
+
     cmp_map = {}
     if not open_df.empty:
         scripts = tuple(open_df['script'].unique())
@@ -303,6 +342,11 @@ def sync_to_gsheet(trades: list):
             cmp_map = fetch_cmp(scripts)
         except Exception:
             cmp_map = {}
+    # Merge manual CMP into cmp_map so Overview P&L calculation also benefits
+    if not open_df.empty and manual_cmp:
+        for s in open_df['script'].unique():
+            if s not in cmp_map and s.upper() in manual_cmp:
+                cmp_map[s] = manual_cmp[s.upper()]
 
     pct_fmt  = CellFormat(numberFormat={"type":"NUMBER","pattern":'0.00"%"'}, horizontalAlignment='RIGHT')
     tot_fmt  = CellFormat(backgroundColor=Color(0.13,0.13,0.18),
@@ -386,7 +430,7 @@ def sync_to_gsheet(trades: list):
         })).reset_index()
         grp['Client Name'] = grp['client'].map(CLIENT_NAMES)
         grp['Days Held']   = (pd.Timestamp.today() - pd.to_datetime(grp['First Entry'])).dt.days.astype(int)
-        grp['CMP']         = grp['script'].map(gfinance_formula)
+        grp['CMP']         = grp['script'].map(cmp_value_or_formula)
         grp['Symbol']      = grp['script'].map(resolve_symbol)
         show_op = grp[['client','Client Name','Symbol','Qty','Avg Buy Price',
                         'Invested (₹)','CMP','First Entry','Last Entry','Days Held']].copy()
