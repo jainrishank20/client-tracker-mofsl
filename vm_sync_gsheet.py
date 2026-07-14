@@ -30,12 +30,19 @@ from symbol_map import SYMBOL_MAP
 
 
 
+_overrides_cache = None
+
 def load_ticker_overrides():
+    global _overrides_cache
+    if _overrides_cache is not None:
+        return _overrides_cache
     if os.path.exists(TICKER_OVERRIDES_FILE):
         try:
             with open(TICKER_OVERRIDES_FILE, encoding="utf-8-sig") as f:
                 data = json.load(f)
-                print(f"  load_ticker_overrides: {len(data)} entries, sample keys: {list(data.keys())[:5]}")
+                for chk in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'INDIANBANK', 'IONEXCHANGEINDIA']:
+                    print(f"  override[{chk}] = {data.get(chk, 'NOT FOUND')}")
+                _overrides_cache = data
                 return data
         except Exception as e:
             print(f"  load_ticker_overrides FAILED: {e}")
