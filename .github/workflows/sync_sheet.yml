@@ -1,0 +1,60 @@
+name: Sync GSheet Only
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install gspread gspread-formatting google-auth google-auth-oauthlib yfinance
+
+      - name: Reconstruct credentials
+        env:
+          BOT_CONFIG:   ${{ secrets.BOT_CONFIG }}
+          GSHEET_KEY:   ${{ secrets.GSHEET_KEY }}
+          TICKER_OVERRIDES: ${{ secrets.TICKER_OVERRIDES }}
+        run: |
+          echo "$BOT_CONFIG"       > bot_config.json
+          echo "$GSHEET_KEY"       > gsheet_key.json
+          echo "$TICKER_OVERRIDES" > ticker_overrides_secret.json
+
+      - name: Pull trades.json + ledger.json from VM
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          echo "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+          $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/trades.json .
+          $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/ledger.json . || true
+          rm -f /tmp/vm_key
+
+      - name: Merge ticker overrides (repo wins for new entries)
+        run: |
+          python3 -c "
+          import json, os
+          repo = json.load(open('ticker_overrides.json'))
+          sec  = json.load(open('ticker_overrides_secret.json')) if os.path.exists('ticker_overrides_secret.json') else {}
+          merged = {**sec, **repo}
+          json.dump(merged, open('ticker_overrides.json', 'w'), indent=2)
+          print(f'Merged: {len(merged)} overrides')
+          "
+
+      - name: Sync Google Sheet
+        run: python vm_sync_gsheet.py
+
+      - name: Cleanup
+        if: always()
+        run: rm -f bot_config.json gsheet_key.json ticker_overrides_secret.json
