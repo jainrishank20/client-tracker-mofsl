@@ -48,8 +48,8 @@ jobs:
           python3 -c "
           import json, os, sys
           sys.path.insert(0, '.')
-          repo = json.load(open('ticker_overrides.json'))
-          sec  = json.load(open('ticker_overrides_secret.json')) if os.path.exists('ticker_overrides_secret.json') else {}
+          repo = json.loads(open('ticker_overrides.json', encoding='utf-8-sig').read())
+          sec  = json.loads(open('ticker_overrides_secret.json', encoding='utf-8-sig').read()) if os.path.exists('ticker_overrides_secret.json') else {}
           merged = {**sec, **repo}
           json.dump(merged, open('ticker_overrides.json', 'w'), indent=2)
           print(f'Merged: {len(merged)} overrides')
