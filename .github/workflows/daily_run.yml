@@ -124,18 +124,20 @@ jobs:
           python3 -c "
           import json, os
           cfg = json.loads(os.environ['BOT_CONFIG'])
-          clients = cfg.get('clients', {})
-          print(json.dumps(clients))
+          patch = {'clients': cfg.get('clients', {}), 'github_token': cfg.get('github_token', '')}
+          print(json.dumps(patch))
           " > /tmp/new_clients.json
           SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no opc@152.67.164.204"
           $SSH "python3 -c \"
           import json
           path='/home/opc/client-tracker-mofsl/bot_config.json'
           c=json.load(open(path))
-          new=json.load(open('/dev/stdin'))
-          c['clients']=new
+          patch=json.load(open('/dev/stdin'))
+          c['clients']=patch['clients']
+          if patch.get('github_token'): c['github_token']=patch['github_token']
           json.dump(c,open(path,'w'),indent=2)
-          print('Clients synced:', list(new.keys()))
+          print('Synced clients:', list(patch['clients'].keys()))
+          print('github_token updated:', bool(patch.get('github_token')))
           \"" < /tmp/new_clients.json
           rm -f /tmp/vm_key_cfg /tmp/new_clients.json
 
