@@ -26,9 +26,9 @@ jobs:
           GSHEET_KEY:   ${{ secrets.GSHEET_KEY }}
           TICKER_OVERRIDES: ${{ secrets.TICKER_OVERRIDES }}
         run: |
-          echo "$BOT_CONFIG"       > bot_config.json
-          echo "$GSHEET_KEY"       > gsheet_key.json
-          echo "$TICKER_OVERRIDES" > ticker_overrides_secret.json
+          printf '%s' "$BOT_CONFIG"       > bot_config.json
+          printf '%s' "$GSHEET_KEY"       > gsheet_key.json
+          printf '%s' "$TICKER_OVERRIDES" > ticker_overrides_secret.json
 
       - name: Pull trades.json + ledger.json from VM
         env:
