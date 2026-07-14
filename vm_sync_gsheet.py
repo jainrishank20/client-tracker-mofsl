@@ -32,6 +32,8 @@ from symbol_map import SYMBOL_MAP
 
 _overrides_cache = None
 
+_overrides_cache = None
+
 def load_ticker_overrides():
     global _overrides_cache
     if _overrides_cache is not None:
@@ -39,11 +41,8 @@ def load_ticker_overrides():
     if os.path.exists(TICKER_OVERRIDES_FILE):
         try:
             with open(TICKER_OVERRIDES_FILE, encoding="utf-8-sig") as f:
-                data = json.load(f)
-                for chk in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'INDIANBANK', 'IONEXCHANGEINDIA']:
-                    print(f"  override[{chk}] = {data.get(chk, 'NOT FOUND')}")
-                _overrides_cache = data
-                return data
+                _overrides_cache = json.load(f)
+                return _overrides_cache
         except Exception as e:
             print(f"  load_ticker_overrides FAILED: {e}")
     return {}
@@ -58,10 +57,6 @@ def fetch_cmp(scripts):
         sys.path.insert(0, BASE)
         from symbol_map import resolve as _resolve
         ticker_map = {s: _resolve(s, overrides) for s in scripts}
-        # Debug: print scripts where resolved name == original (no override applied)
-        unresolved = [s for s, t in ticker_map.items() if t.upper() == s.upper().replace(' ','').replace('.','')]
-        if unresolved:
-            print(f"  fetch_cmp unresolved scripts (raw name → raw name): {sorted(unresolved)}")
         unique_tickers = list(set(ticker_map.values()))
         ns_tickers = [t + '.NS' for t in unique_tickers]
         if not ns_tickers:
