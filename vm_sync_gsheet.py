@@ -20,7 +20,7 @@ if _age_hours > 6:
 GSHEET_KEY = os.path.join(BASE, "gsheet_key.json")
 GSHEET_ID  = "1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo"
 
-_cfg = json.load(open(os.path.join(BASE, "bot_config.json")))
+_cfg = json.loads(open(os.path.join(BASE, "bot_config.json"), encoding="utf-8-sig").read())
 CLIENT_NAMES = _cfg.get("clients", {})
 CLIENTS = list(CLIENT_NAMES.keys())
 
@@ -41,8 +41,40 @@ def load_ticker_overrides():
 
 
 def fetch_cmp(scripts):
-    """Fetch live CMP — returns empty dict on VM (no yfinance needed for sync)."""
-    return {}
+    """Fetch live CMP via yfinance. Returns {script: price} for scripts that resolve."""
+    try:
+        import yfinance as yf
+        import sys
+        overrides = load_ticker_overrides()
+        sys.path.insert(0, BASE)
+        from symbol_map import resolve as _resolve
+        ticker_map = {s: _resolve(s, overrides) for s in scripts}
+        unique_tickers = list(set(ticker_map.values()))
+        ns_tickers = [t + '.NS' for t in unique_tickers]
+        if not ns_tickers:
+            return {}
+        if len(ns_tickers) == 1:
+            df = yf.download(ns_tickers, period='1d', interval='1m',
+                             progress=False, auto_adjust=True, timeout=20)
+            try:
+                price = float(df['Close'].squeeze().dropna().iloc[-1])
+                return {s: price for s, t in ticker_map.items() if t == unique_tickers[0]}
+            except Exception:
+                return {}
+        df = yf.download(ns_tickers, period='1d', interval='1m',
+                         progress=False, auto_adjust=True, timeout=20)
+        result = {}
+        for s, ticker in ticker_map.items():
+            try:
+                price = float(df['Close'][ticker + '.NS'].dropna().iloc[-1])
+                result[s] = price
+            except Exception:
+                pass
+        print(f"  yfinance fetched CMP for {len(result)}/{len(scripts)} scripts")
+        return result
+    except Exception as e:
+        print(f"  fetch_cmp failed: {e}")
+        return {}
 
 
 def sync_to_gsheet(trades: list):
