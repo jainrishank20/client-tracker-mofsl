@@ -156,8 +156,8 @@ jobs:
           echo "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
           trap 'rm -f /tmp/vm_key /tmp/vm_overrides.json' EXIT
-          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no"
-          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no"
+          SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
           # Merge VM's ticker_overrides (has /addticker entries) with runner's (has secret entries)
