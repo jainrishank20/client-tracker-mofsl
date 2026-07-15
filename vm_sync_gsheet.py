@@ -797,7 +797,7 @@ try:
             # 1. strip spaces / common suffixes
             clean = raw_sym.replace(' ', '').upper()
             candidates.append(clean)
-            # 2. drop "INDIA" / "LTD" / "LIMITED" suffix variants
+            # 2. drop common suffix variants
             for suffix in ('INDIA', 'LTD', 'LIMITED', 'INDUSTRIES', 'INFRA'):
                 if clean.endswith(suffix) and len(clean) > len(suffix) + 3:
                     candidates.append(clean[:-len(suffix)])
@@ -811,6 +811,24 @@ try:
                         return ticker
                 except Exception:
                     pass
+            # 3. yfinance Search by company name — handles abbreviations like
+            #    STEELSTRIPSWHEELS → STEELSTRIP, WELSPUNLIVING → WELSPUNLIV
+            try:
+                results = yf.Search(raw_sym, max_results=10).quotes
+                for r in results:
+                    sym_r = r.get('symbol', '')
+                    if not sym_r.endswith('.NS'):
+                        continue
+                    ticker = sym_r[:-3]
+                    try:
+                        info = yf.Ticker(sym_r).fast_info
+                        if info.get('lastPrice') or info.get('regularMarketPreviousClose'):
+                            print(f"  yfinance Search resolved: {raw_sym} → {ticker}")
+                            return ticker
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             return None
 
         for _sym in _na_symbols:
