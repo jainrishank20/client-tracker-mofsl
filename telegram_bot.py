@@ -32,7 +32,7 @@ CFG_FILE = os.path.join(BASE, 'bot_config.json')
 # ── Config helpers ────────────────────────────────────────────────────────────
 
 def load_cfg() -> dict:
-    return json.load(open(CFG_FILE))
+    return json.loads(open(CFG_FILE, encoding='utf-8-sig').read())
 
 def save_cfg(cfg: dict):
     json.dump(cfg, open(CFG_FILE, 'w'), indent=2)

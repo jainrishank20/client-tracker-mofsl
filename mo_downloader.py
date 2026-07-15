@@ -10,7 +10,7 @@ from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-_cfg = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json')))
+_cfg = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json'), encoding='utf-8-sig').read())
 MO_USERNAME        = _cfg['mo_username']
 MO_PASSWORD        = _cfg['mo_password']
 GMAIL_USER         = _cfg['gmail_user']

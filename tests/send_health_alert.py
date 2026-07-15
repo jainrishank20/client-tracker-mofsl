@@ -14,7 +14,7 @@ BASE        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CFG_PATH    = os.path.join(BASE, 'bot_config.json')
 TRADES_PATH = os.path.join(BASE, 'trades.json')
 
-cfg = json.load(open(CFG_PATH))
+cfg = json.loads(open(CFG_PATH, encoding='utf-8-sig').read())
 
 # ── Build per-client summary ──────────────────────────────────────────────────
 trades_ok   = os.path.exists(TRADES_PATH)

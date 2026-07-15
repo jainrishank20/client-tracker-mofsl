@@ -4,7 +4,7 @@ from datetime import date
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 try:
-    cfg    = json.load(open(os.path.join(BASE, 'bot_config.json')))
+    cfg    = json.loads(open(os.path.join(BASE, 'bot_config.json'), encoding='utf-8-sig').read())
     ledger = json.load(open(os.path.join(BASE, 'ledger.json')))
     trades = json.load(open(os.path.join(BASE, 'trades.json')))
 except FileNotFoundError as e:

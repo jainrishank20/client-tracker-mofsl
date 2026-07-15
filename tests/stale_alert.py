@@ -6,7 +6,7 @@ import json, urllib.request, urllib.parse, os, sys
 from datetime import datetime, timezone
 
 cfg_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bot_config.json')
-cfg      = json.load(open(cfg_path))
+cfg      = json.loads(open(cfg_path, encoding='utf-8-sig').read())
 token    = cfg['telegram_token']
 chat_ids = [c.strip() for c in str(cfg['allowed_chat_id']).split(',')]
 

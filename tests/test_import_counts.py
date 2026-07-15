@@ -33,7 +33,7 @@ if not trades:
     print("FATAL: trades.json is empty — import produced 0 trades")
     sys.exit(1)
 
-cfg     = json.load(open(CFG_PATH)) if os.path.exists(CFG_PATH) else {}
+cfg     = json.loads(open(CFG_PATH, encoding='utf-8-sig').read()) if os.path.exists(CFG_PATH) else {}
 clients = list(cfg.get('clients', {}).keys())
 
 # ── Per-client breakdown ──────────────────────────────────────────────────────
