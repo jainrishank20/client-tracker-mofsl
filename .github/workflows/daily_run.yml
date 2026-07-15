@@ -168,6 +168,18 @@ jobs:
           $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
           [ -f pnl_snapshot.json ] && $SCP pnl_snapshot.json "$VM:$VMDIR/" || true
 
+      # ── Step 5b: Commit trades.json + ledger.json to repo (sync_sheet fallback) ─
+      - name: Commit data files to repo
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add trades.json ledger.json 2>/dev/null || true
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update trades.json + ledger.json [skip ci]"
+          git push
+
       # ── Step 6: Pipeline health alert ────────────────────────────────────────
       - name: Send pipeline health alert
         if: always()
