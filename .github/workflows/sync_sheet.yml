@@ -37,10 +37,10 @@ jobs:
           echo "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=20"
-          $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/trades.json .
+          $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/trades.json . || echo "VM unreachable — falling back to repo trades.json"
           $SCP opc@152.67.164.204:/home/opc/client-tracker-mofsl/ledger.json . || true
           rm -f /tmp/vm_key
-          if [ ! -f trades.json ]; then echo "ERROR: trades.json not pulled from VM"; exit 1; fi
+          if [ ! -f trades.json ]; then echo "No trades.json from VM and none in repo — cannot sync"; exit 1; fi
           echo "trades.json: $(wc -l < trades.json) lines"
 
       - name: Merge ticker overrides (repo wins for new entries)
