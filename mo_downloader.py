@@ -55,12 +55,15 @@ def _assert_csv_unique(client: str, fy: str, csv_path: str) -> None:
 # Clients with no trades in a specific FY — skip that FY to avoid 90s timeout on CBOS
 # RIMK1205, 1209, 1215, 1220 joined FY25-26; all others joined FY26-27
 NO_HISTORY_FY: dict[str, set] = {
+    # Only RIMK1205, RIMK1209, RIMK1215, RIMK1220 have FY25-26 data.
+    # Everyone else joined FY26-27 — skip FY25-26 to avoid 90s CBOS timeout.
     "RIMK1238": {"2025-2026"},
     "RIMK1247": {"2025-2026"},
     "RIMK1248": {"2025-2026"},
     "RIMK1249": {"2025-2026"},
     "RIMK1252": {"2025-2026"},
     "RIMK1256": {"2025-2026"},
+    "RIMK1258": {"2025-2026"},
     "SHU9BH":   {"2025-2026"},
 }
 # ─────────────────────────────────────────────────────────────────────────────
