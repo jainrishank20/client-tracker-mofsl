@@ -140,8 +140,8 @@ else:
     CSV_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mo_csvs')
 
 CLIENT_FILES = {}
-for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_RIMK*.csv'))):
-    m = re.search(r'(RIMK\d+)', os.path.basename(f))
+for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_*.csv'))):
+    m = re.search(r'TradeDetailsAndSummary_([A-Z0-9]+)_', os.path.basename(f))
     if m:
         CLIENT_FILES.setdefault(m.group(1), []).append(f)
 

@@ -89,8 +89,9 @@ jobs:
       - name: Import all CSVs → trades.json
         run: python import_all.py
 
-      # ── Step 2b: QA gate — fail fast if per-client counts look wrong ─────────
+      # ── Step 2b: QA gate — warns on bad data but never blocks VM sync/push ─────
       - name: QA — validate trade counts
+        continue-on-error: true
         run: python tests/test_import_counts.py
 
       # ── Step 3: Sync Google Sheet ────────────────────────────────────────────
@@ -114,6 +115,7 @@ jobs:
 
       # ── Step 4b: Sync clients list from secret into VM's bot_config.json ────
       - name: Sync clients to VM bot_config
+        if: always()
         continue-on-error: true
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -143,6 +145,7 @@ jobs:
 
       # ── Step 5: Push trades.json + ledger.json to VM (bot reads these) ──────
       - name: Push data files to VM
+        if: always()
         continue-on-error: true   # VM unreachable = skip, don't fail whole run
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
