@@ -61,7 +61,7 @@ _alerts_lock = threading.Lock()
 def load_overrides() -> dict:
     """Load ticker_overrides.json once per request — caller caches the result."""
     try:
-        return json.load(open(os.path.join(BASE, 'ticker_overrides.json')))
+        return json.loads(open(os.path.join(BASE, 'ticker_overrides.json'), encoding='utf-8-sig').read())
     except Exception:
         return {}
 
