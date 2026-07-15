@@ -66,6 +66,7 @@ jobs:
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
       # Full history runs on: Sunday auto-schedule OR manual trigger with full_history=true
       - name: Download CSVs from CBOS (Playwright headless)
+        continue-on-error: true   # partial downloads still feed import; don't skip it on CBOS slowness
         run: |
           IS_SUNDAY_RUN="${{ github.event.schedule == '0 2 * * 0' }}"
           IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
@@ -75,7 +76,7 @@ jobs:
           else
             python mo_downloader.py
           fi
-        timeout-minutes: 20
+        timeout-minutes: 35
 
       # ── Cache FY25-26 CSVs after a full run so daily runs can reuse them ────
       - name: Save FY25-26 CSVs to cache
@@ -125,7 +126,8 @@ jobs:
           chmod 600 /tmp/vm_key_cfg
           python3 -c "
           import json, os
-          cfg = json.loads(os.environ['BOT_CONFIG'])
+          raw = os.environ['BOT_CONFIG'].lstrip('﻿')
+          cfg = json.loads(raw)
           patch = {'clients': cfg.get('clients', {}), 'github_token': cfg.get('github_token', '')}
           print(json.dumps(patch))
           " > /tmp/new_clients.json
