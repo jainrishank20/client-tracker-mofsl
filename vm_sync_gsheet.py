@@ -712,56 +712,33 @@ def sync_to_gsheet(trades: list):
     except Exception:
         _ledger_data = {}
 
+    # ledger.json format: {"RIMK1205": {"combined": 12345.0, "mtf": 0.0}, ...}
+    # combined = net delivery ledger balance, mtf = MTF balance
     cap_rows_gs = []
     for c in CLIENTS:
-        raw = _ledger_data.get(c, [])
-        entries = raw if isinstance(raw, list) else []  # our ledger.json has dicts not lists
-        payin  = sum(e["amount"] for e in entries if e["amount"] > 0)
-        payout = sum(-e["amount"] for e in entries if e["amount"] < 0)
+        raw = _ledger_data.get(c, {})
+        combined = raw.get('combined', 0.0) if isinstance(raw, dict) else 0.0
+        mtf      = raw.get('mtf',      0.0) if isinstance(raw, dict) else 0.0
         od_c   = open_df[open_df["client"] == c] if not open_df.empty else pd.DataFrame()
         deployed = (od_c["buy_price"] * od_c["buy_qty"]).sum() if not od_c.empty else 0
         net_closed_pnl = closed_df[closed_df["client"]==c]["net_pnl"].sum() if not closed_df.empty else 0
         cap_rows_gs.append({
-            "Client Code":    c,
-            "Client Name":    CLIENT_NAMES.get(c, c),
-            "Total Payin":    round(payin, 2),
-            "Total Payout":   round(payout, 2),
-            "Net Capital":    round(payin - payout, 2),
-            "Deployed (Open)":round(deployed, 2),
-            "Booked Net P&L": round(net_closed_pnl, 2),
-            "Entries":        len(entries),
+            "Client Code":       c,
+            "Client Name":       CLIENT_NAMES.get(c, c),
+            "Ledger Balance":    round(combined, 2),
+            "MTF Balance":       round(mtf, 2),
+            "Deployed (Open)":   round(deployed, 2),
+            "Booked Net P&L":    round(net_closed_pnl, 2),
         })
     df_cap_gs = pd.DataFrame(cap_rows_gs)
-    ws_cap = upsert_ws("💰 Capital", rows=max(len(df_cap_gs)+20, 50), cols=10)
+    ws_cap = upsert_ws("💰 Capital", rows=max(len(df_cap_gs)+20, 50), cols=8)
     write_df(ws_cap, df_cap_gs)
     apply_header_fmt(ws_cap, len(df_cap_gs.columns))
     if not df_cap_gs.empty:
-        apply_num_cols(ws_cap, [3,4,5,6,7], len(df_cap_gs))
-        apply_pnl_conditional(ws_cap, 7, len(df_cap_gs))
+        apply_num_cols(ws_cap, [3,4,5,6], len(df_cap_gs))
+        apply_pnl_conditional(ws_cap, 6, len(df_cap_gs))
         flush_pnl_rules(ws_cap)
-        add_totals_row(ws_cap, df_cap_gs, [3,4,5,6,7], [], len(df_cap_gs)+1)
-
-    all_ledger_rows = []
-    for c in CLIENTS:
-        raw = _ledger_data.get(c, [])
-        for e in (raw if isinstance(raw, list) else []):
-            all_ledger_rows.append({
-                "Client":    c,
-                "Name":      CLIENT_NAMES.get(c, c),
-                "Date":      e["date"],
-                "Type":      e["type"],
-                "Ledger":    e.get("ledger", ""),
-                "Amount":    e["amount"],
-                "Narration": e.get("narration", ""),
-            })
-    if all_ledger_rows:
-        df_led_gs = pd.DataFrame(all_ledger_rows).sort_values(["Client","Date"], ascending=[True,False])
-        ws_led = upsert_ws("📒 Ledger Entries", rows=max(len(df_led_gs)+10, 100), cols=8)
-        write_df(ws_led, df_led_gs)
-        apply_header_fmt(ws_led, len(df_led_gs.columns))
-        apply_num_cols(ws_led, [6], len(df_led_gs))
-        apply_pnl_conditional(ws_led, 6, len(df_led_gs))
-        flush_pnl_rules(ws_led)
+        add_totals_row(ws_cap, df_cap_gs, [3,4,5,6], [], len(df_cap_gs)+1)
 
     total = len(open_df) + len(closed_df)
     all_errors = (ov_errors or []) + (pnl_errors or [])
