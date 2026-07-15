@@ -97,6 +97,7 @@ jobs:
 
       # ── Step 3: Sync Google Sheet ────────────────────────────────────────────
       - name: Sync Google Sheet
+        continue-on-error: true   # GSheet rate limit / yfinance timeout must not block Telegram notify
         run: python vm_sync_gsheet.py
 
       # ── Step 3b: Fetch yesterday's P&L snapshot from VM (for movement delta) ──

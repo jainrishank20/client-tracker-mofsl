@@ -32,8 +32,6 @@ from symbol_map import SYMBOL_MAP
 
 _overrides_cache = None
 
-_overrides_cache = None
-
 def load_ticker_overrides():
     global _overrides_cache
     if _overrides_cache is not None:
@@ -710,7 +708,7 @@ def sync_to_gsheet(trades: list):
     try:
         import os as _os
         _ledger_file = _os.path.join(_os.path.dirname(__file__), "ledger.json")
-        _ledger_data = json.loads(open(_ledger_file).read()) if _os.path.exists(_ledger_file) else {}
+        _ledger_data = json.loads(open(_ledger_file, encoding='utf-8-sig').read()) if _os.path.exists(_ledger_file) else {}
     except Exception:
         _ledger_data = {}
 

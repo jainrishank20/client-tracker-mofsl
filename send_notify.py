@@ -66,7 +66,7 @@ def _calc_unrealized_pnl() -> dict:
         return {}
 
     try:
-        overrides = json.load(open(os.path.join(BASE, 'ticker_overrides.json')))
+        overrides = json.loads(open(os.path.join(BASE, 'ticker_overrides.json'), encoding='utf-8-sig').read())
     except Exception:
         overrides = {}
 

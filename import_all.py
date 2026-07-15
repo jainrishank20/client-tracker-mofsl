@@ -132,7 +132,7 @@ def load_csv(path):
     return df
 
 # ── gather files per client — auto-discover from CSV_DIR ─────────────────────
-import glob, platform, re
+import glob, platform
 
 if platform.system() == 'Windows':
     CSV_DIR = r'C:\Users\jainr\Downloads\MO_Trades'
@@ -276,8 +276,9 @@ if __name__ == '__main__':
                     'buy_gst':       float(buy['gst']),
                     'buy_stamp':     float(buy['stamp']),
                     'buy_txn':       float(buy['txn_chrg']),
+                    'buy_other':     float(buy.get('other', 0)),
                     'sell_brokerage':0, 'sell_stt':0, 'sell_gst':0,
-                    'sell_stamp':0, 'sell_txn':0,
+                    'sell_stamp':0, 'sell_txn':0, 'sell_other':0,
                     'product':       buy.get('product', 'DELIVERY'),
                     'notes':         'imported',
                 })
