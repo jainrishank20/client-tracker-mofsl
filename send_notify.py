@@ -5,11 +5,16 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 
 try:
     cfg    = json.loads(open(os.path.join(BASE, 'bot_config.json'), encoding='utf-8-sig').read())
-    ledger = json.load(open(os.path.join(BASE, 'ledger.json')))
     trades = json.load(open(os.path.join(BASE, 'trades.json')))
 except FileNotFoundError as e:
     print(f"ERROR: {e} — aborting notify")
     raise SystemExit(1)
+
+try:
+    ledger = json.load(open(os.path.join(BASE, 'ledger.json')))
+except FileNotFoundError:
+    print("WARNING: ledger.json missing — ledger columns will show as N/A")
+    ledger = {}
 
 # clients list from config, fallback to ledger keys
 CLIENTS = list(cfg.get('clients', {}).keys()) or sorted(ledger.keys())
