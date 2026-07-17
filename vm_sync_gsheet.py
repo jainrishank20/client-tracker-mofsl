@@ -793,6 +793,14 @@ try:
 
         def _try_resolve(raw_sym):
             """Try common NSE ticker derivations for a raw CBOS symbol name."""
+            # 0. Check ticker_overrides first — fastest and most reliable
+            _ov_hit = _overrides.get(raw_sym) or _overrides.get(raw_sym.upper())
+            if not _ov_hit:
+                # case-insensitive scan
+                _ov_hit = next((v for k, v in _overrides.items() if k.upper() == raw_sym.upper()), None)
+            if _ov_hit:
+                return _ov_hit
+
             candidates = []
             # 1. strip spaces / common suffixes
             clean = raw_sym.replace(' ', '').upper()
