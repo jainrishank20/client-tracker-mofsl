@@ -199,6 +199,7 @@ jobs:
           git add trades.json ledger.json open_positions_snapshot.json 2>/dev/null || true
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore: update trades.json + ledger.json [skip ci]"
+          git pull --rebase origin main || true
           git push
 
       # ── Step 6: Pipeline health alert ────────────────────────────────────────
