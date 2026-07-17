@@ -23,6 +23,8 @@ jobs:
   daily-run:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write   # needed for git push in "Commit data files to repo" step
 
     steps:
       - name: Checkout repo
@@ -199,7 +201,9 @@ jobs:
           git add trades.json ledger.json open_positions_snapshot.json 2>/dev/null || true
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore: update trades.json + ledger.json [skip ci]"
+          git stash || true
           git pull --rebase origin main || true
+          git stash pop || true
           git push
 
       # ── Step 6: Pipeline health alert ────────────────────────────────────────
