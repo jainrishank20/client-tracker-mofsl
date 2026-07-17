@@ -5,8 +5,8 @@ CREDENTIALS.md
 .env
 
 # Data files — written by pipeline, pushed to VM via SCP
-trades.json
-ledger.json
+# trades.json and ledger.json are committed by the pipeline for sync_sheet fallback
+ledger_local.json
 price_alerts.json
 import_meta.json
 processed_orders.json
