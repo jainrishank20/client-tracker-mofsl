@@ -52,6 +52,13 @@ jobs:
           printf '%s' "$TICKER_OVERRIDES" > ticker_overrides.json
           mkdir -p mo_csvs
 
+      # ── Rotate cache key monthly so stale/incomplete FY25-26 CSVs don't persist ──
+      # Key format: fy2526-csvs-YYYY-MM — auto-invalidates on month rollover.
+      # First Sunday of each new month triggers a full re-download.
+      - name: Get cache month key
+        id: month
+        run: echo "ym=$(date +%Y-%m)" >> $GITHUB_OUTPUT
+
       # ── Restore FY25-26 CSVs from cache (populated by a --full run) ──────────
       # FY25-26 is a closed year — data never changes, safe to cache indefinitely.
       # Daily run downloads FY26-27 fresh; this ensures import sees BOTH years
@@ -60,8 +67,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: mo_csvs
-          key: fy2526-csvs-v1
-          restore-keys: fy2526-csvs-v1
+          key: fy2526-csvs-${{ steps.month.outputs.ym }}
+          restore-keys: fy2526-csvs-
 
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
       # Full history runs on: Sunday auto-schedule OR manual trigger with full_history=true
@@ -84,7 +91,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: mo_csvs
-          key: fy2526-csvs-v1
+          key: fy2526-csvs-${{ steps.month.outputs.ym }}
 
       # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
       - name: Import all CSVs → trades.json
@@ -94,6 +101,19 @@ jobs:
       - name: QA — validate trade counts
         continue-on-error: true
         run: python tests/test_import_counts.py
+
+      # ── Step 2c: QA — stale MTF + open position delta ────────────────────────
+      - name: QA — stale MTF positions + open position delta
+        continue-on-error: true
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_qa
+          chmod 600 /tmp/vm_key_qa
+          scp -i /tmp/vm_key_qa -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+            opc@152.67.164.204:/home/opc/client-tracker-mofsl/open_positions_snapshot.json . 2>/dev/null || true
+          rm -f /tmp/vm_key_qa
+          python tests/qa_positions.py
 
       # ── Step 3: Sync Google Sheet ────────────────────────────────────────────
       - name: Sync Google Sheet
@@ -166,7 +186,8 @@ jobs:
           python3 -c "import json,sys; json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read())" 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
           python3 -c "import json,os; r=json.loads(open('ticker_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('ticker_overrides.json') else {}; v=json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('/tmp/vm_overrides.json') else {}; m={**r,**v}; json.dump(m,open('ticker_overrides.json','w'),indent=2); print(f'Merged overrides: {len(r)} runner + {len(v)} VM = {len(m)} total')"
           $SCP trades.json ledger.json symbol_map.py ticker_overrides.json "$VM:$VMDIR/"
-          [ -f pnl_snapshot.json ] && $SCP pnl_snapshot.json "$VM:$VMDIR/" || true
+          [ -f pnl_snapshot.json ]           && $SCP pnl_snapshot.json           "$VM:$VMDIR/" || true
+          [ -f open_positions_snapshot.json ] && $SCP open_positions_snapshot.json "$VM:$VMDIR/" || true
 
       # ── Step 5b: Commit trades.json + ledger.json to repo (sync_sheet fallback) ─
       - name: Commit data files to repo
@@ -175,7 +196,7 @@ jobs:
         run: |
           git config user.email "github-actions@github.com"
           git config user.name "GitHub Actions"
-          git add trades.json ledger.json 2>/dev/null || true
+          git add trades.json ledger.json open_positions_snapshot.json 2>/dev/null || true
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore: update trades.json + ledger.json [skip ci]"
           git push
