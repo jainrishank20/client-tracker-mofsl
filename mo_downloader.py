@@ -157,18 +157,24 @@ async def login(page):
     RESEND_BTN = 'button:has-text("Resend"), a:has-text("Resend"), span:has-text("Resend")'
 
     for attempt in range(3):
-        if attempt == 0:
-            otp = get_otp_from_gmail(sent_after=login_time)
-        else:
-            # Click resend and wait for a fresh OTP
-            print(f"  OTP attempt {attempt+1}: clicking Resend...")
-            resend_time = time.time()
-            try:
-                await page.locator(RESEND_BTN).first.click(timeout=5000)
-            except Exception:
-                print("  No Resend button found — retrying with same OTP")
-            await asyncio.sleep(3)
-            otp = get_otp_from_gmail(sent_after=resend_time)
+        try:
+            if attempt == 0:
+                otp = get_otp_from_gmail(sent_after=login_time, max_wait=90)
+            else:
+                # Click resend and wait for a fresh OTP
+                print(f"  OTP attempt {attempt+1}: clicking Resend...")
+                resend_time = time.time()
+                try:
+                    await page.locator(RESEND_BTN).first.click(timeout=5000)
+                except Exception:
+                    print("  No Resend button found")
+                await asyncio.sleep(3)
+                otp = get_otp_from_gmail(sent_after=resend_time, max_wait=90)
+        except RuntimeError:
+            if attempt < 2:
+                print(f"  OTP not received on attempt {attempt+1}, trying Resend...")
+                continue
+            raise
 
         print(f"  OTP attempt {attempt+1}: {otp}")
         inp = page.locator(OTP_INPUT).first
