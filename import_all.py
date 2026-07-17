@@ -149,6 +149,7 @@ if __name__ == '__main__':
     all_trades, trade_id = [], 1
 
     for client, files in CLIENT_FILES.items():
+        print(f'[{client}] CSV files: {[os.path.basename(f) for f in files]}')
         frames = [load_csv(f) for f in files if os.path.exists(f)]
         if not frames:
             continue
@@ -186,6 +187,14 @@ if __name__ == '__main__':
         # sort buys before sells on same date — order numbers across NSE/BSE aren't comparable
         orders['SIDE SORT'] = (orders['SELL/BUY'] == 'S').astype(int)
         orders = orders.sort_values(['TRADE DATE', 'SIDE SORT', 'ORDER NO SORT']).drop(columns=['ORDER NO SORT', 'SIDE SORT'])
+
+        # Debug: show all Redington rows for RIMK1215
+        if client == 'RIMK1215':
+            red = orders[orders['SCRIP'].str.contains('REDINGTON', case=False, na=False)]
+            if not red.empty:
+                print(f'[RIMK1215] Redington rows:')
+                for _, r in red.iterrows():
+                    print(f'  {r["TRADE DATE"].date()} {r["SELL/BUY"]} qty={r["qty"]} price={r["price"]} fifo_key={r["FIFO_KEY"]}')
 
         for fifo_key in sorted(orders['FIFO_KEY'].unique()):
             s = orders[orders['FIFO_KEY'] == fifo_key]
