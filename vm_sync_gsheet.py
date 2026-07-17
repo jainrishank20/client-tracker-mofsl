@@ -11,6 +11,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 # Guard: refuse to sync if trades.json is older than 6 hours — stale data corrupts the sheet.
 # GitHub Actions always has fresh data; local runs almost never do.
 _trades_path = os.path.join(BASE, "trades.json")
+if not os.path.exists(_trades_path):
+    print("ERROR: trades.json not found.")
+    sys.exit(1)
 _age_hours = (time.time() - os.path.getmtime(_trades_path)) / 3600
 if _age_hours > 6:
     print(f"ERROR: trades.json is {_age_hours:.1f}h old. Run daily pipeline first or use GitHub Actions.")
@@ -762,11 +765,8 @@ print(f"Done: {result}")
 # ── GSheet QA: auto-resolve #N/A CMP symbols via yfinance ────────────────────
 try:
     import gspread, urllib.parse, urllib.request, yfinance as yf
-    from oauth2client.service_account import ServiceAccountCredentials
 
-    _scope  = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    _creds  = ServiceAccountCredentials.from_json_keyfile_name(GSHEET_KEY, _scope)
-    _gc     = gspread.authorize(_creds)
+    _gc     = gspread.service_account(filename=GSHEET_KEY)
     _sh     = _gc.open_by_key(GSHEET_ID)
     _ws_op  = _sh.worksheet("📋 Open Positions")
     _vals   = _ws_op.get_all_values()

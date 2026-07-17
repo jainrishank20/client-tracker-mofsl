@@ -106,9 +106,9 @@ jobs:
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
-          echo "$VM_SSH_KEY" > /tmp/vm_key_snap
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_snap
           chmod 600 /tmp/vm_key_snap
-          scp -i /tmp/vm_key_snap -o StrictHostKeyChecking=no opc@152.67.164.204:/home/opc/client-tracker-mofsl/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
+          scp -i /tmp/vm_key_snap -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204:/home/opc/client-tracker-mofsl/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
           rm -f /tmp/vm_key_snap
 
       # ── Step 4: Send Telegram ledger summary ────────────────────────────────
@@ -123,7 +123,7 @@ jobs:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
           BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
         run: |
-          echo "$VM_SSH_KEY" > /tmp/vm_key_cfg
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_cfg
           chmod 600 /tmp/vm_key_cfg
           python3 -c "
           import json, os
@@ -132,7 +132,7 @@ jobs:
           patch = {'clients': cfg.get('clients', {}), 'github_token': cfg.get('github_token', '')}
           print(json.dumps(patch))
           " > /tmp/new_clients.json
-          SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no opc@152.67.164.204"
+          SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
           $SSH "python3 -c \"
           import json
           path='/home/opc/client-tracker-mofsl/bot_config.json'
