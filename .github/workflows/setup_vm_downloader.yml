@@ -1,0 +1,72 @@
+name: Setup VM Downloader
+
+# One-time setup: install Playwright on Oracle VM and configure cron.
+# Run this once after merging vm_daily_run.sh.
+# Safe to re-run — crontab entries are idempotent.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install Playwright on VM + configure cron
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+
+          # Retry SSH up to 5 times — VM occasionally takes a moment to accept connections
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=10 opc@152.67.164.204"
+          for attempt in 1 2 3 4 5; do
+            echo "=== SSH attempt $attempt ==="
+            $SSH "echo connected" && break
+            echo "Attempt $attempt failed, waiting 30s..."
+            sleep 30
+          done
+
+          $SSH bash << 'REMOTE'
+          set -e
+          echo "=== $(date) — Setting up VM downloader ==="
+          cd /home/opc/client-tracker-mofsl
+
+          # Pull latest code (gets vm_daily_run.sh)
+          git fetch origin main
+          git reset --hard origin/main
+          chmod +x vm_daily_run.sh
+
+          # Install Playwright + Chromium (idempotent)
+          echo "=== Installing Playwright ==="
+          pip install playwright --quiet
+          playwright install chromium
+          playwright install-deps chromium
+          echo "Playwright installed: $(playwright --version)"
+
+          # Set up crontab (remove old vm_daily_run entries first)
+          echo "=== Configuring crontab ==="
+          crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true
+          # Mon-Sat 7:30 PM IST = 14:00 UTC — incremental download
+          echo "0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false" >> /tmp/new_crontab
+          # Sunday 11:00 AM IST = 05:30 UTC — full download (both FYs)
+          echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"  >> /tmp/new_crontab
+          crontab /tmp/new_crontab
+          echo "Crontab configured:"
+          crontab -l
+
+          echo "=== Setup complete at $(date) ==="
+          REMOTE
+
+          rm -f /tmp/vm_key
+
+      - name: Verify setup
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
+          $SSH "playwright --version && crontab -l | grep vm_daily_run"
+          rm -f /tmp/vm_key

@@ -1,19 +1,25 @@
 name: Daily Trade Download
 
 on:
-  schedule:
-    # 3:00 PM UTC = 8:30 PM IST, Mon-Fri — daily incremental
-    - cron: '0 15 * * 1-5'
-    # 6:30 AM UTC = 12:00 PM IST, Sunday — weekly full re-download (noon avoids CBOS morning maintenance)
-    - cron: '30 6 * * 0'
   workflow_dispatch:
     inputs:
       full_history:
-        description: 'Download both FY 2025-26 and 2026-27 (use for initial setup or missing history)'
+        description: 'Download both FY 2025-26 and 2026-27'
         required: false
         default: 'false'
         type: choice
         options: ['false', 'true']
+      skip_download:
+        description: 'Skip CBOS download (VM already pushed trades.json + ledger.json)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+# No schedule — VM runs the download (Indian IP, not blocked by CBOS on Sundays).
+# VM cron: Mon-Sat 7:30 PM IST (14:00 UTC) incremental, Sunday 11:00 AM IST (05:30 UTC) full.
+# VM triggers this workflow with skip_download=true after pushing fresh data.
+# stale_alert.yml at 9:15 PM IST (Mon-Fri) catches VM failures.
 
 concurrency:
   group: daily-run
@@ -39,6 +45,7 @@ jobs:
         run: pip install playwright pandas gspread gspread-formatting google-auth google-auth-oauthlib groq yfinance PyNaCl
 
       - name: Install Playwright Chromium + system deps
+        if: ${{ github.event.inputs.skip_download != 'true' }}
         run: |
           playwright install chromium
           playwright install-deps chromium
@@ -54,21 +61,17 @@ jobs:
           printf '%s' "$TICKER_OVERRIDES" > ticker_overrides.json
           mkdir -p mo_csvs
 
-      # ── Rotate cache key monthly so stale/incomplete FY25-26 CSVs don't persist ──
-      # Key format: fy2526-csvs-YYYY-MM — auto-invalidates on month rollover.
-      # First Sunday of each new month triggers a full re-download.
       - name: Get cache keys
         id: cachekeys
+        if: ${{ github.event.inputs.skip_download != 'true' }}
         run: |
           echo "today=$(date +%Y-%m-%d)"   >> $GITHUB_OUTPUT
           echo "month=$(date +%Y-%m)"      >> $GITHUB_OUTPUT
 
-      # ── Restore CSVs + ledger from cache ─────────────────────────────────────
-      # Key is daily (YYYY-MM-DD) so yesterday's run is always a warm fallback.
-      # This ensures NO_HISTORY_FY clients (RIMK1258, SHU9BH) have FY26-27 CSVs
-      # even when CBOS is down — they have nothing in the monthly FY25-26 cache.
-      # ledger.json is also cached so CBOS outages don't blank the ledger column.
+      # ── Restore CSVs + ledger from cache (only when doing a GHA download) ─────
+      # ledger.json also cached so CBOS outages don't blank the ledger column.
       - name: Restore CSVs from cache
+        if: ${{ github.event.inputs.skip_download != 'true' }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -79,14 +82,15 @@ jobs:
             csvs-
             fy2526-csvs-
 
-      # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
-      # Full history runs on: Sunday auto-schedule OR manual trigger with full_history=true
+      # ── Step 1: Download CSVs + ledger from CBOS (GHA runner only) ───────────
+      # Skipped when VM already ran (skip_download=true) — trades.json from checkout.
+      # On GHA: full download when full_history=true, incremental otherwise.
       - name: Download CSVs from CBOS (Playwright headless)
-        continue-on-error: true   # partial downloads still feed import; don't skip it on CBOS slowness
+        if: ${{ github.event.inputs.skip_download != 'true' }}
+        continue-on-error: true
         run: |
-          IS_SUNDAY_RUN="${{ github.event.schedule == '30 6 * * 0' }}"
           IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
-          if [ "$IS_SUNDAY_RUN" = "true" ] || [ "$IS_MANUAL_FULL" = "true" ]; then
+          if [ "$IS_MANUAL_FULL" = "true" ]; then
             echo "Running FULL history download..."
             python mo_downloader.py --full
           else
@@ -94,12 +98,9 @@ jobs:
           fi
         timeout-minutes: 35
 
-      # ── Save all CSVs + ledger to cache after every run ──────────────────────
-      # NO_HISTORY_FY clients (RIMK1258, SHU9BH) have no FY25-26 cache — they need
-      # FY26-27 cached too so CBOS downtime doesn't leave them with 0 trades.
-      # ledger.json cached here so CBOS outages don't blank the ledger column.
+      # ── Save all CSVs + ledger to cache after GHA download ───────────────────
       - name: Save CSVs to cache
-        if: always()
+        if: ${{ github.event.inputs.skip_download != 'true' }}
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
@@ -108,11 +109,13 @@ jobs:
             ledger.json
           key: csvs-${{ steps.cachekeys.outputs.today }}
 
-      # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
+      # ── Step 2: Rebuild trades.json (only when GHA downloaded CSVs) ──────────
+      # When skip_download=true, trades.json is already in the checkout (from VM push).
       - name: Import all CSVs → trades.json
+        if: ${{ github.event.inputs.skip_download != 'true' }}
         run: python import_all.py
 
-      # ── Step 2b: QA gate — warns on bad data but never blocks VM sync/push ─────
+      # ── Step 2b: QA gate ─────────────────────────────────────────────────────
       - name: QA — validate trade counts
         continue-on-error: true
         run: python tests/test_import_counts.py
@@ -130,12 +133,12 @@ jobs:
           rm -f /tmp/vm_key_qa
           python tests/qa_positions.py
 
-      # ── Step 3: Sync Google Sheet ────────────────────────────────────────────
+      # ── Step 3: Sync Google Sheet ─────────────────────────────────────────────
       - name: Sync Google Sheet
-        continue-on-error: true   # GSheet rate limit / yfinance timeout must not block Telegram notify
+        continue-on-error: true
         run: python vm_sync_gsheet.py
 
-      # ── Step 3b: Fetch yesterday's P&L snapshot from VM (for movement delta) ──
+      # ── Step 3b: Fetch P&L snapshot from VM ──────────────────────────────────
       - name: Fetch P&L snapshot from VM
         continue-on-error: true
         env:
@@ -143,14 +146,15 @@ jobs:
         run: |
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_snap
           chmod 600 /tmp/vm_key_snap
-          scp -i /tmp/vm_key_snap -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204:/home/opc/client-tracker-mofsl/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
+          scp -i /tmp/vm_key_snap -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+            opc@152.67.164.204:/home/opc/client-tracker-mofsl/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
           rm -f /tmp/vm_key_snap
 
-      # ── Step 4: Send Telegram ledger summary ────────────────────────────────
+      # ── Step 4: Send Telegram ledger summary ──────────────────────────────────
       - name: Send Telegram notification
         run: python send_notify.py
 
-      # ── Step 4b: Sync clients list from secret into VM's bot_config.json ────
+      # ── Step 4b: Sync clients list to VM bot_config ───────────────────────────
       - name: Sync clients to VM bot_config
         if: always()
         continue-on-error: true
@@ -177,14 +181,13 @@ jobs:
           if patch.get('github_token'): c['github_token']=patch['github_token']
           json.dump(c,open(path,'w'),indent=2)
           print('Synced clients:', list(patch['clients'].keys()))
-          print('github_token updated:', bool(patch.get('github_token')))
           \"" < /tmp/new_clients.json
           rm -f /tmp/vm_key_cfg /tmp/new_clients.json
 
-      # ── Step 5: Push trades.json + ledger.json to VM (bot reads these) ──────
+      # ── Step 5: Push trades.json + ledger.json to VM ─────────────────────────
       - name: Push data files to VM
         if: always()
-        continue-on-error: true   # VM unreachable = skip, don't fail whole run
+        continue-on-error: true
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
@@ -195,8 +198,6 @@ jobs:
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
           VM="opc@152.67.164.204"
           VMDIR="/home/opc/client-tracker-mofsl"
-          # Merge VM's ticker_overrides (has /addticker entries) with runner's (has secret entries)
-          # VM entries take priority so manual fixes are never lost
           $SCP "$VM:$VMDIR/ticker_overrides.json" /tmp/vm_overrides.json 2>/dev/null || true
           python3 -c "import json,sys; json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read())" 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
           python3 -c "import json,os; r=json.loads(open('ticker_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('ticker_overrides.json') else {}; v=json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('/tmp/vm_overrides.json') else {}; m={**r,**v}; json.dump(m,open('ticker_overrides.json','w'),indent=2); print(f'Merged overrides: {len(r)} runner + {len(v)} VM = {len(m)} total')"
@@ -204,7 +205,7 @@ jobs:
           [ -f pnl_snapshot.json ]           && $SCP pnl_snapshot.json           "$VM:$VMDIR/" || true
           [ -f open_positions_snapshot.json ] && $SCP open_positions_snapshot.json "$VM:$VMDIR/" || true
 
-      # ── Step 5b: Commit trades.json + ledger.json to repo (sync_sheet fallback) ─
+      # ── Step 5b: Commit data files to repo ───────────────────────────────────
       - name: Commit data files to repo
         if: always()
         continue-on-error: true
@@ -228,7 +229,6 @@ jobs:
           printf '%s' "$BOT_CONFIG" > bot_config.json
           IS_FULL="false"
           [ "${{ github.event.inputs.full_history }}" = "true" ] && IS_FULL="true"
-          [ "${{ github.event.schedule }}" = "30 6 * * 0" ] && IS_FULL="true"
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
             --full "$IS_FULL"
