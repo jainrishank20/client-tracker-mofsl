@@ -1,8 +1,7 @@
 name: Setup VM Downloader
 
 # One-time setup: install Playwright on Oracle VM and configure cron.
-# Run this once after merging vm_daily_run.sh.
-# Safe to re-run — crontab entries are idempotent.
+# Safe to re-run — idempotent.
 
 on:
   workflow_dispatch:
@@ -12,79 +11,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Install Playwright on VM + configure cron
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Copy vm_daily_run.sh to VM
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
-
-          # Retry SSH up to 5 times — VM occasionally takes a moment to accept connections
-          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=10 opc@152.67.164.204"
+          # Retry SSH
           for attempt in 1 2 3 4 5; do
             echo "=== SSH attempt $attempt ==="
-            $SSH "echo connected" && break
-            echo "Attempt $attempt failed, waiting 30s..."
+            ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 opc@152.67.164.204 "echo connected" && break
             sleep 30
           done
+          scp -i /tmp/vm_key -o StrictHostKeyChecking=no \
+            vm_daily_run.sh \
+            opc@152.67.164.204:/home/opc/client-tracker-mofsl/vm_daily_run.sh
+          rm -f /tmp/vm_key
+
+      - name: Install Playwright + configure cron on VM
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
+          chmod 600 /tmp/vm_key
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=15 opc@152.67.164.204"
 
           $SSH bash << 'REMOTE'
           set -e
           export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
-          echo "=== $(date) — Setting up VM downloader ==="
+          echo "=== $(date) — Installing Playwright ==="
 
-          # Install git if missing
-          if ! command -v git &>/dev/null; then
-            echo "Installing git..."
-            sudo yum install -y git 2>/dev/null || sudo apt-get install -y git 2>/dev/null || true
-          fi
-          echo "git: $(git --version)"
+          chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
 
-          # Clone repo if not already a git repo, else pull
-          if [ ! -d /home/opc/client-tracker-mofsl/.git ]; then
-            echo "Cloning repo..."
-            BOT_CFG_TOKEN=$(python3 -c "import json; c=json.load(open('/home/opc/client-tracker-mofsl/bot_config.json',encoding='utf-8-sig')); print(c.get('github_token',''))" 2>/dev/null || echo "")
-            if [ -n "$BOT_CFG_TOKEN" ]; then
-              git clone "https://x-access-token:${BOT_CFG_TOKEN}@github.com/jainrishank20/client-tracker-mofsl.git" /tmp/repo_clone
-              # Copy .git dir into existing folder (preserves bot_config.json, mo_csvs/)
-              cp -r /tmp/repo_clone/.git /home/opc/client-tracker-mofsl/
-              rm -rf /tmp/repo_clone
-            fi
-          fi
-
-          cd /home/opc/client-tracker-mofsl
-
-          # Pull latest code (gets vm_daily_run.sh)
-          BOT_CFG_TOKEN=$(python3 -c "import json; c=json.load(open('bot_config.json',encoding='utf-8-sig')); print(c.get('github_token',''))" 2>/dev/null || echo "")
-          git remote set-url origin "https://x-access-token:${BOT_CFG_TOKEN}@github.com/jainrishank20/client-tracker-mofsl.git"
-          git fetch origin main
-          git reset --hard origin/main
-          chmod +x vm_daily_run.sh
-
-          # Install Playwright + Chromium (idempotent)
-          echo "=== Installing Playwright ==="
           pip install playwright --quiet
           playwright install chromium
           playwright install-deps chromium
-          echo "Playwright installed: $(playwright --version)"
+          echo "Playwright: $(playwright --version)"
 
-          # Set up crontab (remove old vm_daily_run entries first)
           echo "=== Configuring crontab ==="
           crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true
-          # Mon-Sat 7:30 PM IST = 14:00 UTC — incremental download
+          # Mon-Sat 7:30 PM IST = 14:00 UTC — incremental
           echo "0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false" >> /tmp/new_crontab
-          # Sunday 11:00 AM IST = 05:30 UTC — full download (both FYs)
-          echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"  >> /tmp/new_crontab
+          # Sunday 11:00 AM IST = 05:30 UTC — full (both FYs)
+          echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"   >> /tmp/new_crontab
           crontab /tmp/new_crontab
-          echo "Crontab configured:"
+          echo "Crontab:"
           crontab -l
-
-          echo "=== Setup complete at $(date) ==="
+          echo "=== Setup complete $(date) ==="
           REMOTE
 
           rm -f /tmp/vm_key
 
-      - name: Verify setup
+      - name: Verify + run now
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
@@ -92,4 +73,8 @@ jobs:
           chmod 600 /tmp/vm_key
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
           $SSH "export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:\$PATH; playwright --version && crontab -l | grep vm_daily_run"
+          echo ""
+          echo "Triggering immediate full run on VM..."
+          $SSH "nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh true > /dev/null 2>&1 &"
+          echo "VM run started in background — watch Telegram for completion."
           rm -f /tmp/vm_key
