@@ -30,10 +30,33 @@ jobs:
 
           $SSH bash << 'REMOTE'
           set -e
+          export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
           echo "=== $(date) — Setting up VM downloader ==="
+
+          # Install git if missing
+          if ! command -v git &>/dev/null; then
+            echo "Installing git..."
+            sudo yum install -y git 2>/dev/null || sudo apt-get install -y git 2>/dev/null || true
+          fi
+          echo "git: $(git --version)"
+
+          # Clone repo if not already a git repo, else pull
+          if [ ! -d /home/opc/client-tracker-mofsl/.git ]; then
+            echo "Cloning repo..."
+            BOT_CFG_TOKEN=$(python3 -c "import json; c=json.load(open('/home/opc/client-tracker-mofsl/bot_config.json',encoding='utf-8-sig')); print(c.get('github_token',''))" 2>/dev/null || echo "")
+            if [ -n "$BOT_CFG_TOKEN" ]; then
+              git clone "https://x-access-token:${BOT_CFG_TOKEN}@github.com/jainrishank20/client-tracker-mofsl.git" /tmp/repo_clone
+              # Copy .git dir into existing folder (preserves bot_config.json, mo_csvs/)
+              cp -r /tmp/repo_clone/.git /home/opc/client-tracker-mofsl/
+              rm -rf /tmp/repo_clone
+            fi
+          fi
+
           cd /home/opc/client-tracker-mofsl
 
           # Pull latest code (gets vm_daily_run.sh)
+          BOT_CFG_TOKEN=$(python3 -c "import json; c=json.load(open('bot_config.json',encoding='utf-8-sig')); print(c.get('github_token',''))" 2>/dev/null || echo "")
+          git remote set-url origin "https://x-access-token:${BOT_CFG_TOKEN}@github.com/jainrishank20/client-tracker-mofsl.git"
           git fetch origin main
           git reset --hard origin/main
           chmod +x vm_daily_run.sh
@@ -68,5 +91,5 @@ jobs:
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
-          $SSH "playwright --version && crontab -l | grep vm_daily_run"
+          $SSH "export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:\$PATH; playwright --version && crontab -l | grep vm_daily_run"
           rm -f /tmp/vm_key
