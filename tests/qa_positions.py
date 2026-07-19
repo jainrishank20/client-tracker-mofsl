@@ -40,7 +40,7 @@ for t in open_trades:
 
 # ── CHECK 1: stale MTF positions ──────────────────────────────────────────────
 MTF_PRODUCTS  = {'MTF', 'MTFX', 'MARGIN', 'MTF DELIVERY'}
-MTF_THRESHOLD = timedelta(days=60)
+MTF_THRESHOLD = timedelta(days=120)  # MOFSL allows long MTF holds; 60d was too noisy
 
 stale = []
 for t in open_trades:
