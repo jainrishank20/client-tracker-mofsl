@@ -57,20 +57,24 @@ jobs:
       # ── Rotate cache key monthly so stale/incomplete FY25-26 CSVs don't persist ──
       # Key format: fy2526-csvs-YYYY-MM — auto-invalidates on month rollover.
       # First Sunday of each new month triggers a full re-download.
-      - name: Get cache month key
-        id: month
-        run: echo "ym=$(date +%Y-%m)" >> $GITHUB_OUTPUT
+      - name: Get cache keys
+        id: cachekeys
+        run: |
+          echo "today=$(date +%Y-%m-%d)"   >> $GITHUB_OUTPUT
+          echo "month=$(date +%Y-%m)"      >> $GITHUB_OUTPUT
 
-      # ── Restore FY25-26 CSVs from cache (populated by a --full run) ──────────
-      # FY25-26 is a closed year — data never changes, safe to cache indefinitely.
-      # Daily run downloads FY26-27 fresh; this ensures import sees BOTH years
-      # so P&L reflects full history, not just the current year.
-      - name: Restore FY25-26 CSVs from cache
+      # ── Restore CSVs from cache ───────────────────────────────────────────────
+      # Key is daily (YYYY-MM-DD) so yesterday's run is always a warm fallback.
+      # This ensures NO_HISTORY_FY clients (RIMK1258, SHU9BH) have FY26-27 CSVs
+      # even when CBOS is down — they have nothing in the monthly FY25-26 cache.
+      - name: Restore CSVs from cache
         uses: actions/cache/restore@v4
         with:
           path: mo_csvs
-          key: fy2526-csvs-${{ steps.month.outputs.ym }}
-          restore-keys: fy2526-csvs-
+          key: csvs-${{ steps.cachekeys.outputs.today }}
+          restore-keys: |
+            csvs-
+            fy2526-csvs-
 
       # ── Step 1: Download CSVs + ledger from CBOS ────────────────────────────
       # Full history runs on: Sunday auto-schedule OR manual trigger with full_history=true
@@ -87,13 +91,16 @@ jobs:
           fi
         timeout-minutes: 35
 
-      # ── Cache FY25-26 CSVs after a full run so daily runs can reuse them ────
-      - name: Save FY25-26 CSVs to cache
-        if: github.event.inputs.full_history == 'true' || github.event.schedule == '0 2 * * 0'
+      # ── Save all CSVs to cache after every run (daily key = always fresh fallback) ─
+      # NO_HISTORY_FY clients (RIMK1258, SHU9BH) have no FY25-26 cache — they need
+      # FY26-27 cached too so CBOS downtime doesn't leave them with 0 trades.
+      - name: Save CSVs to cache
+        if: always()
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: mo_csvs
-          key: fy2526-csvs-${{ steps.month.outputs.ym }}
+          key: csvs-${{ steps.cachekeys.outputs.today }}
 
       # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
       - name: Import all CSVs → trades.json
