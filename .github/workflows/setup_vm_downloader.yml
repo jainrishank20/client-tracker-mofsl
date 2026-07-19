@@ -46,7 +46,7 @@ jobs:
 
           chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
 
-          pip install playwright --quiet
+          pip3 install playwright --quiet
           playwright install chromium
           playwright install-deps chromium
           echo "Playwright: $(playwright --version)"
