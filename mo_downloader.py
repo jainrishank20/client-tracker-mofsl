@@ -126,7 +126,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
 async def login(page):
     print("Logging in...")
 
-    await page.goto(LOGIN_URL, wait_until="networkidle")
+    await page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=60000)
     await asyncio.sleep(2)
 
     await page.locator('input[type="text"], input:not([type="password"]):not([type="hidden"])').first.fill(MO_USERNAME)
@@ -185,7 +185,7 @@ async def login(page):
 
         try:
             await page.wait_for_url("**/Home.aspx**", timeout=15000)
-            await page.wait_for_load_state("networkidle")
+            await page.wait_for_load_state("domcontentloaded")
             print("  Logged in successfully.")
             return
         except PWTimeout:
