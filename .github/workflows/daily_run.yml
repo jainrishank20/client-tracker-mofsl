@@ -84,7 +84,7 @@ jobs:
       - name: Download CSVs from CBOS (Playwright headless)
         continue-on-error: true   # partial downloads still feed import; don't skip it on CBOS slowness
         run: |
-          IS_SUNDAY_RUN="${{ github.event.schedule == '0 2 * * 0' }}"
+          IS_SUNDAY_RUN="${{ github.event.schedule == '30 6 * * 0' }}"
           IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
           if [ "$IS_SUNDAY_RUN" = "true" ] || [ "$IS_MANUAL_FULL" = "true" ]; then
             echo "Running FULL history download..."
@@ -228,7 +228,7 @@ jobs:
           printf '%s' "$BOT_CONFIG" > bot_config.json
           IS_FULL="false"
           [ "${{ github.event.inputs.full_history }}" = "true" ] && IS_FULL="true"
-          [ "${{ github.event.schedule }}" = "0 2 * * 0" ] && IS_FULL="true"
+          [ "${{ github.event.schedule }}" = "30 6 * * 0" ] && IS_FULL="true"
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
             --full "$IS_FULL"

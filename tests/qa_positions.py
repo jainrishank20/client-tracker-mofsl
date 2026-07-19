@@ -56,7 +56,7 @@ for t in open_trades:
         stale.append((t['client'], t['script'], t['buy_qty'], t['entry_date'], age.days))
 
 if stale:
-    err(f"{len(stale)} stale MTF position(s) open > 60 days (likely data error — sell CSV missing):")
+    err(f"{len(stale)} stale MTF position(s) open > 120 days (likely data error — sell CSV missing):")
     for client, script, qty, entry, days in sorted(stale):
         err(f"  {client} | {script} | qty={qty} | entry={entry} | {days}d old")
 
