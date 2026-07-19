@@ -63,14 +63,17 @@ jobs:
           echo "today=$(date +%Y-%m-%d)"   >> $GITHUB_OUTPUT
           echo "month=$(date +%Y-%m)"      >> $GITHUB_OUTPUT
 
-      # ── Restore CSVs from cache ───────────────────────────────────────────────
+      # ── Restore CSVs + ledger from cache ─────────────────────────────────────
       # Key is daily (YYYY-MM-DD) so yesterday's run is always a warm fallback.
       # This ensures NO_HISTORY_FY clients (RIMK1258, SHU9BH) have FY26-27 CSVs
       # even when CBOS is down — they have nothing in the monthly FY25-26 cache.
+      # ledger.json is also cached so CBOS outages don't blank the ledger column.
       - name: Restore CSVs from cache
         uses: actions/cache/restore@v4
         with:
-          path: mo_csvs
+          path: |
+            mo_csvs
+            ledger.json
           key: csvs-${{ steps.cachekeys.outputs.today }}
           restore-keys: |
             csvs-
@@ -91,15 +94,18 @@ jobs:
           fi
         timeout-minutes: 35
 
-      # ── Save all CSVs to cache after every run (daily key = always fresh fallback) ─
+      # ── Save all CSVs + ledger to cache after every run ──────────────────────
       # NO_HISTORY_FY clients (RIMK1258, SHU9BH) have no FY25-26 cache — they need
       # FY26-27 cached too so CBOS downtime doesn't leave them with 0 trades.
+      # ledger.json cached here so CBOS outages don't blank the ledger column.
       - name: Save CSVs to cache
         if: always()
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
-          path: mo_csvs
+          path: |
+            mo_csvs
+            ledger.json
           key: csvs-${{ steps.cachekeys.outputs.today }}
 
       # ── Step 2: Rebuild trades.json ─────────────────────────────────────────
