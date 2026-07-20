@@ -9,72 +9,60 @@ on:
 jobs:
   setup:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Copy vm_daily_run.sh to VM
+      - name: Setup VM — single SSH session (SCP + install + cron + run)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
-          # Retry SSH
+          trap 'rm -f /tmp/vm_key' EXIT
+
+          VM="opc@152.67.164.204"
+          OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=20 -o ServerAliveCountMax=10"
+
+          # Wait for SSH to be ready (retry up to 5 times)
           for attempt in 1 2 3 4 5; do
-            echo "=== SSH attempt $attempt ==="
-            ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 opc@152.67.164.204 "echo connected" && break
-            sleep 30
+            echo "=== SSH probe attempt $attempt ==="
+            ssh -i /tmp/vm_key $OPTS "$VM" "echo connected" && break
+            [ $attempt -lt 5 ] && sleep 30 || { echo "VM unreachable"; exit 1; }
           done
-          scp -i /tmp/vm_key -o StrictHostKeyChecking=no \
-            vm_daily_run.sh \
-            opc@152.67.164.204:/home/opc/client-tracker-mofsl/vm_daily_run.sh
-          rm -f /tmp/vm_key
 
-      - name: Install Playwright + configure cron on VM
-        env:
-          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-        run: |
-          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
-          chmod 600 /tmp/vm_key
-          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=15 opc@152.67.164.204"
+          # Copy script in same SSH connection batch
+          scp -i /tmp/vm_key $OPTS vm_daily_run.sh "$VM:/home/opc/client-tracker-mofsl/vm_daily_run.sh"
+          echo "Copied vm_daily_run.sh"
 
-          $SSH bash << 'REMOTE'
-          set -e
-          export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
-          echo "=== $(date) — Installing Playwright ==="
+          # Single SSH session: install + cron + immediate run
+          ssh -i /tmp/vm_key $OPTS "$VM" bash << 'REMOTE'
+set -e
+export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
+echo "=== $(date) — Starting VM setup ==="
 
-          chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
+chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
 
-          pip3 install playwright --quiet
-          playwright install chromium
-          playwright install-deps chromium
-          echo "Playwright: $(playwright --version)"
+echo "--- Installing Playwright ---"
+pip3 install playwright --quiet
+playwright install chromium
+playwright install-deps chromium
+echo "Playwright: $(playwright --version)"
 
-          echo "=== Configuring crontab ==="
-          crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true
-          # Mon-Sat 7:30 PM IST = 14:00 UTC — incremental
-          echo "0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false" >> /tmp/new_crontab
-          # Sunday 11:00 AM IST = 05:30 UTC — full (both FYs)
-          echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"   >> /tmp/new_crontab
-          crontab /tmp/new_crontab
-          echo "Crontab:"
-          crontab -l
-          echo "=== Setup complete $(date) ==="
-          REMOTE
+echo "--- Configuring crontab ---"
+crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true
+# Mon-Sat 7:30 PM IST = 14:00 UTC
+echo "0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false" >> /tmp/new_crontab
+# Sunday 11:00 AM IST = 05:30 UTC
+echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"   >> /tmp/new_crontab
+crontab /tmp/new_crontab
+echo "Crontab installed:"
+crontab -l
 
-          rm -f /tmp/vm_key
+echo "--- Triggering immediate incremental run ---"
+nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1 &
+echo "VM run PID=$! started in background"
 
-      - name: Verify + run now
-        env:
-          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-        run: |
-          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
-          chmod 600 /tmp/vm_key
-          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
-          $SSH "export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:\$PATH; playwright --version && crontab -l | grep vm_daily_run"
-          echo ""
-          echo "Triggering immediate full run on VM..."
-          $SSH "nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh true > /dev/null 2>&1 &"
-          echo "VM run started in background — watch Telegram for completion."
-          rm -f /tmp/vm_key
+echo "=== Setup complete $(date) ==="
+REMOTE
