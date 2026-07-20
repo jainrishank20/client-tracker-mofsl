@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup VM — single SSH session (SCP + install + cron + run)
+      - name: Setup VM
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
@@ -23,46 +23,17 @@ jobs:
           trap 'rm -f /tmp/vm_key' EXIT
 
           VM="opc@152.67.164.204"
-          OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=20 -o ServerAliveCountMax=10"
+          OPTS="-i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=20 -o ServerAliveCountMax=10"
 
-          # Wait for SSH to be ready (retry up to 5 times)
+          echo "=== Waiting for SSH ==="
           for attempt in 1 2 3 4 5; do
-            echo "=== SSH probe attempt $attempt ==="
-            ssh -i /tmp/vm_key $OPTS "$VM" "echo connected" && break
-            [ $attempt -lt 5 ] && sleep 30 || { echo "VM unreachable"; exit 1; }
+            echo "Attempt $attempt..."
+            ssh $OPTS "$VM" "echo connected" && break
+            [ $attempt -lt 5 ] && sleep 30 || { echo "VM unreachable after 5 attempts"; exit 1; }
           done
 
-          # Copy script in same SSH connection batch
-          scp -i /tmp/vm_key $OPTS vm_daily_run.sh "$VM:/home/opc/client-tracker-mofsl/vm_daily_run.sh"
-          echo "Copied vm_daily_run.sh"
+          echo "=== Copying scripts to VM ==="
+          scp $OPTS vm_daily_run.sh vm_setup.sh "$VM:/home/opc/client-tracker-mofsl/"
 
-          # Single SSH session: install + cron + immediate run
-          ssh -i /tmp/vm_key $OPTS "$VM" bash << 'REMOTE'
-set -e
-export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
-echo "=== $(date) — Starting VM setup ==="
-
-chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
-
-echo "--- Installing Playwright ---"
-pip3 install playwright --quiet
-playwright install chromium
-playwright install-deps chromium
-echo "Playwright: $(playwright --version)"
-
-echo "--- Configuring crontab ---"
-crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true
-# Mon-Sat 7:30 PM IST = 14:00 UTC
-echo "0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false" >> /tmp/new_crontab
-# Sunday 11:00 AM IST = 05:30 UTC
-echo "30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true"   >> /tmp/new_crontab
-crontab /tmp/new_crontab
-echo "Crontab installed:"
-crontab -l
-
-echo "--- Triggering immediate incremental run ---"
-nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1 &
-echo "VM run PID=$! started in background"
-
-echo "=== Setup complete $(date) ==="
-REMOTE
+          echo "=== Running setup on VM ==="
+          ssh $OPTS "$VM" "chmod +x /home/opc/client-tracker-mofsl/vm_setup.sh && /home/opc/client-tracker-mofsl/vm_setup.sh"
