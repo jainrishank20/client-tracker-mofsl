@@ -968,6 +968,26 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         trigger_daily_run(chat_id)
         return None  # sent async
 
+    # /update — pull latest code from GitHub and restart the bot process
+    if tl == '/update':
+        send(chat_id, "Pulling latest code from GitHub...")
+        try:
+            token = load_cfg().get('github_token', '')
+            repo  = 'jainrishank20/client-tracker-mofsl'
+            for f in ['telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json']:
+                url  = f'https://raw.githubusercontent.com/{repo}/main/{f}'
+                req_ = urllib.request.Request(url, headers={'Authorization': f'token {token}'})
+                with urllib.request.urlopen(req_, timeout=15) as r:
+                    content = r.read()
+                fpath = os.path.join(BASE, f)
+                with open(fpath + '.new', 'wb') as fh:
+                    fh.write(content)
+                os.replace(fpath + '.new', fpath)
+            send(chat_id, "Code updated. Restarting now...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as e:
+            return f"Update failed: {e}"
+
     # /alert SYMBOL PRICE [above|below]
     m = re.match(r'^/alert\s+([A-Z0-9&.-]+)\s+([\d.]+)(?:\s+(above|below))?$', text.upper())
     if m:
