@@ -809,14 +809,22 @@ try:
         _still_broken = []   # symbols we couldn't resolve
 
         def _try_resolve(raw_sym):
-            """Try common NSE ticker derivations for a raw CBOS symbol name."""
+            """Try common NSE ticker derivations for a raw CBOS symbol name.
+            Returns (ticker, price) on success, (None, None) on failure."""
             # 0. Check ticker_overrides first — fastest and most reliable
             _ov_hit = _overrides.get(raw_sym) or _overrides.get(raw_sym.upper())
             if not _ov_hit:
                 # case-insensitive scan
                 _ov_hit = next((v for k, v in _overrides.items() if k.upper() == raw_sym.upper()), None)
             if _ov_hit:
-                return _ov_hit
+                try:
+                    _info = yf.Ticker(_ov_hit + '.NS').fast_info
+                    _p = _info.get('lastPrice') or _info.get('regularMarketPreviousClose')
+                    if _p:
+                        return _ov_hit, float(_p)
+                except Exception:
+                    pass
+                return _ov_hit, None
 
             candidates = []
             # 1. strip spaces / common suffixes
@@ -832,8 +840,9 @@ try:
             for ticker in unique:
                 try:
                     info = yf.Ticker(ticker + '.NS').fast_info
-                    if info.get('lastPrice') or info.get('regularMarketPreviousClose'):
-                        return ticker
+                    _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    if _p:
+                        return ticker, float(_p)
                 except Exception:
                     pass
             # 3. yfinance Search by company name — handles abbreviations like
@@ -847,21 +856,27 @@ try:
                     ticker = sym_r[:-3]
                     try:
                         info = yf.Ticker(sym_r).fast_info
-                        if info.get('lastPrice') or info.get('regularMarketPreviousClose'):
+                        _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        if _p:
                             print(f"  yfinance Search resolved: {raw_sym} → {ticker}")
-                            return ticker
+                            return ticker, float(_p)
                     except Exception:
                         pass
             except Exception:
                 pass
-            return None
+            return None, None
 
+        # {sym: ticker} and {sym: price} for direct cell writes
+        _auto_fixed   = {}
+        _auto_prices  = {}
         for _sym in _na_symbols:
-            _resolved = _try_resolve(_sym)
-            if _resolved:
-                _overrides[_sym] = _resolved
-                _auto_fixed[_sym] = _resolved
-                print(f"QA auto-fixed: {_sym} → {_resolved}")
+            _ticker, _price = _try_resolve(_sym)
+            if _ticker:
+                _overrides[_sym] = _ticker
+                _auto_fixed[_sym] = _ticker
+                if _price:
+                    _auto_prices[_sym] = _price
+                print(f"QA auto-fixed: {_sym} → {_ticker}" + (f" (price={_price})" if _price else " (no price)"))
             else:
                 _still_broken.append(_sym)
                 print(f"QA could not resolve: {_sym}")
@@ -870,10 +885,25 @@ try:
         if _auto_fixed:
             with open(TICKER_OVERRIDES_FILE, 'w') as _f:
                 json.dump(_overrides, _f, indent=2)
-            # Re-run sync so the sheet gets updated CMP values immediately
-            print("Re-syncing GSheet with auto-resolved tickers...")
-            result2 = sync_to_gsheet(trades)
-            print(f"Re-sync done: {result2}")
+
+            # Write confirmed prices directly to the N/A cells — avoids GOOGLEFINANCE fallback
+            if _auto_prices:
+                import gspread as _gs
+                _cell_updates = []
+                for _row_idx, _row in enumerate(_vals[1:], start=2):
+                    _sym = _row[_sym_i].strip() if len(_row) > _sym_i else ''
+                    if _sym in _auto_prices and str(_row[_cmp_i]).strip() in ('#N/A', '#ERROR!', '#REF!', '#VALUE!', '—'):
+                        _cell_updates.append(_gs.Cell(_row_idx, _cmp_i + 1, round(_auto_prices[_sym], 2)))
+                if _cell_updates:
+                    _ws_op.update_cells(_cell_updates, value_input_option='USER_ENTERED')
+                    print(f"  Direct-wrote CMP for {len(_cell_updates)} cells")
+
+            # Full re-sync for any auto-fixed symbols where we couldn't get a live price
+            _needs_resync = [s for s in _auto_fixed if s not in _auto_prices]
+            if _needs_resync:
+                print(f"Re-syncing GSheet for {_needs_resync} (no live price available)...")
+                result2 = sync_to_gsheet(trades)
+                print(f"Re-sync done: {result2}")
 
         # Send Telegram summary
         _token    = _cfg.get("telegram_token", "")
