@@ -22,13 +22,12 @@ jobs:
 
       - name: Reconstruct credentials
         env:
-          BOT_CONFIG:   ${{ secrets.BOT_CONFIG }}
-          GSHEET_KEY:   ${{ secrets.GSHEET_KEY }}
-          TICKER_OVERRIDES: ${{ secrets.TICKER_OVERRIDES }}
+          BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+          GSHEET_KEY: ${{ secrets.GSHEET_KEY }}
         run: |
-          printf '%s' "$BOT_CONFIG"       > bot_config.json
-          printf '%s' "$GSHEET_KEY"       > gsheet_key.json
-          printf '%s' "$TICKER_OVERRIDES" > ticker_overrides_secret.json
+          printf '%s' "$BOT_CONFIG" > bot_config.json
+          printf '%s' "$GSHEET_KEY" > gsheet_key.json
+          # ticker_overrides.json comes from git checkout — authoritative source
 
       - name: Pull trades.json + ledger.json from VM
         continue-on-error: true
@@ -44,25 +43,9 @@ jobs:
           if [ ! -f trades.json ]; then echo "ERROR: No trades.json from VM or repo — cannot sync"; exit 1; fi
           echo "trades.json: $(wc -l < trades.json) lines"
 
-      - name: Merge ticker overrides (repo wins for new entries)
-        run: |
-          python3 -c "
-          import json, os, sys
-          sys.path.insert(0, '.')
-          repo = json.loads(open('ticker_overrides.json', encoding='utf-8-sig').read())
-          sec  = json.loads(open('ticker_overrides_secret.json', encoding='utf-8-sig').read()) if os.path.exists('ticker_overrides_secret.json') else {}
-          merged = {**sec, **repo}
-          json.dump(merged, open('ticker_overrides.json', 'w'), indent=2)
-          print(f'Merged: {len(merged)} overrides')
-          # Debug: test resolution of known problem symbols
-          from symbol_map import resolve
-          for s in ['DIVISLABORATORIES', 'AMARARAJAENERGYMOB', 'IONEXCHANGEINDIA', 'INDIANBANK']:
-              print(f'  resolve({s}) -> {resolve(s, merged)}')
-          "
-
       - name: Sync Google Sheet
         run: python vm_sync_gsheet.py
 
       - name: Cleanup
         if: always()
-        run: rm -f bot_config.json gsheet_key.json ticker_overrides_secret.json
+        run: rm -f bot_config.json gsheet_key.json
