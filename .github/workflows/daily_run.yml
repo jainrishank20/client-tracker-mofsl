@@ -52,14 +52,13 @@ jobs:
 
       - name: Reconstruct credentials
         env:
-          BOT_CONFIG:       ${{ secrets.BOT_CONFIG }}
-          GSHEET_KEY:       ${{ secrets.GSHEET_KEY }}
-          TICKER_OVERRIDES: ${{ secrets.TICKER_OVERRIDES }}
+          BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+          GSHEET_KEY: ${{ secrets.GSHEET_KEY }}
         run: |
-          printf '%s' "$BOT_CONFIG"       > bot_config.json
-          printf '%s' "$GSHEET_KEY"       > gsheet_key.json
-          printf '%s' "$TICKER_OVERRIDES" > ticker_overrides.json
+          printf '%s' "$BOT_CONFIG" > bot_config.json
+          printf '%s' "$GSHEET_KEY" > gsheet_key.json
           mkdir -p mo_csvs
+          # ticker_overrides.json comes from git checkout — no secret needed
 
       - name: Get cache keys
         id: cachekeys
@@ -235,4 +234,4 @@ jobs:
 
       - name: Cleanup credentials
         if: always()
-        run: rm -f bot_config.json gsheet_key.json ticker_overrides.json
+        run: rm -f bot_config.json gsheet_key.json
