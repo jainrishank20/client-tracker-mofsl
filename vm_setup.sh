@@ -25,12 +25,29 @@ crontab /tmp/new_crontab
 echo "Crontab installed:"
 crontab -l
 
-echo "--- Restarting Telegram bot ---"
-pkill -f 'python3.*telegram_bot' || true
-sleep 2
-cd /home/opc/client-tracker-mofsl
-nohup python3 telegram_bot.py >> /home/opc/telegram_bot.log 2>&1 &
-echo "Bot PID=$! started"
+echo "--- Setting up Telegram bot as systemd service ---"
+sudo tee /etc/systemd/system/tgbot.service > /dev/null << 'EOF'
+[Unit]
+Description=Client Tracker Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=opc
+WorkingDirectory=/home/opc/client-tracker-mofsl
+ExecStart=/usr/bin/python3 /home/opc/client-tracker-mofsl/telegram_bot.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/opc/telegram_bot.log
+StandardError=append:/home/opc/telegram_bot.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable tgbot
+sudo systemctl restart tgbot
+echo "Bot service status: $(sudo systemctl is-active tgbot)"
 
 echo "--- Triggering immediate incremental run in background ---"
 nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1 &

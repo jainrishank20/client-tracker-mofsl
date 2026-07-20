@@ -2,7 +2,7 @@ name: Stale Data Alert
 
 on:
   schedule:
-    - cron: '45 15 * * 1-5'   # 9:15 PM IST weekdays (45 min after daily_run is due)
+    - cron: '45 15 * * 0-6'   # 9:15 PM IST every day (Sun: 10h after VM run; Mon-Sat: 45m after daily_run)
   workflow_dispatch:
 
 jobs:

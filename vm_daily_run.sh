@@ -32,24 +32,26 @@ except Exception as e:
     sys.exit(1)
 ")
 
-# Pull latest Python scripts from GitHub (no git needed)
+# Pull latest Python scripts from GitHub API (always fresh, no CDN caching)
 echo "Updating scripts from GitHub..."
 for f in mo_downloader.py import_all.py symbol_map.py telegram_bot.py ticker_overrides.json tests/test_import_counts.py tests/qa_positions.py; do
     mkdir -p "$(dirname "$f")"
-    curl -sf -H "Authorization: token ${GITHUB_TOKEN}" \
-        "https://raw.githubusercontent.com/${REPO}/main/${f}" -o "${f}.new" \
+    curl -sf \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Accept: application/vnd.github.v3.raw" \
+        "https://api.github.com/repos/${REPO}/contents/${f}?ref=main" -o "${f}.new" \
         && mv "${f}.new" "${f}" \
         || { echo "  Warning: could not update $f"; rm -f "${f}.new"; }
 done
 echo "Scripts updated."
 
-# Download CSVs + ledger from CBOS
+# Download CSVs + ledger from CBOS (hard timeout: 45 min for full, 20 min incremental)
 if [ "$IS_FULL" = "true" ]; then
     echo "Running FULL download (FY25-26 + FY26-27)..."
-    python3 mo_downloader.py --full
+    timeout 2700 python3 mo_downloader.py --full || { echo "ERROR: mo_downloader.py timed out or failed"; exit 1; }
 else
     echo "Running incremental download (FY26-27)..."
-    python3 mo_downloader.py
+    timeout 1200 python3 mo_downloader.py || { echo "ERROR: mo_downloader.py timed out or failed"; exit 1; }
 fi
 
 # Import CSVs → trades.json

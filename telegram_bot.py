@@ -1149,6 +1149,12 @@ def main():
                         send(chat_id, reply)
                 except Exception as e:
                     send(chat_id, f"Error: {e}")
+        except urllib.error.HTTPError as e:
+            if e.code == 409:
+                print("FATAL: 409 Conflict — another bot instance is running. Exiting.")
+                sys.exit(1)
+            print(f"HTTP {e.code}: {e} — retrying in 10s")
+            time.sleep(10)
         except urllib.error.URLError as e:
             print(f"Network error: {e} — retrying in 5s")
             time.sleep(5)
