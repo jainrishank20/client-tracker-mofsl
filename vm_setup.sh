@@ -25,6 +25,13 @@ crontab /tmp/new_crontab
 echo "Crontab installed:"
 crontab -l
 
+echo "--- Restarting Telegram bot ---"
+pkill -f 'python3.*telegram_bot' || true
+sleep 2
+cd /home/opc/client-tracker-mofsl
+nohup python3 telegram_bot.py >> /home/opc/telegram_bot.log 2>&1 &
+echo "Bot PID=$! started"
+
 echo "--- Triggering immediate incremental run in background ---"
 nohup /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1 &
 echo "VM run PID=$! started"
