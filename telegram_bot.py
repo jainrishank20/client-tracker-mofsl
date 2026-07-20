@@ -734,10 +734,15 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     if not terms:
         return None
     open_trades = [t for t in trades if not t.get('exit_date')]
+    _ov = load_overrides()
+    def _matches(t):
+        script = (t.get('script') or '').upper()
+        ticker = sym(t.get('script', ''), _ov).upper()
+        return any(term in script or term in ticker for term in terms)
     matches: dict[str, set] = {}
     for t in open_trades:
-        script = (t.get('script') or '').upper()
-        if any(term in script for term in terms):
+        if _matches(t):
+            script = (t.get('script') or '').upper()
             matches.setdefault(t.get('client', ''), set()).add(script)
     if not matches:
         return f"No open positions found matching '{' '.join(terms)}'."
@@ -746,7 +751,7 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     cost_map:  dict[str, dict[str, float]] = {}  # total cost (qty * price)
     for t in open_trades:
         script = (t.get('script') or '').upper()
-        if any(term in script for term in terms):
+        if _matches(t):
             c   = t.get('client', '')
             qty = float(t.get('buy_qty') or 0)
             bp  = float(t.get('buy_price') or 0)
