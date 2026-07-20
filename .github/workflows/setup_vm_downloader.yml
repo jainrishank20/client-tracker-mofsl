@@ -33,7 +33,7 @@ jobs:
           done
 
           echo "=== Copying scripts to VM ==="
-          scp $OPTS vm_daily_run.sh vm_setup.sh "$VM:/home/opc/client-tracker-mofsl/"
+          scp $OPTS vm_daily_run.sh vm_setup.sh ticker_overrides.json "$VM:/home/opc/client-tracker-mofsl/"
 
           echo "=== Running setup on VM ==="
           ssh $OPTS "$VM" "chmod +x /home/opc/client-tracker-mofsl/vm_setup.sh && /home/opc/client-tracker-mofsl/vm_setup.sh"
