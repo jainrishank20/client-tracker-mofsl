@@ -79,6 +79,16 @@ def fetch_cmp(scripts):
                 result[s] = price
             except Exception:
                 pass
+        # fast_info fallback for any ticker that yf.download missed
+        missing = {s: t for s, t in ticker_map.items() if s not in result}
+        for s, ticker in missing.items():
+            try:
+                info = yf.Ticker(ticker + '.NS').fast_info
+                price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                if price:
+                    result[s] = float(price)
+            except Exception:
+                pass
         print(f"  yfinance fetched CMP for {len(result)}/{len(scripts)} scripts")
         return result
     except Exception as e:
