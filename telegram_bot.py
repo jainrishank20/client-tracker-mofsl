@@ -257,9 +257,7 @@ def _table(headers: list, rows: list) -> str:
             parts.append(s.ljust(w) if align == 'l' else s.rjust(w))
         return '  '.join(parts)
     sep = '─' * (sum(widths) + 2 * (len(widths) - 1))
-    aligns = ['l'] + ['r'] * (len(headers) - 1)
-    aligns[0] = 'r'  # serial number right-aligned
-    aligns[1] = 'l'  # script name left-aligned
+    aligns = ['r', 'l'] + ['r'] * (len(headers) - 2)
     lines = [
         f"`{fmt_row(headers, aligns)}`",
         f"`{sep}`",
@@ -888,10 +886,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     if tl in ('/summary', 'summary'):
         open_t   = [t for t in trades if not t.get('exit_date')]
         closed_t = [t for t in trades if t.get('exit_date')]
-        total_pnl = sum(
-            (t.get('sell_price', 0) - t.get('buy_price', 0)) * t.get('sell_qty', t.get('buy_qty', 0))
-            for t in closed_t
-        )
+        total_pnl = sum(_net_pnl(t) for t in closed_t)
         sign = '+' if total_pnl >= 0 else ''
         return (
             f"*Summary*\n"
@@ -967,26 +962,6 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     if tl == '/run':
         trigger_daily_run(chat_id)
         return None  # sent async
-
-    # /update — pull latest code from GitHub and restart the bot process
-    if tl == '/update':
-        send(chat_id, "Pulling latest code from GitHub...")
-        try:
-            token = load_cfg().get('github_token', '')
-            repo  = 'jainrishank20/client-tracker-mofsl'
-            for f in ['telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json']:
-                url  = f'https://raw.githubusercontent.com/{repo}/main/{f}'
-                req_ = urllib.request.Request(url, headers={'Authorization': f'token {token}'})
-                with urllib.request.urlopen(req_, timeout=15) as r:
-                    content = r.read()
-                fpath = os.path.join(BASE, f)
-                with open(fpath + '.new', 'wb') as fh:
-                    fh.write(content)
-                os.replace(fpath + '.new', fpath)
-            send(chat_id, "Code updated. Restarting now...")
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-        except Exception as e:
-            return f"Update failed: {e}"
 
     # /alert SYMBOL PRICE [above|below]
     m = re.match(r'^/alert\s+([A-Z0-9&.-]+)\s+([\d.]+)(?:\s+(above|below))?$', text.upper())
