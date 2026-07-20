@@ -34,7 +34,7 @@ except Exception as e:
 
 # Pull latest Python scripts from GitHub (no git needed)
 echo "Updating scripts from GitHub..."
-for f in mo_downloader.py import_all.py symbol_map.py telegram_bot.py tests/test_import_counts.py tests/qa_positions.py; do
+for f in mo_downloader.py import_all.py symbol_map.py telegram_bot.py ticker_overrides.json tests/test_import_counts.py tests/qa_positions.py; do
     mkdir -p "$(dirname "$f")"
     curl -sf -H "Authorization: token ${GITHUB_TOKEN}" \
         "https://raw.githubusercontent.com/${REPO}/main/${f}" -o "${f}.new" \
