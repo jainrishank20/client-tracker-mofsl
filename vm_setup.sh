@@ -7,10 +7,12 @@ echo "=== $(date) — Starting VM setup ==="
 
 chmod +x /home/opc/client-tracker-mofsl/vm_daily_run.sh
 
-echo "--- Installing Playwright ---"
+echo "--- Installing/updating Playwright ---"
 pip3 install playwright --quiet
+# Install chromium only if not already present
 playwright install chromium
-playwright install-deps chromium
+# NOTE: playwright install-deps uses apt-get which doesn't exist on Oracle Linux (yum-based).
+# System deps are already present since the user runs Playwright manually on this VM.
 echo "Playwright: $(playwright --version)"
 
 echo "--- Configuring crontab ---"
