@@ -97,7 +97,13 @@ def _calc_unrealized_pnl() -> dict:
                 # yfinance ≥0.2.18 returns MultiIndex even for one ticker
                 cmp_data[unique[0]] = float(df['Close'].squeeze().dropna().iloc[-1])
             except Exception:
-                pass
+                try:
+                    info = yf.Ticker(ns_tickers[0]).fast_info
+                    price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    if price:
+                        cmp_data[unique[0]] = float(price)
+                except Exception:
+                    pass
         else:
             df = yf.download(ns_tickers, period='1d', interval='1m',
                              progress=False, auto_adjust=True, timeout=20)
@@ -105,7 +111,13 @@ def _calc_unrealized_pnl() -> dict:
                 try:
                     cmp_data[sym] = float(df['Close'][ns].dropna().iloc[-1])
                 except Exception:
-                    pass
+                    try:
+                        info = yf.Ticker(ns).fast_info
+                        price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        if price:
+                            cmp_data[sym] = float(price)
+                    except Exception:
+                        pass
     except Exception as e:
         print(f"yfinance fetch failed: {e}")
         return {}

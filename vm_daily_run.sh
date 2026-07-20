@@ -110,6 +110,10 @@ HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
   -d "{\"ref\":\"main\",\"inputs\":{\"skip_download\":\"true\",\"full_history\":\"${IS_FULL}\"}}" \
   "https://api.github.com/repos/${REPO}/actions/workflows/daily_run.yml/dispatches")
 echo "Triggered GHA daily_run.yml — HTTP $HTTP"
+if [ "$HTTP" != "204" ]; then
+  echo "ERROR: GHA workflow dispatch failed (HTTP $HTTP) — GSheet sync will not run."
+  exit 1
+fi
 
 echo "=== Done $(date '+%Y-%m-%d %H:%M:%S') ==="
 } >> "$LOG" 2>&1

@@ -309,6 +309,8 @@ if __name__ == '__main__':
         print(f'  {c}: {len(op)} open, {len(cl)} closed | P&L Rs {p:>10,.0f} | Capital Rs {k:>12,.0f}')
 
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trades.json')
-    with open(out, 'w') as f:
+    _tmp = out + '.tmp'
+    with open(_tmp, 'w') as f:
         json.dump(all_trades, f, indent=2)
+    os.replace(_tmp, out)
     print(f'\nSaved to {out}')

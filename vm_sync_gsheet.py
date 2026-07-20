@@ -69,6 +69,13 @@ def fetch_cmp(scripts):
                 price = float(df['Close'].squeeze().dropna().iloc[-1])
                 return {s: price for s, t in ticker_map.items() if t == unique_tickers[0]}
             except Exception:
+                try:
+                    info = yf.Ticker(ns_tickers[0]).fast_info
+                    price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    if price:
+                        return {s: float(price) for s, t in ticker_map.items() if t == unique_tickers[0]}
+                except Exception:
+                    pass
                 return {}
         df = yf.download(ns_tickers, period='1d', interval='1m',
                          progress=False, auto_adjust=True, timeout=20)

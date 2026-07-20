@@ -89,14 +89,17 @@ def send(token, chat_id, text):
         )
     except Exception as e:
         # Fallback: plain text
-        data2 = urllib.parse.urlencode({
-            'chat_id': chat_id,
-            'text': text.replace('*','').replace('`','').replace('\\',''),
-        }).encode()
-        urllib.request.urlopen(
-            urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=data2),
-            timeout=15
-        )
+        try:
+            data2 = urllib.parse.urlencode({
+                'chat_id': chat_id,
+                'text': text.replace('*','').replace('`','').replace('\\',''),
+            }).encode()
+            urllib.request.urlopen(
+                urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=data2),
+                timeout=15
+            )
+        except Exception as e2:
+            print(f"Health alert send failed (both MarkdownV2 and plain): {e2}")
 
 chat_ids = [c.strip() for c in str(cfg['allowed_chat_id']).split(',')]
 for cid in chat_ids:
