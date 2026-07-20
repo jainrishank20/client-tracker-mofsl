@@ -267,7 +267,10 @@ def send(token, chat_id):
 # Send to all chat IDs (comma-separated in config)
 chat_ids = [c.strip() for c in str(cfg['allowed_chat_id']).split(',')]
 for chat_id in chat_ids:
-    send(cfg['telegram_token'], chat_id)
-    print(f'Sent to {chat_id}!')
+    try:
+        send(cfg['telegram_token'], chat_id)
+        print(f'Sent to {chat_id}!')
+    except Exception as e:
+        print(f'Failed to send to {chat_id}: {e}')
 
 print(msg)
