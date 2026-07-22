@@ -861,6 +861,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             "/pnl — realized P&L by client\n"
             "/today — all trades entered/exited today\n"
             "/run — trigger daily pipeline\n"
+            "/fixcron — re-install VM crontab (use if daily run stops firing)\n"
             "/update — pull latest bot code from GitHub & restart\n"
             "/addticker SYMBOL TICKER — fix #N/A CMP (e.g. /addticker EIMCOELECONINDIA EIMCOELECO)\n"
             "/alert SYM PRICE [above|below] — price alert\n"
@@ -962,6 +963,28 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     if tl == '/run':
         trigger_daily_run(chat_id)
         return None  # sent async
+
+    # /fixcron — re-install VM crontab from inside the VM (bypasses GHA SSH block)
+    if tl == '/fixcron':
+        def _fixcron():
+            try:
+                import subprocess
+                send(chat_id, "Re-installing crontab on VM...")
+                script = (
+                    "crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true\n"
+                    "echo '0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
+                    "echo '30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true  >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
+                    "crontab /tmp/new_crontab\n"
+                    "echo 'Crontab installed:'\n"
+                    "crontab -l\n"
+                )
+                result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, timeout=30)
+                out = (result.stdout + result.stderr).strip()
+                send(chat_id, f"Crontab result:\n```\n{out}\n```")
+            except Exception as e:
+                send(chat_id, f"fixcron failed: {e}")
+        threading.Thread(target=_fixcron, daemon=True).start()
+        return None
 
     # /alert SYMBOL PRICE [above|below]
     m = re.match(r'^/alert\s+([A-Z0-9&.-]+)\s+([\d.]+)(?:\s+(above|below))?$', text.upper())
