@@ -864,6 +864,20 @@ try:
                         pass
             except Exception:
                 pass
+            # 4. Progressive prefix truncation — CBOS concatenates full company names
+            #    onto the real NSE ticker (e.g. AEGISVOPAKTERMINALS → AEGISVOPAK).
+            #    NSE tickers are max 10 chars, so try prefixes 10→6.
+            if len(clean) > 10:
+                for length in range(10, 5, -1):
+                    prefix = clean[:length]
+                    try:
+                        info = yf.Ticker(prefix + '.NS').fast_info
+                        _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        if _p:
+                            print(f"  prefix truncation resolved: {raw_sym} → {prefix}")
+                            return prefix, float(_p)
+                    except Exception:
+                        pass
             return None, None
 
         # {sym: ticker} and {sym: price} for direct cell writes
