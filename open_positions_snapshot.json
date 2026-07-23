@@ -5,6 +5,7 @@
       "CARBORUNDUM UNIVERSAL"
     ],
     "RIMK1209": [
+      "AEGIS VOPAK TERMINALS",
       "BAJAJ HOUSING FINANCE",
       "BEML",
       "BHARAT COKING COAL",
@@ -15,7 +16,6 @@
       "CITY UNION BANK",
       "CLEAN SCIENCE & TECH",
       "COHANCE LIFESCIENCES",
-      "DATA PATTERNS INDIA",
       "DR. REDDY S LABORATORIES",
       "EDELWEISS FIN SERV",
       "EIMCO ELECON (INDIA)",
@@ -23,6 +23,7 @@
       "GRANULES INDIA",
       "HAVELLS INDIA",
       "HDFC LIFE INS",
+      "HFCL",
       "IDBI BANK",
       "IFCI",
       "INDIAN BANK",
@@ -42,7 +43,7 @@
       "LARSEN & TOUBRO",
       "LUX INDUSTRIES",
       "MIC ELECTRONICS",
-      "MRPL",
+      "NACL INDUSTRIES",
       "NATCO PHARMA",
       "NCC",
       "NETWEB TECHNOLOGIES",
@@ -88,16 +89,14 @@
       "VIKRAM SOLAR"
     ],
     "RIMK1238": [
-      "BIOCON",
-      "HAVELLS INDIA",
-      "HDFC LIFE INS",
-      "INOX WIND",
-      "LARSEN & TOUBRO",
-      "NUVOCO VISTAS CORP",
+      "BSE",
+      "KAYNES TECHNOLOGY IND",
+      "REC",
+      "SCHAEFFLER INDIA",
       "SHIPPING CORP OF INDIA LT",
       "SUZLON ENERGY",
-      "TRANSPORT CORP OF INDIA",
-      "VIKRAM SOLAR"
+      "VIKRAM SOLAR",
+      "WIPRO"
     ],
     "RIMK1247": [
       "WOCKHARDT"
@@ -105,8 +104,6 @@
     "RIMK1248": [
       "BIOCON",
       "BSE",
-      "CANARA ROBECO AMC",
-      "DATA PATTERNS INDIA",
       "EPACK PREFAB TECHN",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
