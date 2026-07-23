@@ -975,7 +975,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                 import subprocess
                 send(chat_id, "Re-installing crontab on VM...")
                 script = (
-                    "crontab -l 2>/dev/null | grep -v 'vm_daily_run' > /tmp/new_crontab || true\n"
+                    "crontab -l 2>/dev/null | grep -vE 'vm_daily|pull_from_github|streamlit' > /tmp/new_crontab || true\n"
                     "echo '0 14 * * 1-6 /home/opc/client-tracker-mofsl/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
                     "echo '30 5 * * 0  /home/opc/client-tracker-mofsl/vm_daily_run.sh true  >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
                     "crontab /tmp/new_crontab\n"
