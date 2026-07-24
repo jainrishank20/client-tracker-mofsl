@@ -969,6 +969,27 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         trigger_daily_run(chat_id)
         return None  # sent async
 
+    # /fixdeps — reinstall Playwright system dependencies on VM
+    if tl == '/fixdeps':
+        def _fixdeps():
+            try:
+                import subprocess
+                send(chat_id, "Installing missing Playwright deps on VM (may take ~60s)...")
+                script = (
+                    "sudo dnf install -y atk at-spi2-atk cups-libs libdrm libgbm "
+                    "libxkbcommon alsa-lib pango cairo gtk3 2>&1 | tail -5\n"
+                    "echo '--- playwright install-deps ---'\n"
+                    "cd /home/opc/client-tracker-mofsl && python -m playwright install-deps chromium 2>&1 | tail -10\n"
+                    "echo 'Done.'\n"
+                )
+                result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, timeout=120)
+                out = (result.stdout + result.stderr).strip()[-3000:]
+                send(chat_id, f"fixdeps result:\n```\n{out}\n```")
+            except Exception as e:
+                send(chat_id, f"fixdeps failed: {e}")
+        threading.Thread(target=_fixdeps, daemon=True).start()
+        return None
+
     # /vmlog — tail VM daily run log to diagnose cron failures
     if tl == '/vmlog':
         def _vmlog():
