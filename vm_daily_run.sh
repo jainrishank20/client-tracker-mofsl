@@ -9,11 +9,28 @@
 set -e
 export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
 
-
 IS_FULL=${1:-false}
 REPO_DIR=/home/opc/client-tracker-mofsl
 REPO="jainrishank20/client-tracker-mofsl"
 LOG=/home/opc/vm_daily_run.log
+
+# Always send Telegram on exit (success or failure)
+_tg_notify() {
+  TG_TOKEN=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(c.get('telegram_token',''))" 2>/dev/null)
+  TG_CHAT=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(c.get('allowed_chat_id',''))" 2>/dev/null)
+  if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
+    LAST=$(tail -3 "$LOG" | grep "=== Done" | wc -l)
+    if [ "$LAST" -gt 0 ]; then
+      MSG="Pipeline done ($(date '+%d %b %I:%M %p IST')) — GHA triggered. Check dashboard."
+    else
+      ERRMSG=$(tail -5 "$LOG" | grep -i "error\|fail\|timed out" | tail -1)
+      MSG="Pipeline FAILED at $(date '+%d %b %I:%M %p IST'). Error: ${ERRMSG:-unknown}. Check /vmlog."
+    fi
+    curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+      -d "chat_id=${TG_CHAT}&text=${MSG}" > /dev/null
+  fi
+}
+trap _tg_notify EXIT
 
 {
 echo ""
@@ -120,20 +137,3 @@ fi
 
 echo "=== Done $(date '+%Y-%m-%d %H:%M:%S') ==="
 } >> "$LOG" 2>&1
-
-# Send Telegram notification (uses bot_config.json for token + chat_id)
-TG_TOKEN=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(c.get('telegram_token',''))" 2>/dev/null)
-TG_CHAT=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(c.get('allowed_chat_id',''))" 2>/dev/null)
-
-if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
-  # Check if pipeline succeeded (last line of log should be "=== Done ...")
-  LAST=$(tail -3 "$LOG" | grep "=== Done" | wc -l)
-  if [ "$LAST" -gt 0 ]; then
-    MSG="Pipeline done ($(date '+%d %b %I:%M %p IST')) — GHA triggered. Check dashboard."
-  else
-    ERRMSG=$(tail -5 "$LOG" | grep -i "error\|fail\|timed out" | tail -1)
-    MSG="Pipeline FAILED at $(date '+%d %b %I:%M %p IST'). Last error: ${ERRMSG:-unknown}. Check /vmlog."
-  fi
-  curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-    -d "chat_id=${TG_CHAT}&text=${MSG}" > /dev/null
-fi
