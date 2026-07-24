@@ -26,11 +26,15 @@ def _ensure_playwright_deps():
                             f'echo "{lib_dir}" > /etc/ld.so.conf.d/atk-fix.conf && ldconfig'],
                            timeout=10, check=False)
             return
-        # Step 2: try yum install (faster/more reliable than dnf on Oracle Linux)
-        print("Trying yum install atk...", flush=True)
-        subprocess.run(['sudo', 'yum', 'install', '-y', '--setopt=timeout=20', 'atk'],
-                       timeout=90, check=False)
-        print("yum install done.", flush=True)
+        # Step 2: download RPM directly (avoids yum/dnf which can hang on this VM)
+        print("Downloading atk RPM directly...", flush=True)
+        rpm_url = "https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/atk-2.36.0-5.el9.x86_64.rpm"
+        subprocess.run(['curl', '-sSL', rpm_url, '-o', '/tmp/atk.rpm', '--connect-timeout', '15', '--max-time', '60'],
+                       timeout=70, check=False)
+        subprocess.run(['sudo', 'rpm', '-ivh', '--nodeps', '/tmp/atk.rpm'],
+                       timeout=30, check=False)
+        subprocess.run(['sudo', 'ldconfig'], timeout=10, check=False)
+        print("atk RPM install done.", flush=True)
     except Exception as e:
         print(f"Warning: dep self-heal failed: {e}", flush=True)
 
