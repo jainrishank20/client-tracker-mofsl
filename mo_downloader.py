@@ -12,17 +12,27 @@ from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 # Self-heal: install missing Playwright system dependencies if libatk is absent
 def _ensure_playwright_deps():
     try:
-        result = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True, timeout=5)
-        if 'libatk-1.0' not in result.stdout:
-            print("libatk-1.0 missing — installing Playwright system deps...", flush=True)
-            subprocess.run(
-                ['sudo', 'dnf', 'install', '-y', 'atk', 'at-spi2-atk', 'cups-libs',
-                 'libdrm', 'libgbm', 'libxkbcommon', 'alsa-lib', 'pango', 'cairo', 'gtk3'],
-                timeout=300, check=False
-            )
-            print("Playwright deps install complete.", flush=True)
+        r = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True, timeout=5)
+        if 'libatk-1.0' in r.stdout:
+            return  # already present
+        print("libatk-1.0 missing — attempting self-heal...", flush=True)
+        # Step 1: check if library exists but isn't linked
+        r2 = subprocess.run(['find', '/usr', '/lib', '/lib64', '-name', 'libatk-1.0*'],
+                            capture_output=True, text=True, timeout=15)
+        if r2.stdout.strip():
+            lib_dir = os.path.dirname(r2.stdout.strip().splitlines()[0])
+            print(f"Library found at {lib_dir} — refreshing ldconfig", flush=True)
+            subprocess.run(['sudo', 'bash', '-c',
+                            f'echo "{lib_dir}" > /etc/ld.so.conf.d/atk-fix.conf && ldconfig'],
+                           timeout=10, check=False)
+            return
+        # Step 2: try yum install (faster/more reliable than dnf on Oracle Linux)
+        print("Trying yum install atk...", flush=True)
+        subprocess.run(['sudo', 'yum', 'install', '-y', '--setopt=timeout=20', 'atk'],
+                       timeout=90, check=False)
+        print("yum install done.", flush=True)
     except Exception as e:
-        print(f"Warning: dep check failed: {e}", flush=True)
+        print(f"Warning: dep self-heal failed: {e}", flush=True)
 
 if os.name != 'nt':
     _ensure_playwright_deps()

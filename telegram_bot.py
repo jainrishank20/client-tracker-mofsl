@@ -972,23 +972,34 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     # /fixdeps — reinstall Playwright system dependencies on VM
     if tl == '/fixdeps':
         def _fixdeps():
+            import subprocess
             try:
-                import subprocess
-                send(chat_id, "Installing missing Playwright deps on VM (may take ~3 mins)...")
-                # Step 1: install missing system libs
-                r1 = subprocess.run(
-                    ['sudo', 'dnf', 'install', '-y', 'atk', 'at-spi2-atk', 'cups-libs',
-                     'libdrm', 'libgbm', 'libxkbcommon', 'alsa-lib', 'pango', 'cairo', 'gtk3'],
-                    capture_output=True, text=True, timeout=300
-                )
-                out1 = (r1.stdout + r1.stderr).strip()[-1000:]
-                send(chat_id, f"dnf install done (rc={r1.returncode}):\n```\n{out1}\n```")
-                # Step 2: verify libatk is now found
-                r2 = subprocess.run(
-                    ['bash', '-c', 'ldconfig -p | grep libatk'],
-                    capture_output=True, text=True, timeout=10
-                )
-                send(chat_id, f"libatk check:\n```\n{(r2.stdout or 'NOT FOUND').strip()}\n```")
+                send(chat_id, "Checking system for libatk...")
+                # 1. Check if library already exists somewhere
+                r0 = subprocess.run(['find', '/usr', '/lib', '/lib64', '-name', 'libatk-1.0*'],
+                                    capture_output=True, text=True, timeout=15)
+                found = r0.stdout.strip()
+                send(chat_id, f"find result:\n```\n{found or 'NOT FOUND anywhere'}\n```")
+                if found:
+                    # Library exists — just refresh ldconfig
+                    lib_dir = os.path.dirname(found.splitlines()[0])
+                    subprocess.run(['sudo', 'bash', '-c', f'echo "{lib_dir}" > /etc/ld.so.conf.d/atk-fix.conf && ldconfig'],
+                                   capture_output=True, text=True, timeout=10)
+                    send(chat_id, f"Ran ldconfig with {lib_dir}. Try /vmrun now.")
+                    return
+                # 2. Library truly missing — try yum (faster than dnf on OL7)
+                send(chat_id, "Library not found. Trying yum install atk (30s timeout)...")
+                r1 = subprocess.run(['sudo', 'yum', 'install', '-y', '--setopt=timeout=20', 'atk'],
+                                    capture_output=True, text=True, timeout=60)
+                out1 = (r1.stdout + r1.stderr).strip()[-800:]
+                send(chat_id, f"yum result (rc={r1.returncode}):\n```\n{out1}\n```")
+                # 3. Verify
+                r2 = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True, timeout=5)
+                if 'libatk-1.0' in r2.stdout:
+                    send(chat_id, "libatk now found! Run /vmrun to test.")
+                else:
+                    send(chat_id, "Still missing. Trying dnf in background — check /vmlog in 5 mins then /vmrun.")
+                    subprocess.Popen(['sudo', 'dnf', 'install', '-y', 'atk', 'at-spi2-atk'])
             except Exception as e:
                 send(chat_id, f"fixdeps failed: {e}")
         threading.Thread(target=_fixdeps, daemon=True).start()
