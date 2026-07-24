@@ -566,7 +566,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     print("  Polling for SUCCESS...")
     row_cells = None
     fresh_row_idx = None
-    for _ in range(30):
+    for _ in range(60):
         all_rows = await page.evaluate("""
             () => {
                 const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
