@@ -1012,7 +1012,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                 import subprocess
                 send(chat_id, "Starting full VM pipeline (mo_downloader + import + GHA)... check /vmlog in ~20 mins.")
                 subprocess.Popen(
-                    ['bash', '/home/opc/vm_daily_run.sh'],
+                    ['bash', '/home/opc/client-tracker-mofsl/vm_daily_run.sh'],
                     stdout=open('/home/opc/vm_daily_run.log', 'a'),
                     stderr=subprocess.STDOUT
                 )
