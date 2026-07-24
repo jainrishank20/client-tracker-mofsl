@@ -5,9 +5,27 @@ Usage:
     python mo_downloader.py           # current FY only (daily use)
     python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
-import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hashlib
+import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hashlib, subprocess
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
+
+# Self-heal: install missing Playwright system dependencies if libatk is absent
+def _ensure_playwright_deps():
+    try:
+        result = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True, timeout=5)
+        if 'libatk-1.0' not in result.stdout:
+            print("libatk-1.0 missing — installing Playwright system deps...", flush=True)
+            subprocess.run(
+                ['sudo', 'dnf', 'install', '-y', 'atk', 'at-spi2-atk', 'cups-libs',
+                 'libdrm', 'libgbm', 'libxkbcommon', 'alsa-lib', 'pango', 'cairo', 'gtk3'],
+                timeout=300, check=False
+            )
+            print("Playwright deps install complete.", flush=True)
+    except Exception as e:
+        print(f"Warning: dep check failed: {e}", flush=True)
+
+if os.name != 'nt':
+    _ensure_playwright_deps()
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 _cfg = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json'), encoding='utf-8-sig').read())

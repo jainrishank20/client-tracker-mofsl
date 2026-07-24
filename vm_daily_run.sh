@@ -9,6 +9,7 @@
 set -e
 export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
 
+
 IS_FULL=${1:-false}
 REPO_DIR=/home/opc/client-tracker-mofsl
 REPO="jainrishank20/client-tracker-mofsl"
