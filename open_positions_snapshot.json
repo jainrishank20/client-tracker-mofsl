@@ -1,5 +1,5 @@
 {
-  "date": "2026-07-23",
+  "date": "2026-07-24",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
@@ -16,13 +16,16 @@
       "CITY UNION BANK",
       "CLEAN SCIENCE & TECH",
       "COHANCE LIFESCIENCES",
+      "DATA PATTERNS INDIA",
       "DR. REDDY S LABORATORIES",
       "EDELWEISS FIN SERV",
       "EIMCO ELECON (INDIA)",
       "EMMVEE PHOTOVOLTAIC",
       "GRANULES INDIA",
+      "GRAPHITE INDIA",
       "HAVELLS INDIA",
       "HDFC LIFE INS",
+      "HEG",
       "HFCL",
       "IDBI BANK",
       "IFCI",
@@ -42,6 +45,7 @@
       "L&T TECHNOLOGY SERVICES",
       "LARSEN & TOUBRO",
       "LUX INDUSTRIES",
+      "MAHINDRA & MAHINDRA",
       "MIC ELECTRONICS",
       "NACL INDUSTRIES",
       "NATCO PHARMA",
@@ -88,23 +92,17 @@
       "TRANSPORT CORP OF INDIA",
       "VIKRAM SOLAR"
     ],
-    "RIMK1238": [
-      "BSE",
-      "KAYNES TECHNOLOGY IND",
-      "REC",
-      "SCHAEFFLER INDIA",
-      "SHIPPING CORP OF INDIA LT",
-      "SUZLON ENERGY",
-      "VIKRAM SOLAR",
-      "WIPRO"
-    ],
     "RIMK1247": [
       "WOCKHARDT"
     ],
     "RIMK1248": [
+      "AEGIS VOPAK TERMINALS",
       "BIOCON",
       "BSE",
+      "DIXON TECHNOLOGIES",
       "EPACK PREFAB TECHN",
+      "HINDUSTAN AERONAUTICS",
+      "ICICI PRUDENTIAL AMC",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ION EXCHANGE (INDIA)",
