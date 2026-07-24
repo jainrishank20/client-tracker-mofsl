@@ -863,6 +863,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             "*⚙️ Pipeline*\n"
             "/run — trigger fresh download + GSheet sync\n"
             "/fixcron — daily run stopped? use this to fix it\n"
+            "/vmlog — show VM cron status + last 40 lines of run log\n"
             "/update — pull latest bot code & restart\n\n"
             "*🔧 Maintenance*\n"
             "/addticker SYMBOL TICKER — fix a #N/A CMP in GSheet\n"
@@ -967,6 +968,30 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     if tl == '/run':
         trigger_daily_run(chat_id)
         return None  # sent async
+
+    # /vmlog — tail VM daily run log to diagnose cron failures
+    if tl == '/vmlog':
+        def _vmlog():
+            try:
+                import subprocess
+                script = (
+                    "echo '=== CRON STATUS ==='\n"
+                    "systemctl is-active crond || systemctl is-active cron || echo 'cron status unknown'\n"
+                    "echo '=== CRONTAB ==='\n"
+                    "crontab -l\n"
+                    "echo '=== LAST 40 LINES OF vm_daily_run.log ==='\n"
+                    "tail -40 /home/opc/vm_daily_run.log 2>/dev/null || echo 'No log file found'\n"
+                )
+                result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, timeout=30)
+                out = (result.stdout + result.stderr).strip()
+                # Split if too long for one message
+                if len(out) > 3500:
+                    out = out[-3500:]
+                send(chat_id, f"VM Log:\n```\n{out}\n```")
+            except Exception as e:
+                send(chat_id, f"vmlog failed: {e}")
+        threading.Thread(target=_vmlog, daemon=True).start()
+        return None
 
     # /fixcron — re-install VM crontab from inside the VM (bypasses GHA SSH block)
     if tl == '/fixcron':
