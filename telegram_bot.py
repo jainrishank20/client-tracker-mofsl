@@ -994,6 +994,22 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         threading.Thread(target=_fixdeps, daemon=True).start()
         return None
 
+    # /vmrun — manually trigger the full VM pipeline (download + import + GHA dispatch)
+    if tl == '/vmrun':
+        def _vmrun():
+            try:
+                import subprocess
+                send(chat_id, "Starting full VM pipeline (mo_downloader + import + GHA)... check /vmlog in ~20 mins.")
+                subprocess.Popen(
+                    ['bash', '/home/opc/vm_daily_run.sh'],
+                    stdout=open('/home/opc/vm_daily_run.log', 'a'),
+                    stderr=subprocess.STDOUT
+                )
+            except Exception as e:
+                send(chat_id, f"vmrun failed to start: {e}")
+        threading.Thread(target=_vmrun, daemon=True).start()
+        return None
+
     # /vmlog — tail VM daily run log to diagnose cron failures
     if tl == '/vmlog':
         def _vmlog():
