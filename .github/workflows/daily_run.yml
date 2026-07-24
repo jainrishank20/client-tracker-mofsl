@@ -16,10 +16,9 @@ on:
         type: choice
         options: ['false', 'true']
 
-# No schedule — VM runs the download (Indian IP, not blocked by CBOS on Sundays).
-# VM cron: Mon-Sat 7:30 PM IST (14:00 UTC) incremental, Sunday 11:00 AM IST (05:30 UTC) full.
-# VM triggers this workflow with skip_download=true after pushing fresh data.
-# stale_alert.yml at 9:15 PM IST (Mon-Fri) catches VM failures.
+  schedule:
+    - cron: '0 14 * * 1-6'   # Mon-Sat 7:30 PM IST (14:00 UTC) — incremental
+    - cron: '30 5 * * 0'     # Sun   11:00 AM IST (05:30 UTC)  — full history
 
 concurrency:
   group: daily-run
@@ -89,7 +88,8 @@ jobs:
         continue-on-error: true
         run: |
           IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
-          if [ "$IS_MANUAL_FULL" = "true" ]; then
+          IS_SUNDAY_CRON="${{ github.event.schedule == '30 5 * * 0' }}"
+          if [ "$IS_MANUAL_FULL" = "true" ] || [ "$IS_SUNDAY_CRON" = "true" ]; then
             echo "Running FULL history download..."
             python mo_downloader.py --full
           else
@@ -228,6 +228,7 @@ jobs:
           printf '%s' "$BOT_CONFIG" > bot_config.json
           IS_FULL="false"
           [ "${{ github.event.inputs.full_history }}" = "true" ] && IS_FULL="true"
+          [ "${{ github.event.schedule }}" = "30 5 * * 0" ] && IS_FULL="true"
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
             --full "$IS_FULL"
