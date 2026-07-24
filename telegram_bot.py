@@ -974,17 +974,21 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         def _fixdeps():
             try:
                 import subprocess
-                send(chat_id, "Installing missing Playwright deps on VM (may take ~60s)...")
-                script = (
-                    "sudo dnf install -y atk at-spi2-atk cups-libs libdrm libgbm "
-                    "libxkbcommon alsa-lib pango cairo gtk3 2>&1 | tail -5\n"
-                    "echo '--- playwright install-deps ---'\n"
-                    "cd /home/opc/client-tracker-mofsl && python -m playwright install-deps chromium 2>&1 | tail -10\n"
-                    "echo 'Done.'\n"
+                send(chat_id, "Installing missing Playwright deps on VM (may take ~3 mins)...")
+                # Step 1: install missing system libs
+                r1 = subprocess.run(
+                    ['sudo', 'dnf', 'install', '-y', 'atk', 'at-spi2-atk', 'cups-libs',
+                     'libdrm', 'libgbm', 'libxkbcommon', 'alsa-lib', 'pango', 'cairo', 'gtk3'],
+                    capture_output=True, text=True, timeout=300
                 )
-                result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, timeout=120)
-                out = (result.stdout + result.stderr).strip()[-3000:]
-                send(chat_id, f"fixdeps result:\n```\n{out}\n```")
+                out1 = (r1.stdout + r1.stderr).strip()[-1000:]
+                send(chat_id, f"dnf install done (rc={r1.returncode}):\n```\n{out1}\n```")
+                # Step 2: verify libatk is now found
+                r2 = subprocess.run(
+                    ['bash', '-c', 'ldconfig -p | grep libatk'],
+                    capture_output=True, text=True, timeout=10
+                )
+                send(chat_id, f"libatk check:\n```\n{(r2.stdout or 'NOT FOUND').strip()}\n```")
             except Exception as e:
                 send(chat_id, f"fixdeps failed: {e}")
         threading.Thread(target=_fixdeps, daemon=True).start()
