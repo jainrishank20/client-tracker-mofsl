@@ -21,10 +21,10 @@ _tg_notify() {
   if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
     LAST=$(tail -3 "$LOG" | grep "=== Done" | wc -l)
     if [ "$LAST" -gt 0 ]; then
-      MSG="Pipeline done ($(date '+%d %b %I:%M %p IST')) — GHA triggered. Check dashboard."
+      MSG="Pipeline done ($(TZ='Asia/Kolkata' date '+%d %b %I:%M %p IST')) — GHA triggered. Check dashboard."
     else
       ERRMSG=$(tail -5 "$LOG" | grep -i "error\|fail\|timed out" | tail -1)
-      MSG="Pipeline FAILED at $(date '+%d %b %I:%M %p IST'). Error: ${ERRMSG:-unknown}. Check /vmlog."
+      MSG="Pipeline FAILED at $(TZ='Asia/Kolkata' date '+%d %b %I:%M %p IST'). Error: ${ERRMSG:-unknown}. Check /vmlog."
     fi
     curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
       -d "chat_id=${TG_CHAT}&text=${MSG}" > /dev/null
