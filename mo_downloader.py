@@ -917,7 +917,7 @@ async def main():
 
     async with async_playwright() as p:
         headless = os.name != 'nt'  # headless on Linux VM, visible on Windows
-        launch_args = ['--no-sandbox', '--disable-dev-shm-usage'] if os.name != 'nt' else []
+        launch_args = ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer'] if os.name != 'nt' else []
         browser = await p.chromium.launch(headless=headless, args=launch_args)
         page = await browser.new_page()
 
