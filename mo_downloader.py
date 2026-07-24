@@ -9,38 +9,6 @@ import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hash
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
-# Self-heal: install missing Playwright system dependencies if libatk is absent
-def _ensure_playwright_deps():
-    try:
-        r = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True, timeout=5)
-        if 'libatk-1.0' in r.stdout:
-            return  # already present
-        print("libatk-1.0 missing — attempting self-heal...", flush=True)
-        # Step 1: check if library exists but isn't linked
-        r2 = subprocess.run(['find', '/usr', '/lib', '/lib64', '-name', 'libatk-1.0*'],
-                            capture_output=True, text=True, timeout=15)
-        if r2.stdout.strip():
-            lib_dir = os.path.dirname(r2.stdout.strip().splitlines()[0])
-            print(f"Library found at {lib_dir} — refreshing ldconfig", flush=True)
-            subprocess.run(['sudo', 'bash', '-c',
-                            f'echo "{lib_dir}" > /etc/ld.so.conf.d/atk-fix.conf && ldconfig'],
-                           timeout=10, check=False)
-            return
-        # Step 2: download RPM directly (avoids yum/dnf which can hang on this VM)
-        print("Downloading atk RPM directly...", flush=True)
-        rpm_url = "https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/atk-2.36.0-5.el9.x86_64.rpm"
-        subprocess.run(['curl', '-sSL', rpm_url, '-o', '/tmp/atk.rpm', '--connect-timeout', '15', '--max-time', '60'],
-                       timeout=70, check=False)
-        subprocess.run(['sudo', 'rpm', '-ivh', '--nodeps', '/tmp/atk.rpm'],
-                       timeout=30, check=False)
-        subprocess.run(['sudo', 'ldconfig'], timeout=10, check=False)
-        print("atk RPM install done.", flush=True)
-    except Exception as e:
-        print(f"Warning: dep self-heal failed: {e}", flush=True)
-
-if os.name != 'nt':
-    _ensure_playwright_deps()
-
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 _cfg = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json'), encoding='utf-8-sig').read())
 MO_USERNAME        = _cfg['mo_username']
