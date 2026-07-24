@@ -24,6 +24,10 @@ closed_count = sum(1 for t in trades if t.get('exit_date'))
 today        = date.today().strftime('%d %b %Y')
 today_iso    = date.today().isoformat()
 
+# Current FY start (April 1)
+_td = date.today()
+FY_START = date(_td.year if _td.month >= 4 else _td.year - 1, 4, 1)
+
 # Per-client open position counts (for health check footer)
 from collections import defaultdict as _dd
 _by_client = _dd(lambda: {'open': 0, 'closed': 0})
@@ -136,6 +140,62 @@ def _calc_unrealized_pnl() -> dict:
     return pnl
 
 
+# Compute once, shared by both movement and summary sections
+_unrealized_cache = None
+def _get_unrealized():
+    global _unrealized_cache
+    if _unrealized_cache is None:
+        _unrealized_cache = _calc_unrealized_pnl()
+    return _unrealized_cache
+
+
+def _pnl_summary_lines() -> list:
+    """Realized (FY to date) + Unrealized + Total per client."""
+    # Realized: sum net_pnl of closed trades in current FY
+    realized = {}
+    for t in trades:
+        if t.get('exit_date') and t.get('net_pnl') is not None:
+            try:
+                if date.fromisoformat(t['exit_date']) >= FY_START:
+                    c = t['client']
+                    realized[c] = realized.get(c, 0.0) + float(t['net_pnl'])
+            except (ValueError, TypeError):
+                pass
+
+    unrealized = _get_unrealized()
+
+    rows = []
+    tot_r = tot_u = tot_t = 0.0
+    for c in CLIENTS:
+        r = realized.get(c, 0.0)
+        u = unrealized.get(c, 0.0)
+        t_val = r + u
+        tot_r += r; tot_u += u; tot_t += t_val
+        rows.append((c, r, u, t_val))
+
+    if not any(r[1] or r[2] for r in rows):
+        return []
+
+    def _col(v):
+        return fmt_signed(v) if v else ''
+
+    w0 = max(len(r[0]) for r in rows)
+    w1 = max(len('Realized'), max((len(_col(r[1])) for r in rows), default=0))
+    w2 = max(len('Unrealzd'), max((len(_col(r[2])) for r in rows), default=0))
+    w3 = max(len('Total'),    max((len(_col(r[3])) for r in rows), default=0))
+    sep = '─' * (w0 + w1 + w2 + w3 + 9)
+
+    out = ['', f'`📈 P&L Summary (FY {FY_START.year}-{FY_START.year % 100 + 1})`',
+           f'`{sep}`',
+           f'`{"Client":<{w0}}  {"Realized":>{w1}}  {"Unrealzd":>{w2}}  {"Total":>{w3}}`',
+           f'`{sep}`']
+    for c, r, u, t_val in rows:
+        out.append(f'`{c:<{w0}}  {_col(r):>{w1}}  {_col(u):>{w2}}  {_col(t_val):>{w3}}`')
+    out.append(f'`{sep}`')
+    out.append(f'`{"Total":<{w0}}  {_col(tot_r):>{w1}}  {_col(tot_u):>{w2}}  {_col(tot_t):>{w3}}`')
+    return out
+
+
 SNAP_PATH = os.path.join(BASE, 'pnl_snapshot.json')
 
 def _load_snapshot() -> dict:
@@ -153,7 +213,7 @@ def _save_snapshot(pnl: dict):
 
 def _pnl_movement_lines() -> list:
     """Build the P&L movement section. Returns [] if data unavailable."""
-    today_pnl = _calc_unrealized_pnl()
+    today_pnl = _get_unrealized()
     if not today_pnl:
         return []
 
@@ -235,7 +295,10 @@ for name, d, m in rows_display:
     lines.append(f'`{row_line(name, d, m)}`')
 lines.append(f'`{sep}`')
 
-# P&L movement
+# P&L summary (realized + unrealized + total)
+lines.extend(_pnl_summary_lines())
+
+# P&L movement (day-over-day change)
 lines.extend(_pnl_movement_lines())
 
 # ── Trade count footer ────────────────────────────────────────────────────────
