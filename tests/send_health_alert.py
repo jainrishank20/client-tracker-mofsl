@@ -8,6 +8,10 @@ from collections import defaultdict
 parser = argparse.ArgumentParser()
 parser.add_argument('--status', default='unknown')
 parser.add_argument('--full',   default='false')
+parser.add_argument('--sync-gsheet-outcome',  default='skipped')
+parser.add_argument('--fetch-pnl-outcome',    default='skipped')
+parser.add_argument('--sync-vm-outcome',      default='skipped')
+parser.add_argument('--push-vm-outcome',      default='skipped')
 args = parser.parse_args()
 
 BASE        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -75,6 +79,22 @@ if duplicate_detected:
 if not trades_ok or total == 0:
     lines.append("")
     lines.append("❌ *trades\\.json is EMPTY* — no data synced to GSheet or VM\\.")
+
+# ── SSH/VM step outcomes ──────────────────────────────────────────────────────
+def _outcome_icon(o):
+    return '✅' if o == 'success' else ('⏭' if o in ('skipped', '') else '❌')
+
+ssh_lines = []
+if args.sync_gsheet_outcome not in ('success', 'skipped', ''):
+    ssh_lines.append(f"  {_outcome_icon(args.sync_gsheet_outcome)} GSheet sync: {args.sync_gsheet_outcome}")
+if args.push_vm_outcome not in ('success', 'skipped', ''):
+    ssh_lines.append(f"  {_outcome_icon(args.push_vm_outcome)} Push to VM: {args.push_vm_outcome} \\(bot may have stale data\\)")
+if args.sync_vm_outcome not in ('success', 'skipped', ''):
+    ssh_lines.append(f"  {_outcome_icon(args.sync_vm_outcome)} VM config sync: {args.sync_vm_outcome}")
+if ssh_lines:
+    lines.append("")
+    lines.append("⚠️ *Step failures \\(SSH may be blocked\\):*")
+    lines.extend(ssh_lines)
 
 msg = '\n'.join(lines)
 

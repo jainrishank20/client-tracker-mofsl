@@ -134,11 +134,13 @@ jobs:
 
       # ── Step 3: Sync Google Sheet ─────────────────────────────────────────────
       - name: Sync Google Sheet
+        id: sync-gsheet
         continue-on-error: true
         run: python vm_sync_gsheet.py
 
       # ── Step 3b: Fetch P&L snapshot from VM ──────────────────────────────────
       - name: Fetch P&L snapshot from VM
+        id: fetch-pnl-snapshot
         continue-on-error: true
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -155,6 +157,7 @@ jobs:
 
       # ── Step 4b: Sync clients list to VM bot_config ───────────────────────────
       - name: Sync clients to VM bot_config
+        id: sync-vm-clients
         if: always()
         continue-on-error: true
         env:
@@ -185,12 +188,13 @@ jobs:
 
       # ── Step 5: Push trades.json + ledger.json to VM ─────────────────────────
       - name: Push data files to VM
+        id: push-to-vm
         if: always()
         continue-on-error: true
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
-          echo "$VM_SSH_KEY" > /tmp/vm_key
+          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
           trap 'rm -f /tmp/vm_key /tmp/vm_overrides.json' EXIT
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
@@ -213,10 +217,8 @@ jobs:
           git config user.name "GitHub Actions"
           git add trades.json ledger.json open_positions_snapshot.json ticker_overrides.json 2>/dev/null || true
           git diff --cached --quiet && echo "No changes to commit" && exit 0
-          git commit -m "chore: update data files + auto-resolved tickers [skip ci]"
-          git stash || true
           git pull --rebase origin main || true
-          git stash pop || true
+          git commit -m "chore: update data files + auto-resolved tickers [skip ci]"
           git push
 
       # ── Step 6: Pipeline health alert ────────────────────────────────────────
@@ -224,6 +226,10 @@ jobs:
         if: always()
         env:
           BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+          SYNC_GSHEET_OUTCOME: ${{ steps.sync-gsheet.outcome }}
+          FETCH_PNL_OUTCOME: ${{ steps.fetch-pnl-snapshot.outcome }}
+          SYNC_VM_OUTCOME: ${{ steps.sync-vm-clients.outcome }}
+          PUSH_VM_OUTCOME: ${{ steps.push-to-vm.outcome }}
         run: |
           printf '%s' "$BOT_CONFIG" > bot_config.json
           IS_FULL="false"
@@ -231,7 +237,11 @@ jobs:
           [ "${{ github.event.schedule }}" = "30 5 * * 0" ] && IS_FULL="true"
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
-            --full "$IS_FULL"
+            --full "$IS_FULL" \
+            --sync-gsheet-outcome "${SYNC_GSHEET_OUTCOME:-skipped}" \
+            --fetch-pnl-outcome "${FETCH_PNL_OUTCOME:-skipped}" \
+            --sync-vm-outcome "${SYNC_VM_OUTCOME:-skipped}" \
+            --push-vm-outcome "${PUSH_VM_OUTCOME:-skipped}"
 
       - name: Cleanup credentials
         if: always()

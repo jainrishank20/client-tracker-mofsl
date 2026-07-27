@@ -48,21 +48,29 @@ for t in trades:
 
 
 def fmt(val: float) -> str:
-    """Indian number format, blank if zero. e.g. -58,71,034"""
+    """Indian number format, blank if zero. e.g. -58,71,034.50"""
     if val == 0.0:
         return ''
     sign  = '-' if val < 0 else ''
-    abval = abs(int(round(val)))
-    s     = str(abval)
+    abval = round(abs(val), 2)
+    int_v = int(abval)
+    frac  = round(abval - int_v, 2)
+    s     = str(int_v)
     if len(s) <= 3:
-        return f"{sign}{s}"
+        base = f"{sign}{s}"
+        if frac >= 0.005:
+            base += f".{round(frac * 100):02d}"
+        return base
     head, tail = s[:-3], s[-3:]
     groups = []
     while len(head) > 2:
         groups.insert(0, head[-2:])
         head = head[:-2]
     groups.insert(0, head)
-    return f"{sign}{','.join(groups)},{tail}"
+    base = f"{sign}{','.join(groups)},{tail}"
+    if frac >= 0.005:
+        base += f".{round(frac * 100):02d}"
+    return base
 
 
 def fmt_signed(val: float) -> str:
@@ -106,7 +114,7 @@ def _calc_unrealized_pnl() -> dict:
     try:
         ns_tickers = [s + '.NS' for s in unique]
         if len(ns_tickers) == 1:
-            df = yf.download(ns_tickers, period='1d', interval='1m',
+            df = yf.download(ns_tickers, period='5d', interval='1d',
                              progress=False, auto_adjust=True, timeout=20)
             try:
                 # yfinance ≥0.2.18 returns MultiIndex even for one ticker
@@ -120,7 +128,7 @@ def _calc_unrealized_pnl() -> dict:
                 except Exception:
                     pass
         else:
-            df = yf.download(ns_tickers, period='1d', interval='1m',
+            df = yf.download(ns_tickers, period='5d', interval='1d',
                              progress=False, auto_adjust=True, timeout=20)
             for sym, ns in zip(unique, ns_tickers):
                 try:
@@ -327,15 +335,19 @@ lines.append(f'`{"":─<38}`')
 msg = '\n'.join(lines)
 
 
+def _send_chunks(token, chat_id, text):
+    MAX = 4000
+    for i in range(0, len(text), MAX):
+        chunk = text[i:i+MAX]
+        urllib.request.urlopen(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=urllib.parse.urlencode({'chat_id': chat_id, 'text': chunk, 'parse_mode': 'Markdown'}).encode(),
+            timeout=15
+        )
+
+
 def send(token, chat_id):
-    data = urllib.parse.urlencode({
-        'chat_id':    chat_id,
-        'text':       msg,
-        'parse_mode': 'Markdown',
-    }).encode()
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage", data=data)
-    urllib.request.urlopen(req, timeout=15)
+    _send_chunks(token, chat_id, msg)
 
 
 # Send to all chat IDs (comma-separated in config)

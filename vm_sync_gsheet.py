@@ -5,6 +5,10 @@ sync_to_gsheet is copied verbatim from app.py — no Streamlit needed.
 import json, os, sys, time
 import pandas as pd
 from datetime import datetime, date
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -71,7 +75,7 @@ def fetch_cmp(scripts):
             except Exception:
                 try:
                     info = yf.Ticker(ns_tickers[0]).fast_info
-                    price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                     if price:
                         return {s: float(price) for s, t in ticker_map.items() if t == unique_tickers[0]}
                 except Exception:
@@ -91,7 +95,7 @@ def fetch_cmp(scripts):
         for s, ticker in missing.items():
             try:
                 info = yf.Ticker(ticker + '.NS').fast_info
-                price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                 if price:
                     result[s] = float(price)
             except Exception:
@@ -169,19 +173,19 @@ def sync_to_gsheet(trades: list):
     df_all['entry_date'] = pd.to_datetime(df_all['entry_date'], errors='coerce')
     df_all['exit_date']  = pd.to_datetime(df_all['exit_date'],  errors='coerce')
     open_df   = df_all[df_all['exit_date'].isna()].copy()
-    closed_df = df_all[df_all['exit_date'].notna()].copy()
-
-    for _col in ["buy_price", "sell_price", "buy_qty", "sell_qty"]:
-        closed_df[_col] = pd.to_numeric(closed_df[_col], errors="coerce").fillna(0)
-        open_df[_col]   = pd.to_numeric(open_df[_col],   errors="coerce").fillna(0)
     # Charge columns may be absent on open-trade rows (open trades have no sell_other/buy_other).
-    # Fill NaN → 0 on df_all so total_charges() never gets NaN from pandas .get() on a Series.
+    # Fill NaN → 0 on df_all BEFORE creating closed_df so the copy inherits filled values.
     _charge_fill = ['buy_brokerage','buy_stt','buy_gst','buy_stamp','buy_txn','buy_other',
                     'sell_brokerage','sell_stt','sell_gst','sell_stamp','sell_txn','sell_other']
     for _col in _charge_fill:
         if _col not in df_all.columns:
             df_all[_col] = 0.0
         df_all[_col] = pd.to_numeric(df_all[_col], errors='coerce').fillna(0)
+    closed_df = df_all[df_all['exit_date'].notna()].copy()
+
+    for _col in ["buy_price", "sell_price", "buy_qty", "sell_qty"]:
+        closed_df[_col] = pd.to_numeric(closed_df[_col], errors="coerce").fillna(0)
+        open_df[_col]   = pd.to_numeric(open_df[_col],   errors="coerce").fillna(0)
     closed_df["pnl"] = (closed_df["sell_price"] - closed_df["buy_price"]) * closed_df["buy_qty"]
     if "net_pnl" in closed_df.columns:
         closed_df["net_pnl"] = pd.to_numeric(closed_df["net_pnl"], errors="coerce").fillna(0)
@@ -363,7 +367,7 @@ def sync_to_gsheet(trades: list):
                 continue
             try:
                 info = _yf.Ticker(nse_ticker + '.NS').fast_info
-                price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                 if price:
                     cmp_map[s] = float(price)
             except Exception:
@@ -414,7 +418,7 @@ def sync_to_gsheet(trades: list):
     tot_fmt  = CellFormat(backgroundColor=Color(0.13,0.13,0.18),
                           textFormat=TextFormat(bold=True, foregroundColor=Color(1,1,1)),
                           horizontalAlignment='RIGHT')
-    synced_at = datetime.now(tz=__import__('zoneinfo').ZoneInfo('Asia/Kolkata')).strftime('%d %b %Y %I:%M %p IST')
+    synced_at = datetime.now(tz=ZoneInfo('Asia/Kolkata')).strftime('%d %b %Y %I:%M %p IST')
 
     def add_totals_row(ws, df, num_cols, pct_cols, last_row):
         ncols = len(df.columns)
@@ -483,13 +487,20 @@ def sync_to_gsheet(trades: list):
     # ═══ TAB 2 — Open Positions ═════════════════════════════════════════════════
     _time.sleep(2)
     if not open_df.empty:
+        _apply_kwargs = {}
+        try:
+            import pandas as _pd2
+            if tuple(int(x) for x in _pd2.__version__.split('.')[:2]) >= (2, 2):
+                _apply_kwargs = {'include_groups': False}
+        except Exception:
+            pass
         grp = open_df.groupby(['client','script']).apply(lambda g: pd.Series({
             'Qty':           g['buy_qty'].sum(),
             'Avg Buy Price': round((g['buy_price']*g['buy_qty']).sum() / g['buy_qty'].sum(), 2),
             'Invested (₹)': round((g['buy_price']*g['buy_qty']).sum(), 2),
             'First Entry':   g['entry_date'].min().strftime('%Y-%m-%d') if pd.notna(g['entry_date'].min()) else '',
             'Last Entry':    g['entry_date'].max().strftime('%Y-%m-%d') if pd.notna(g['entry_date'].max()) else '',
-        })).reset_index()
+        }), **_apply_kwargs).reset_index()
         grp['Client Name'] = grp['client'].map(CLIENT_NAMES)
         grp['Days Held']   = (pd.Timestamp.today() - pd.to_datetime(grp['First Entry'])).dt.days.astype(int)
         grp['CMP']         = grp['script'].map(cmp_value_or_formula)
@@ -708,7 +719,7 @@ def sync_to_gsheet(trades: list):
             _row["Trades"]            = len(_mg)
             for _c in CLIENTS:
                 _cg = _mg[_mg["client"] == _c]
-                _row[f"{CLIENT_NAMES[_c]} Net"] = round(_cg["_net_pnl"].sum(), 2) if not _cg.empty else 0
+                _row[f"{CLIENT_NAMES.get(_c, _c)} Net"] = round(_cg["_net_pnl"].sum(), 2) if not _cg.empty else 0
             _mn_rows.append(_row)
         df_monthly = pd.DataFrame(_mn_rows).sort_values("Month", ascending=False)
         ws_mn = upsert_ws("📆 Monthly P&L", rows=max(len(df_monthly)+20, 50),
@@ -819,7 +830,7 @@ try:
             if _ov_hit:
                 try:
                     _info = yf.Ticker(_ov_hit + '.NS').fast_info
-                    _p = _info.get('lastPrice') or _info.get('regularMarketPreviousClose')
+                    _p = getattr(_info, 'last_price', None) or getattr(_info, 'previous_close', None)
                     if _p:
                         return _ov_hit, float(_p)
                 except Exception:
@@ -840,7 +851,7 @@ try:
             for ticker in unique:
                 try:
                     info = yf.Ticker(ticker + '.NS').fast_info
-                    _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    _p = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                     if _p:
                         return ticker, float(_p)
                 except Exception:
@@ -856,7 +867,7 @@ try:
                     ticker = sym_r[:-3]
                     try:
                         info = yf.Ticker(sym_r).fast_info
-                        _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        _p = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                         if _p:
                             print(f"  yfinance Search resolved: {raw_sym} → {ticker}")
                             return ticker, float(_p)
@@ -872,7 +883,7 @@ try:
                     prefix = clean[:length]
                     try:
                         info = yf.Ticker(prefix + '.NS').fast_info
-                        _p = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        _p = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                         if _p:
                             print(f"  prefix truncation resolved: {raw_sym} → {prefix}")
                             return prefix, float(_p)

@@ -16,10 +16,14 @@ Commands:
   /removeclient CODE  — remove client
   Or ask naturally: "Sathyavrath open trades", "Savitha ledger"
 """
-import json, os, re, time, threading, datetime, sys
+import json, os, re, time, threading, datetime, sys, concurrent.futures
 import urllib.request, urllib.parse, urllib.error
 from typing import Optional
 from groq import Groq
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 try:
     import yfinance as yf
     _YF = True
@@ -35,7 +39,11 @@ def load_cfg() -> dict:
     return json.loads(open(CFG_FILE, encoding='utf-8-sig').read())
 
 def save_cfg(cfg: dict):
-    json.dump(cfg, open(CFG_FILE, 'w'), indent=2)
+    with _cfg_lock:
+        try:
+            json.dump(cfg, open(CFG_FILE, 'w'), indent=2)
+        finally:
+            pass
 
 def get_names() -> dict:
     """Always fresh — picks up /addclient changes without restart."""
@@ -48,13 +56,18 @@ def get_name_to_code(names: dict) -> dict:
     return m
 
 # Module-level constants (token never changes, no need to reload)
-_cfg   = load_cfg()
-TOKEN  = _cfg['telegram_token']
-CHAT_IDS = {c.strip() for c in str(_cfg['allowed_chat_id']).split(',')}
+try:
+    _cfg = load_cfg()
+except Exception as e:
+    print(f"FATAL: cannot load bot_config.json: {e}")
+    _cfg = {}
+TOKEN  = _cfg.get('telegram_token', '')
+CHAT_IDS = {c.strip() for c in str(_cfg.get('allowed_chat_id', '')).split(',')}
 groq_client = Groq(api_key=_cfg.get('groq_api_key', ''))
 
 ALERTS_FILE  = os.path.join(BASE, 'price_alerts.json')
 _alerts_lock = threading.Lock()
+_cfg_lock    = threading.Lock()
 
 # ── Symbol resolution ─────────────────────────────────────────────────────────
 
@@ -97,7 +110,10 @@ def load_alerts() -> dict:
 def save_alerts(alerts: dict):
     with _alerts_lock:
         try:
-            json.dump(alerts, open(ALERTS_FILE, 'w'), indent=2)
+            tmp = ALERTS_FILE + '.tmp'
+            with open(tmp, 'w') as f:
+                json.dump(alerts, f, indent=2)
+            os.replace(tmp, ALERTS_FILE)
         except Exception:
             pass
         try:
@@ -240,12 +256,12 @@ def fetch_cmp(symbols: list) -> dict:
         return {}
     symbols = list(dict.fromkeys(symbols))
     result = {}
-    for sym in symbols:
+    for ticker in symbols:
         try:
-            info = yf.Ticker(sym + '.NS').fast_info
+            info = yf.Ticker(ticker + '.NS').fast_info
             price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
             if price:
-                result[sym] = float(price)
+                result[ticker] = float(price)
         except Exception:
             pass
     return result
@@ -465,7 +481,8 @@ def pnl_summary(trades: list, names: dict) -> str:
 
 # ── /update — self-update from GitHub (no SSH needed) ────────────────────────
 
-_UPDATE_LOCK = threading.Lock()
+_UPDATE_LOCK   = threading.Lock()
+_dispatch_pool = concurrent.futures.ThreadPoolExecutor(max_workers=6)
 
 def self_update(chat_id: str):
     """Pull latest code from GitHub, set up systemd if needed, restart cleanly."""
@@ -563,8 +580,7 @@ def trigger_daily_run(chat_id: str):
 # ── Price alert polling ───────────────────────────────────────────────────────
 
 def _is_market_hours() -> bool:
-    import zoneinfo
-    now = datetime.datetime.now(zoneinfo.ZoneInfo('Asia/Kolkata'))
+    now = datetime.datetime.now(ZoneInfo('Asia/Kolkata'))
     if now.weekday() >= 5:
         return False
     t = now.time()
@@ -617,6 +633,7 @@ def ask_groq(question: str, context: str) -> str:
     try:
         resp = groq_client.chat.completions.create(
             model='llama-3.1-8b-instant',
+            timeout=15,
             messages=[
                 {
                     'role': 'system',
@@ -1157,6 +1174,12 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             parts = [brokerage_summary_for(c, trades, names, tl) for c in all_clients]
             return '\n\n'.join(parts)
 
+    # Multi-client open position query (e.g. "Savitha and Sathya open positions")
+    _all_clients = detect_all_clients(text, names)
+    if len(_all_clients) > 1 and any(w in tl for w in ('open', 'position', 'trade', 'holding')):
+        parts = [trades_summary_for(c, trades, names, overrides) for c in _all_clients]
+        return '\n\n'.join(parts)
+
     # Client-specific query
     client = detect_client(text, names)
     if client:
@@ -1280,7 +1303,7 @@ def main():
                             send(c, reply)
                     except Exception as e:
                         send(c, f"Error: {e}")
-                threading.Thread(target=_dispatch, daemon=True).start()
+                _dispatch_pool.submit(_dispatch)
         except urllib.error.HTTPError as e:
             if e.code == 409:
                 print("FATAL: 409 Conflict — another bot instance is running. Exiting.")

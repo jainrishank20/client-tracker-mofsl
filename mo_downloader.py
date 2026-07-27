@@ -30,8 +30,22 @@ LOGIN_URL    = "https://backoffice.motilaloswal.com/Login.aspx"
 HOME_URL     = "https://backoffice.motilaloswal.com/Home.aspx"
 DATE_OPTION  = "Current Financial Year"
 
-FULL_MODE       = "--full" in sys.argv
-FINANCIAL_YEARS = ["2025-2026", "2026-2027"] if FULL_MODE else ["2026-2027"]
+FULL_MODE = "--full" in sys.argv
+
+def _current_financial_years():
+    today = date.today()
+    fy_start = today.year if today.month >= 4 else today.year - 1
+    years = []
+    for y in range(max(2024, fy_start - 1), fy_start + 1):
+        years.append(f"{y}-{y+1}")
+    return years
+
+def _current_fy():
+    today = date.today()
+    fy_start = today.year if today.month >= 4 else today.year - 1
+    return f"{fy_start}-{fy_start+1}"
+
+FINANCIAL_YEARS = _current_financial_years() if FULL_MODE else [_current_fy()]
 
 # Session-level registry: (client, fy) → md5 of saved CSV.
 # If two entries share the same hash → downloader gave one client the wrong file.
@@ -86,6 +100,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
     print("  Waiting for OTP email...")
     deadline = time.time() + max_wait
     while time.time() < deadline:
+        mail = None
         try:
             mail = imaplib.IMAP4_SSL("imap.gmail.com")
             mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
@@ -125,11 +140,16 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
                 if m and email_ts >= best_time:
                     best_otp, best_time = m.group(1), email_ts
 
-            mail.logout()
             if best_otp:
                 return best_otp
         except Exception as e:
             print(f"  Gmail error: {e}")
+        finally:
+            try:
+                if mail:
+                    mail.logout()
+            except Exception:
+                pass
         time.sleep(5)
 
     raise RuntimeError(f"OTP not received within {max_wait} seconds.")
@@ -899,8 +919,8 @@ async def main():
         # Scrape ledger first — session is freshest right after login
         await scrape_ledger_balances(page, home_url)
 
-        # Return to Home.aspx after ledger (page is on ClientDashboard after last scrape)
-        await page.go_back(wait_until='domcontentloaded', timeout=15000)
+        # Return to Home.aspx after ledger (explicit goto — go_back unreliable after ledger scrape)
+        await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
         await asyncio.sleep(1.5)
 
         first = True

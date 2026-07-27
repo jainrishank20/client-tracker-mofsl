@@ -151,8 +151,11 @@ for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_*.csv'))
 # keep only the canonical — timestamped files are Excel-lock fallbacks and cause DUP imports.
 for client in list(CLIENT_FILES.keys()):
     files = CLIENT_FILES[client]
-    canonical = {_CANONICAL_RE.match(os.path.basename(f)).group(2): f
-                 for f in files if _CANONICAL_RE.match(os.path.basename(f))}
+    canonical = {}
+    for f in files:
+        m = _CANONICAL_RE.match(os.path.basename(f))
+        if m:
+            canonical[m.group(2)] = f
     filtered = []
     for f in files:
         m_ts = _TIMESTAMPED_RE.match(os.path.basename(f))
@@ -276,6 +279,8 @@ if __name__ == '__main__':
                         sell_rem  -= qty
                         if buy['qty'] <= 0:
                             buy_queue.popleft()
+                    if sell_rem > 0:
+                        print(f"  WARNING: {client} {canonical_scrip} sell qty exceeds buy history by {sell_rem} — possible missing buy records")
 
             while buy_queue:
                 buy = buy_queue.popleft()
