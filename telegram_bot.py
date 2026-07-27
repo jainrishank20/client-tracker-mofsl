@@ -779,7 +779,11 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     def _matches(t):
         script = (t.get('script') or '').upper()
         ticker = sym(t.get('script', ''), _ov).upper()
-        return any(term in script or term in ticker for term in terms)
+        def _term_matches(term, s):
+            # Exact match OR term starts the token (e.g. "REC" matches "REC" but not "RECTI")
+            tokens = re.split(r'[\s&,.-]+', s)
+            return term == s or any(tok == term or tok.startswith(term) and len(term) >= 4 for tok in tokens)
+        return any(_term_matches(term, script) or _term_matches(term, ticker) for term in terms)
     matches: dict[str, set] = {}
     for t in open_trades:
         if _matches(t):
