@@ -10,7 +10,7 @@ set -e
 export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
 
 IS_FULL=${1:-false}
-REPO_DIR=/home/opc/client-tracker-mofsl
+REPO_DIR=/home/opc/app
 REPO="jainrishank20/client-tracker-mofsl"
 LOG=/home/opc/vm_daily_run.log
 
