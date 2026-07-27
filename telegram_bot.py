@@ -243,7 +243,7 @@ def fetch_cmp(symbols: list) -> dict:
     for sym in symbols:
         try:
             info = yf.Ticker(sym + '.NS').fast_info
-            price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+            price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
             if price:
                 result[sym] = float(price)
         except Exception:
@@ -255,7 +255,7 @@ def fetch_single_cmp(symbol: str) -> Optional[float]:
         return None
     try:
         info = yf.Ticker(symbol + '.NS').fast_info
-        price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+        price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
         return float(price) if price else None
     except Exception:
         pass

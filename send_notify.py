@@ -8,6 +8,17 @@ try:
     trades = json.load(open(os.path.join(BASE, 'trades.json')))
 except FileNotFoundError as e:
     print(f"ERROR: {e} — aborting notify")
+    try:
+        _c = json.loads(open(os.path.join(BASE, 'bot_config.json'), encoding='utf-8-sig').read())
+        _tok = _c.get('telegram_token') or _c.get('token', '')
+        _cid = str(_c.get('chat_id', ''))
+        if _tok and _cid:
+            import urllib.request as _ur
+            _ur.urlopen(f"https://api.telegram.org/bot{_tok}/sendMessage",
+                        data=f'chat_id={_cid}&text=❌ Pipeline ERROR: {e} — trades.json missing, pipeline failed.'.encode(),
+                        timeout=10)
+    except Exception:
+        pass
     raise SystemExit(1)
 
 try:
@@ -103,7 +114,7 @@ def _calc_unrealized_pnl() -> dict:
             except Exception:
                 try:
                     info = yf.Ticker(ns_tickers[0]).fast_info
-                    price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                    price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                     if price:
                         cmp_data[unique[0]] = float(price)
                 except Exception:
@@ -117,7 +128,7 @@ def _calc_unrealized_pnl() -> dict:
                 except Exception:
                     try:
                         info = yf.Ticker(ns).fast_info
-                        price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+                        price = getattr(info, 'last_price', None) or getattr(info, 'previous_close', None)
                         if price:
                             cmp_data[sym] = float(price)
                     except Exception:

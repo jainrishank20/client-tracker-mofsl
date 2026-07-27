@@ -140,10 +140,26 @@ else:
     CSV_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mo_csvs')
 
 CLIENT_FILES = {}
+_CANONICAL_RE = re.compile(r'TradeDetailsAndSummary_([A-Z0-9]+)_(\d{4}_\d{4})\.csv$')
+_TIMESTAMPED_RE = re.compile(r'TradeDetailsAndSummary_([A-Z0-9]+)_(\d{4}_\d{4})_\d{8}\.csv$')
 for f in sorted(glob.glob(os.path.join(CSV_DIR, 'TradeDetailsAndSummary_*.csv'))):
     m = re.search(r'TradeDetailsAndSummary_([A-Z0-9]+)_', os.path.basename(f))
     if m:
         CLIENT_FILES.setdefault(m.group(1), []).append(f)
+
+# For each client, if both canonical and timestamped files exist for the same FY,
+# keep only the canonical — timestamped files are Excel-lock fallbacks and cause DUP imports.
+for client in list(CLIENT_FILES.keys()):
+    files = CLIENT_FILES[client]
+    canonical = {_CANONICAL_RE.match(os.path.basename(f)).group(2): f
+                 for f in files if _CANONICAL_RE.match(os.path.basename(f))}
+    filtered = []
+    for f in files:
+        m_ts = _TIMESTAMPED_RE.match(os.path.basename(f))
+        if m_ts and m_ts.group(2) in canonical:
+            continue  # skip timestamped duplicate when canonical exists
+        filtered.append(f)
+    CLIENT_FILES[client] = filtered
 
 if __name__ == '__main__':
     all_trades, trade_id = [], 1
@@ -166,6 +182,10 @@ if __name__ == '__main__':
         df['FIFO_KEY'] = df.apply(
             lambda r: r['ISIN'] if r.get('ISIN', '') else r['SCRIP'], axis=1
         )
+        _apply_kwargs = {}
+        try:
+            import pandas as _pd2; _apply_kwargs = {'include_groups': False} if tuple(int(x) for x in _pd2.__version__.split('.')[:2]) >= (2, 2) else {}
+        except Exception: pass
         orders = df.groupby(['TRADE DATE', 'FIFO_KEY', 'SCRIP', 'SELL/BUY', 'ORDER NO']).apply(
             lambda g: pd.Series({
                 'qty':        g['TRADE QTY'].sum(),
@@ -178,7 +198,8 @@ if __name__ == '__main__':
                 'txn_chrg':   round(g['TRANSACTION CHARGES'].sum(), 2),
                 'other':      round((g['SEBI CHARGES'] + g['IPFT CHARGES']).sum(), 2),
                 'product':    g['PRODUCT'].iloc[0] if 'PRODUCT' in g.columns else 'DELIVERY',
-            })
+            }),
+            **_apply_kwargs
         ).reset_index()
         orders['ORDER NO SORT'] = pd.to_numeric(
             orders['ORDER NO'].astype(str).str.lstrip("'").str.strip(), errors='coerce'

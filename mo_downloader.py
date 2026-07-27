@@ -921,7 +921,7 @@ async def main():
                     print(f"  Retrying {client} [{fy}] in 30s...")
                     await asyncio.sleep(30)
                     try:
-                        await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=first)
+                        await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True)
                         print(f"  Retry succeeded for {client} [{fy}]")
                         first = False
                     except Exception as e2:
