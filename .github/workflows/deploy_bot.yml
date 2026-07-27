@@ -16,14 +16,14 @@ jobs:
         run: |
           echo "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
-          VM="opc@152.67.164.204"
-          VMDIR="/home/opc/client-tracker-mofsl"
+          VM="opc@${{ secrets.VM_HOST }}"
+          VMDIR="/home/opc/app"
 
           # deploy script — refreshes files then restarts the live systemd service
           cat > /tmp/deploy.sh << 'SCRIPT'
           #!/bin/bash
           set -e
-          VMDIR="/home/opc/client-tracker-mofsl"
+          VMDIR="/home/opc/app"
           SVC="tgbot"
 
           # Clean up leftover files from old deploys

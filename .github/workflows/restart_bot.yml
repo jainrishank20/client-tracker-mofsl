@@ -17,7 +17,7 @@ jobs:
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
           for attempt in 1 2 3 4 5; do
             echo "=== SSH attempt $attempt ==="
-            if $SSH opc@152.67.164.204 \
+            if $SSH opc@${{ secrets.VM_HOST }} \
                 "sudo systemctl restart tgbot.service && sleep 3 && sudo systemctl is-active tgbot.service && echo 'Bot restarted OK'"; then
               echo "Restart succeeded on attempt $attempt"
               break

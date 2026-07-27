@@ -22,7 +22,7 @@ jobs:
           chmod 600 /tmp/vm_key
           trap 'rm -f /tmp/vm_key' EXIT
 
-          VM="opc@152.67.164.204"
+          VM="opc@${{ secrets.VM_HOST }}"
           OPTS="-i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=20 -o ServerAliveCountMax=10"
 
           echo "=== Waiting for SSH ==="
@@ -33,7 +33,7 @@ jobs:
           done
 
           echo "=== Copying scripts to VM ==="
-          scp $OPTS vm_daily_run.sh vm_setup.sh ticker_overrides.json symbol_map.py "$VM:/home/opc/client-tracker-mofsl/"
+          scp $OPTS vm_daily_run.sh vm_setup.sh ticker_overrides.json symbol_map.py "$VM:/home/opc/app/"
 
           echo "=== Running setup on VM ==="
-          ssh $OPTS "$VM" "chmod +x /home/opc/client-tracker-mofsl/vm_setup.sh && /home/opc/client-tracker-mofsl/vm_setup.sh"
+          ssh $OPTS "$VM" "chmod +x /home/opc/app/vm_setup.sh && /home/opc/app/vm_setup.sh"

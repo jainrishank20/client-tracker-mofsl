@@ -128,7 +128,7 @@ jobs:
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_qa
           chmod 600 /tmp/vm_key_qa
           scp -i /tmp/vm_key_qa -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-            opc@152.67.164.204:/home/opc/client-tracker-mofsl/open_positions_snapshot.json . 2>/dev/null || true
+            opc@${{ secrets.VM_HOST }}:/home/opc/app/open_positions_snapshot.json . 2>/dev/null || true
           rm -f /tmp/vm_key_qa
           python tests/qa_positions.py
 
@@ -148,7 +148,7 @@ jobs:
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_snap
           chmod 600 /tmp/vm_key_snap
           scp -i /tmp/vm_key_snap -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-            opc@152.67.164.204:/home/opc/client-tracker-mofsl/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
+            opc@${{ secrets.VM_HOST }}:/home/opc/app/pnl_snapshot.json pnl_snapshot.json 2>/dev/null || true
           rm -f /tmp/vm_key_snap
 
       # ── Step 4: Send Telegram ledger summary ──────────────────────────────────
@@ -173,10 +173,10 @@ jobs:
           patch = {'clients': cfg.get('clients', {}), 'github_token': cfg.get('github_token', '')}
           print(json.dumps(patch))
           " > /tmp/new_clients.json
-          SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@152.67.164.204"
+          SSH="ssh -i /tmp/vm_key_cfg -o StrictHostKeyChecking=no -o ConnectTimeout=30 opc@${{ secrets.VM_HOST }}"
           $SSH "python3 -c \"
           import json
-          path='/home/opc/client-tracker-mofsl/bot_config.json'
+          path='/home/opc/app/bot_config.json'
           c=json.load(open(path))
           patch=json.load(open('/dev/stdin'))
           c['clients']=patch['clients']
@@ -199,8 +199,8 @@ jobs:
           trap 'rm -f /tmp/vm_key /tmp/vm_overrides.json' EXIT
           SCP="scp -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
           SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
-          VM="opc@152.67.164.204"
-          VMDIR="/home/opc/client-tracker-mofsl"
+          VM="opc@${{ secrets.VM_HOST }}"
+          VMDIR="/home/opc/app"
           $SCP "$VM:$VMDIR/ticker_overrides.json" /tmp/vm_overrides.json 2>/dev/null || true
           python3 -c "import json,sys; json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read())" 2>/dev/null || echo '{}' > /tmp/vm_overrides.json
           python3 -c "import json,os; r=json.loads(open('ticker_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('ticker_overrides.json') else {}; v=json.loads(open('/tmp/vm_overrides.json',encoding='utf-8-sig').read()) if os.path.exists('/tmp/vm_overrides.json') else {}; m={**r,**v}; json.dump(m,open('ticker_overrides.json','w'),indent=2); print(f'Merged overrides: {len(r)} runner + {len(v)} VM = {len(m)} total')"
