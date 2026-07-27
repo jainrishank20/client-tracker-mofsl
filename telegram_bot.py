@@ -204,29 +204,17 @@ def fmt_inr(val: float) -> str:
 # ── CMP fetching ──────────────────────────────────────────────────────────────
 
 def fetch_cmp(symbols: list) -> dict:
-    """Fetch live CMP for a list of NSE symbols. Returns {symbol: price}."""
+    """Fetch live CMP for a list of NSE symbols using fast_info — one lightweight call per ticker."""
     if not _YF or not symbols:
         return {}
-    symbols = list(dict.fromkeys(symbols))  # dedupe, no cap
+    symbols = list(dict.fromkeys(symbols))
     result = {}
-    # yfinance handles up to ~100 tickers per call; batch in chunks of 50 to be safe
-    for i in range(0, len(symbols), 50):
-        chunk = symbols[i:i+50]
+    for sym in symbols:
         try:
-            tickers = [s + '.NS' for s in chunk]
-            data = yf.download(tickers, period='1d', interval='1m',
-                               progress=False, auto_adjust=True, timeout=15)
-            if len(tickers) == 1:
-                try:
-                    result[chunk[0]] = float(data['Close'].dropna().iloc[-1])
-                except Exception:
-                    pass
-            else:
-                for s, t in zip(chunk, tickers):
-                    try:
-                        result[s] = float(data['Close'][t].dropna().iloc[-1])
-                    except Exception:
-                        pass
+            info = yf.Ticker(sym + '.NS').fast_info
+            price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+            if price:
+                result[sym] = float(price)
         except Exception:
             pass
     return result
@@ -235,9 +223,9 @@ def fetch_single_cmp(symbol: str) -> Optional[float]:
     if not _YF:
         return None
     try:
-        data = yf.Ticker(symbol + '.NS').history(period='1d', interval='1m')
-        if not data.empty:
-            return float(data['Close'].iloc[-1])
+        info = yf.Ticker(symbol + '.NS').fast_info
+        price = info.get('lastPrice') or info.get('regularMarketPreviousClose')
+        return float(price) if price else None
     except Exception:
         pass
     return None
@@ -1247,12 +1235,14 @@ def main():
                 if not text or chat_id not in CHAT_IDS:
                     continue
                 print(f"[{chat_id}] {text}")
-                try:
-                    reply = handle(text, chat_id)
-                    if reply:
-                        send(chat_id, reply)
-                except Exception as e:
-                    send(chat_id, f"Error: {e}")
+                def _dispatch(t=text, c=chat_id):
+                    try:
+                        reply = handle(t, c)
+                        if reply:
+                            send(c, reply)
+                    except Exception as e:
+                        send(c, f"Error: {e}")
+                threading.Thread(target=_dispatch, daemon=True).start()
         except urllib.error.HTTPError as e:
             if e.code == 409:
                 print("FATAL: 409 Conflict — another bot instance is running. Exiting.")
