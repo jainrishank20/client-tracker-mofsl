@@ -1,10 +1,11 @@
 {
-  "date": "2026-07-26",
+  "date": "2026-07-27",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
     ],
     "RIMK1209": [
+      "AEGIS VOPAK TERMINALS",
       "BAJAJ HOUSING FINANCE",
       "BEML",
       "BHARAT COKING COAL",
@@ -21,8 +22,11 @@
       "EIMCO ELECON (INDIA)",
       "EMMVEE PHOTOVOLTAIC",
       "GRANULES INDIA",
+      "GRAPHITE INDIA",
       "HAVELLS INDIA",
       "HDFC LIFE INS",
+      "HEG",
+      "HFCL",
       "IDBI BANK",
       "IFCI",
       "INDIAN BANK",
@@ -34,6 +38,7 @@
       "JBM AUTO",
       "JSW ENERGY",
       "KALPATARU",
+      "KARUR VYSYA BANK",
       "KAVERI SEED",
       "KIRLOSKAR OIL ENG",
       "KNR CONSTRU",
@@ -41,8 +46,9 @@
       "L&T TECHNOLOGY SERVICES",
       "LARSEN & TOUBRO",
       "LUX INDUSTRIES",
+      "MAHINDRA & MAHINDRA",
       "MIC ELECTRONICS",
-      "MRPL",
+      "NACL INDUSTRIES",
       "NATCO PHARMA",
       "NCC",
       "NETWEB TECHNOLOGIES",
@@ -58,6 +64,7 @@
       "RITES",
       "SHAILY ENGINEERING",
       "SHIPPING CORP OF INDIA LT",
+      "STERLITE TECHNOLOGIES",
       "SUZLON ENERGY",
       "SWAN CORP",
       "SWIGGY",
@@ -88,26 +95,26 @@
       "VIKRAM SOLAR"
     ],
     "RIMK1238": [
-      "BIOCON",
-      "HAVELLS INDIA",
-      "HDFC LIFE INS",
-      "INOX WIND",
-      "LARSEN & TOUBRO",
-      "NUVOCO VISTAS CORP",
+      "BSE",
+      "KAYNES TECHNOLOGY IND",
+      "REC",
+      "SCHAEFFLER INDIA",
       "SHIPPING CORP OF INDIA LT",
       "SUZLON ENERGY",
-      "TRANSPORT CORP OF INDIA",
-      "VIKRAM SOLAR"
+      "VIKRAM SOLAR",
+      "WIPRO"
     ],
     "RIMK1247": [
       "WOCKHARDT"
     ],
     "RIMK1248": [
+      "AEGIS VOPAK TERMINALS",
       "BIOCON",
       "BSE",
-      "CANARA ROBECO AMC",
-      "DATA PATTERNS INDIA",
+      "DIXON TECHNOLOGIES",
       "EPACK PREFAB TECHN",
+      "HINDUSTAN AERONAUTICS",
+      "ICICI PRUDENTIAL AMC",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ION EXCHANGE (INDIA)",
