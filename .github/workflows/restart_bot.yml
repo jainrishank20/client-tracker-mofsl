@@ -14,7 +14,15 @@ jobs:
         run: |
           printf '%s' "$VM_SSH_KEY" > /tmp/vm_key
           chmod 600 /tmp/vm_key
-          ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            opc@152.67.164.204 \
-            "sudo systemctl restart tgbot.service && sleep 3 && sudo systemctl status tgbot.service --no-pager -l | tail -10"
+          SSH="ssh -i /tmp/vm_key -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=20"
+          for attempt in 1 2 3 4 5; do
+            echo "=== SSH attempt $attempt ==="
+            if $SSH opc@152.67.164.204 \
+                "sudo systemctl restart tgbot.service && sleep 3 && sudo systemctl is-active tgbot.service && echo 'Bot restarted OK'"; then
+              echo "Restart succeeded on attempt $attempt"
+              break
+            fi
+            echo "Attempt $attempt failed, waiting 30s..."
+            sleep 30
+          done
           rm -f /tmp/vm_key
