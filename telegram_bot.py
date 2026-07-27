@@ -465,11 +465,16 @@ def pnl_summary(trades: list, names: dict) -> str:
 
 # ── /update — self-update from GitHub (no SSH needed) ────────────────────────
 
+_UPDATE_LOCK = threading.Lock()
+
 def self_update(chat_id: str):
     """Pull latest code from GitHub, set up systemd if needed, restart cleanly."""
     import subprocess
 
     def _run():
+        if not _UPDATE_LOCK.acquire(blocking=False):
+            send(chat_id, "Update already in progress — please wait.")
+            return
         try:
             send(chat_id, "Updating bot from GitHub...")
             c     = load_cfg()
@@ -517,6 +522,8 @@ def self_update(chat_id: str):
 
         except Exception as e:
             send(chat_id, f"Update failed: {e}")
+        finally:
+            _UPDATE_LOCK.release()
 
     threading.Thread(target=_run, daemon=True).start()
 
