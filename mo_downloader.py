@@ -576,27 +576,31 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             }
         """) or []
 
-        # Identify the fresh row for THIS client:
-        # Priority 1 — PROCESSING/PENDING: unambiguously new (not yet complete)
-        # Priority 2 — row count grew: index-0 row is the newest addition
-        # Priority 3 — SUCCESS sig not seen at snapshot time
+        # Identify the fresh row for THIS client.
+        # Pass 1 — client code must appear in the row (prevents picking another
+        #           client's SUCCESS row from the shared download history table).
+        # Pass 2 — fallback to position/sig heuristics when client code is absent.
         found = None
         found_idx = None
-        for i, cells in enumerate(all_rows):
-            sig = '|'.join(cells)
-            status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
-            if status in ('PROCESSING', 'PENDING'):
-                found, found_idx = cells, i
+        for _pass in (1, 2):
+            for i, cells in enumerate(all_rows):
+                sig = '|'.join(cells)
+                status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
+                row_is_mine = any(client in c for c in cells)
+                if _pass == 1 and not row_is_mine:
+                    continue
+                if status in ('PROCESSING', 'PENDING'):
+                    found, found_idx = cells, i
+                    break
+                if status == 'SUCCESS':
+                    if len(all_rows) > pre_count and i == 0 and sig not in pre_set:
+                        found, found_idx = cells, i
+                        break
+                    if sig not in pre_set:
+                        found, found_idx = cells, i
+                        break
+            if found is not None:
                 break
-            if status == 'SUCCESS':
-                # New row appeared (count grew) — must be index 0
-                if len(all_rows) > pre_count and i == 0:
-                    found, found_idx = cells, i
-                    break
-                # Sig not present at snapshot time
-                if sig not in pre_set:
-                    found, found_idx = cells, i
-                    break
 
         if found is not None:
             row_cells = found
@@ -618,7 +622,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
                 }
             }
         """)
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
     else:
         raise RuntimeError(f"Timed out waiting for SUCCESS — {client}")
 

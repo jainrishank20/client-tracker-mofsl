@@ -27,7 +27,7 @@ concurrency:
 jobs:
   daily-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     permissions:
       contents: write   # needed for git push in "Commit data files to repo" step
 
@@ -95,7 +95,7 @@ jobs:
           else
             python mo_downloader.py
           fi
-        timeout-minutes: 35
+        timeout-minutes: 40
 
       # ── Save all CSVs + ledger to cache after GHA download ───────────────────
       - name: Save CSVs to cache
