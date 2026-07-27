@@ -147,13 +147,44 @@ def push_config_async(cfg: dict):
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
 
+_GH_CACHE: dict = {}   # {filename: (data, fetched_at)}
+_GH_TTL   = 300        # seconds — refresh from GitHub every 5 min
+
+def _gh_fetch(filename: str):
+    """Fetch a JSON file from the GitHub repo, with 5-min in-memory cache."""
+    import time as _time
+    now = _time.time()
+    cached = _GH_CACHE.get(filename)
+    if cached and now - cached[1] < _GH_TTL:
+        return cached[0]
+    try:
+        cfg  = load_cfg()
+        repo = cfg.get('github_repo', 'jainrishank20/client-tracker-mofsl')
+        tok  = cfg.get('github_token', '')
+        headers = {'Authorization': f'token {tok}', 'Accept': 'application/vnd.github.v3.raw'} if tok else {}
+        req  = urllib.request.Request(
+            f'https://api.github.com/repos/{repo}/contents/{filename}?ref=main',
+            headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        _GH_CACHE[filename] = (data, now)
+        return data
+    except Exception:
+        return cached[0] if cached else None
+
 def load_trades() -> list:
+    data = _gh_fetch('trades.json')
+    if data is not None:
+        return data
     try:
         return json.load(open(os.path.join(BASE, 'trades.json')))
     except Exception:
         return []
 
 def load_ledger() -> dict:
+    data = _gh_fetch('ledger.json')
+    if data is not None:
+        return data
     try:
         return json.load(open(os.path.join(BASE, 'ledger.json')))
     except Exception:
