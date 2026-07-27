@@ -57,9 +57,9 @@ GitHub Actions (ubuntu-latest runner)
   │
   └─ 6. SCP push to VM
         trades.json, ledger.json, symbol_map.py, ticker_overrides.json
-        → /home/opc/client-tracker-mofsl/ on Oracle VM
+        → /home/opc/app/ on Oracle VM
 
-Oracle VM (152.67.164.204) — always on
+Oracle VM (140.245.200.121) — always on
   └─ tgbot.service (systemd, Restart=always)
         telegram_bot.py reads trades.json + ledger.json from disk
         Responds to Telegram messages
@@ -151,7 +151,7 @@ Option B: Edit `ticker_overrides.json` → push → trigger Daily Trade Download
 | Item | Location |
 |---|---|
 | Source code | `C:\Users\jainr\Desktop\client-tracker\` (local) + GitHub: `jainrishank20/client-tracker-mofsl` |
-| VM code | `/home/opc/client-tracker-mofsl/` on `152.67.164.204` |
+| VM code | `/home/opc/app/` on `140.245.200.121` |
 | Bot service | `sudo systemctl status tgbot` on VM |
 | Bot logs | `sudo journalctl -u tgbot -n 100` on VM |
 | GSheet | [Client-tracker-MOFSL](https://docs.google.com/spreadsheets/d/1RBaZYY8Eheet13UJy6eRMJIFUzU9Yii335l5x_H5KVo) |
