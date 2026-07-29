@@ -200,18 +200,17 @@ def _pnl_summary_lines() -> list:
 
     w0 = max(len(r[0]) for r in rows)
     w1 = max(len('Realized'), max((len(_col(r[1])) for r in rows), default=0))
-    w2 = max(len('Unrealzd'), max((len(_col(r[2])) for r in rows), default=0))
-    w3 = max(len('Total'),    max((len(_col(r[3])) for r in rows), default=0))
-    sep = '─' * (w0 + w1 + w2 + w3 + 9)
+    w2 = max(len('Total'),    max((len(_col(r[3])) for r in rows), default=0))
+    sep = '─' * (w0 + w1 + w2 + 6)
 
     out = ['', f'`📈 P&L Summary (FY {FY_START.year}-{FY_START.year % 100 + 1})`',
            f'`{sep}`',
-           f'`{"Client":<{w0}}  {"Realized":>{w1}}  {"Unrealzd":>{w2}}  {"Total":>{w3}}`',
+           f'`{"Client":<{w0}}  {"Realized":>{w1}}  {"Total":>{w2}}`',
            f'`{sep}`']
     for c, r, u, t_val in rows:
-        out.append(f'`{c:<{w0}}  {_col(r):>{w1}}  {_col(u):>{w2}}  {_col(t_val):>{w3}}`')
+        out.append(f'`{c:<{w0}}  {_col(r):>{w1}}  {_col(t_val):>{w2}}`')
     out.append(f'`{sep}`')
-    out.append(f'`{"Total":<{w0}}  {_col(tot_r):>{w1}}  {_col(tot_u):>{w2}}  {_col(tot_t):>{w3}}`')
+    out.append(f'`{"Total":<{w0}}  {_col(tot_r):>{w1}}  {_col(tot_t):>{w2}}`')
     return out
 
 
