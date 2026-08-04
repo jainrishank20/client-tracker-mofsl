@@ -286,8 +286,8 @@ def _pnl_movement_lines() -> list:
 
 rows = []
 for c in CLIENTS:
-    d = fmt(ledger.get(c, {}).get('combined', 0.0))
-    m = fmt(ledger.get(c, {}).get('mtf', 0.0))
+    d = fmt(round(ledger.get(c, {}).get('combined', 0.0)))
+    m = fmt(round(ledger.get(c, {}).get('mtf', 0.0)))
     rows.append((c, d, m))
 
 rows_display = rows
