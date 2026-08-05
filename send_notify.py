@@ -196,7 +196,7 @@ def _pnl_summary_lines() -> list:
         return []
 
     def _col(v):
-        return fmt_signed(v) if v else ''
+        return fmt_signed(round(v)) if v else ''
 
     w0 = max(len(r[0]) for r in rows)
     w1 = max(len('Realized'), max((len(_col(r[1])) for r in rows), default=0))
@@ -253,9 +253,9 @@ def _pnl_movement_lines() -> list:
         if has_prev:
             delta = cur - prev_pnl.get(c, 0.0)
             arrow = '▲' if delta >= 0 else '▼'
-            rows.append((c, arrow, fmt_signed(delta)))
+            rows.append((c, arrow, fmt_signed(round(delta))))
         else:
-            rows.append((c, '▲' if cur >= 0 else '▼', fmt(cur)))
+            rows.append((c, '▲' if cur >= 0 else '▼', fmt(round(cur))))
 
     if not any(r[2] for r in rows):
         return []
@@ -267,7 +267,7 @@ def _pnl_movement_lines() -> list:
         total_delta = sum(today_pnl.get(c, 0) for c in CLIENTS)
         header_txt  = 'Unrealized P&L (today)'
 
-    total_str = fmt_signed(total_delta) or '0'
+    total_str = fmt_signed(round(total_delta)) or '0'
     w0 = max(len(r[0]) for r in rows)
     w1 = max(len(total_str), max((len(r[2]) for r in rows if r[2]), default=0)) or 1
     sep = '─' * (w0 + w1 + 5)
