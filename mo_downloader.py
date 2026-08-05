@@ -940,10 +940,14 @@ async def main():
 
         for fy in FINANCIAL_YEARS:
             print(f"\n{'='*40}\nFinancial Year: {fy}\n{'='*40}")
-            # Always navigate fresh at the start of each FY (goto home + re-enter Trade Details)
-            if len(FINANCIAL_YEARS) > 1:
-                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
-                await asyncio.sleep(1.5)
+            # Navigate to home and check session is still alive before each FY
+            await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
+            await asyncio.sleep(1.5)
+            # If session expired, CBOS redirects to login page — re-authenticate
+            if 'login' in page.url.lower() or await page.locator('input[type="password"]').count() > 0:
+                print("  Session expired — re-logging in...")
+                await login(page)
+                home_url = page.url
             first = True
             for client in CLIENTS:
                 if fy in NO_HISTORY_FY.get(client, set()):

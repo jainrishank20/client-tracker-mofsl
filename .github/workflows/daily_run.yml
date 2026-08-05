@@ -57,7 +57,6 @@ jobs:
           printf '%s' "$BOT_CONFIG" > bot_config.json
           printf '%s' "$GSHEET_KEY" > gsheet_key.json
           mkdir -p mo_csvs
-          touch /tmp/pipeline_start
           # ticker_overrides.json comes from git checkout — no secret needed
 
       - name: Get cache keys
@@ -80,6 +79,11 @@ jobs:
           restore-keys: |
             csvs-
             fy2526-csvs-
+
+      # Mark pipeline start AFTER cache restore so restored files don't count as new downloads
+      - name: Mark pipeline start time
+        if: ${{ github.event.inputs.skip_download != 'true' }}
+        run: touch /tmp/pipeline_start
 
       # ── Step 1: Download CSVs + ledger from CBOS (GHA runner only) ───────────
       # Skipped when VM already ran (skip_download=true) — trades.json from checkout.
