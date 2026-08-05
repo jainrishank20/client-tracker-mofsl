@@ -231,8 +231,16 @@ async def login(page):
 
 async def navigate_to_trade_details(page):
     """JS-click the Trade Details And Summary switch-page link (bypasses pointer intercept)."""
+    # Wait up to 10s for switch-page links to render (Angular may be slow after ledger scrape)
+    for _wait in range(10):
+        count = await page.evaluate("() => document.querySelectorAll('a.switch-page, a[class*=\"switch-page\"]').length")
+        if count > 0:
+            break
+        await asyncio.sleep(1)
+
     r = await page.evaluate("""
         () => {
+            // Primary: switch-page links matching Trade Details
             for (const a of document.querySelectorAll('a.switch-page, a[class*="switch-page"]')) {
                 const txt = a.textContent.trim();
                 const bc  = a.getAttribute('data-breadcrumb') || '';
@@ -242,6 +250,14 @@ async def navigate_to_trade_details(page):
                     jsn.toLowerCase().includes('tradedetail')) {
                     a.click();
                     return {clicked: txt.substring(0, 40), jsn};
+                }
+            }
+            // Fallback: any link whose text includes 'Trade Details'
+            for (const a of document.querySelectorAll('a')) {
+                const txt = a.textContent.trim();
+                if (txt.includes('Trade Details') && txt.includes('Summary')) {
+                    a.click();
+                    return {clicked_fallback: txt.substring(0, 40)};
                 }
             }
             return {notFound: true};
@@ -922,9 +938,13 @@ async def main():
         await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
         await asyncio.sleep(1.5)
 
-        first = True
         for fy in FINANCIAL_YEARS:
             print(f"\n{'='*40}\nFinancial Year: {fy}\n{'='*40}")
+            # Always navigate fresh at the start of each FY (goto home + re-enter Trade Details)
+            if len(FINANCIAL_YEARS) > 1:
+                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
+                await asyncio.sleep(1.5)
+            first = True
             for client in CLIENTS:
                 if fy in NO_HISTORY_FY.get(client, set()):
                     print(f"  Skipping {client} [{fy}] — no history for this FY")
