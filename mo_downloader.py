@@ -330,13 +330,20 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     # Try to find the client filter — CBOS UI has changed; try multiple approaches
     filter_found = False
 
-    # Option A: original aria-controls trigger (old CBOS)
-    if await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').count() > 0:
-        await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=5000)
+    # Option A: Select2 trigger — try both old (-results) and new (-container) aria-controls values
+    _filter_sel = None
+    for _ac in ('select2-txtEDP_TradeDetailsSumry_FilterSearch-container',
+                'select2-txtEDP_TradeDetailsSumry_FilterSearch-results'):
+        _loc = f'[aria-controls="{_ac}"], [aria-owns="{_ac}"]'
+        if await page.locator(_loc).count() > 0:
+            _filter_sel = _loc
+            break
+    if _filter_sel:
+        await page.locator(_filter_sel).click(timeout=5000)
         await asyncio.sleep(1)
         await page.locator('input.select2-search__field').fill(client)
         filter_found = True
-        print("  Filter: Select2 aria-controls (old)")
+        print(f"  Filter: Select2 ({_filter_sel[:60]})")
 
     # Option B: jQuery Select2 open on the underlying input (works even if trigger span ID changed)
     if not filter_found:
