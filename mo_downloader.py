@@ -320,15 +320,59 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     """)
     await asyncio.sleep(0.5)
 
-    # ── Filter Search (Select2 autocomplete) ──
-    # If we're not on Trade Details page (e.g. session expired mid-loop), navigate there first
+    # ── Filter Search ──
+    # If we're not on Trade Details page, navigate there first
     if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() == 0:
         print("  Not on Trade Details page — navigating...")
         if not await navigate_to_trade_details(page):
             raise RuntimeError("Could not navigate to Trade Details page")
-    await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=15000)
-    await asyncio.sleep(1)
-    await page.locator('input.select2-search__field').fill(client)
+
+    # Try to find the client filter — CBOS UI has changed; try multiple selectors
+    filter_found = False
+
+    # Option A: original Select2 aria-controls trigger
+    if await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').count() > 0:
+        await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=5000)
+        await asyncio.sleep(1)
+        await page.locator('input.select2-search__field').fill(client)
+        filter_found = True
+        print("  Filter: Select2 aria-controls")
+
+    # Option B: underlying input directly (Select2 may have been replaced with plain input)
+    elif await page.locator('#txtEDP_TradeDetailsSumry_FilterSearch').count() > 0:
+        inp = page.locator('#txtEDP_TradeDetailsSumry_FilterSearch')
+        await inp.click()
+        await asyncio.sleep(0.5)
+        await inp.fill(client)
+        filter_found = True
+        print("  Filter: direct input #txtEDP_TradeDetailsSumry_FilterSearch")
+
+    # Option C: any Select2 trigger on the page
+    elif await page.locator('.select2-selection, .select2-container').first.count() > 0:
+        await page.locator('.select2-selection, .select2-container').first.click()
+        await asyncio.sleep(1)
+        sf = page.locator('input.select2-search__field')
+        if await sf.count() > 0:
+            await sf.fill(client)
+            filter_found = True
+            print("  Filter: Select2 generic")
+
+    if not filter_found:
+        # Debug: dump what inputs/selects exist on the page
+        debug = await page.evaluate("""
+            () => {
+                const els = [];
+                for (const el of document.querySelectorAll('input, select, [class*="select2"], [aria-controls]')) {
+                    const s = window.getComputedStyle(el);
+                    if (s.display === 'none') continue;
+                    els.push({tag: el.tagName, id: el.id, cls: el.className.substring(0,40), aria: el.getAttribute('aria-controls') || ''});
+                }
+                return els.slice(0, 20);
+            }
+        """)
+        print(f"  Filter debug: {debug}")
+        raise RuntimeError("Could not find client filter input")
+
     await asyncio.sleep(2)
     client_display = await page.evaluate("""
         (code) => {
