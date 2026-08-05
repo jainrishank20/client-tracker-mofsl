@@ -57,6 +57,7 @@ jobs:
           printf '%s' "$BOT_CONFIG" > bot_config.json
           printf '%s' "$GSHEET_KEY" > gsheet_key.json
           mkdir -p mo_csvs
+          touch /tmp/pipeline_start
           # ticker_overrides.json comes from git checkout — no secret needed
 
       - name: Get cache keys
@@ -102,11 +103,12 @@ jobs:
         id: verify-csvs
         if: ${{ github.event.inputs.skip_download != 'true' }}
         run: |
-          CSV_COUNT=$(find mo_csvs -name "*.csv" 2>/dev/null | wc -l)
+          # Count only CSVs modified in the last 60 minutes (this run's downloads)
+          CSV_COUNT=$(find mo_csvs -name "*.csv" -newer /tmp/pipeline_start 2>/dev/null | wc -l)
           echo "csv_count=$CSV_COUNT" >> $GITHUB_OUTPUT
-          echo "CSVs downloaded: $CSV_COUNT"
+          echo "CSVs downloaded this run: $CSV_COUNT"
           if [ "$CSV_COUNT" -eq 0 ]; then
-            echo "❌ CBOS download produced 0 CSVs — Playwright likely failed. Aborting pipeline."
+            echo "❌ CBOS download produced 0 new CSVs — Playwright likely failed. Aborting pipeline."
             exit 1
           fi
 
