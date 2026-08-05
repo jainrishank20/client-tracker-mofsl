@@ -230,52 +230,32 @@ async def login(page):
 
 
 async def navigate_to_trade_details(page):
-    """Navigate to the Trade Details And Summary page."""
+    """Navigate to the Trade Details And Summary page.
+    CBOS now uses a <select> dropdown for navigation (changed from sidebar links in UI update).
+    """
     await asyncio.sleep(2)  # let Angular render
 
-    # Attempt 1: Playwright text locator (most resilient to class/structure changes)
-    try:
-        loc = page.get_by_text('Trade Details And Summary', exact=False)
-        if await loc.count() > 0:
-            await loc.first.click()
-            await asyncio.sleep(3)
-            if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() > 0:
-                print("  On Trade Details page (text locator).")
-                return True
-    except Exception as e:
-        print(f"  Text locator attempt: {e}")
-
-    # Attempt 2: JS over all interactive elements — broader than switch-page only
+    # Primary: find the nav <select> with "Trade Details And Summary" option and select it
     r = await page.evaluate("""
         () => {
-            const tags = 'a, button, li, [role="menuitem"], [role="listitem"], mat-list-item';
-            for (const el of document.querySelectorAll(tags)) {
-                const txt = el.textContent.trim();
-                const bc  = el.getAttribute('data-breadcrumb') || '';
-                const jsn = el.getAttribute('data-jsname') || '';
-                if (txt.includes('Trade Detail') ||
-                    bc.includes('Trade Detail') ||
-                    jsn.toLowerCase().includes('tradedetail')) {
-                    el.click();
-                    return {clicked: txt.substring(0, 60), tag: el.tagName};
+            for (const sel of document.querySelectorAll('select')) {
+                for (const opt of sel.options) {
+                    if (opt.text.includes('Trade Detail') && opt.text.includes('Summar')) {
+                        sel.value = opt.value;
+                        sel.dispatchEvent(new Event('change', {bubbles: true}));
+                        if (typeof $ !== 'undefined') $(sel).trigger('change');
+                        return {selected: opt.text.trim(), value: opt.value.substring(0, 60)};
+                    }
                 }
             }
-            // Debug: dump all visible link/button text so we can see what IS on the page
-            const visible = [];
-            for (const el of document.querySelectorAll('a, button, li')) {
-                const s = window.getComputedStyle(el);
-                if (s.display === 'none' || s.visibility === 'hidden') continue;
-                const txt = el.textContent.trim();
-                if (txt.length > 3 && txt.length < 60) visible.push(txt);
-            }
-            return {notFound: true, visibleLinks: [...new Set(visible)].slice(0, 30)};
+            return {notFound: true};
         }
     """)
     print(f"  Nav: {r}")
     await asyncio.sleep(3)
 
     if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() > 0:
-        print("  On Trade Details page (JS click).")
+        print("  On Trade Details page.")
         return True
 
     return False
