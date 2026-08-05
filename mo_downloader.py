@@ -68,13 +68,12 @@ def _assert_csv_unique(client: str, fy: str, csv_path: str) -> None:
 
 # Clients confirmed to have FY25-26 trade history.
 # Everyone NOT in this set is assumed to have joined FY26-27 only.
-FY2526_CLIENTS = {"RIMK1205", "RIMK1209", "RIMK1215", "RIMK1220"}
+FY2526_CLIENTS = {"RIMK1205", "RIMK1209", "RIMK1215", "RIMK1220", "RIMK1248"}
 
 # Explicit skip map — belt-and-suspenders; auto-skip logic below also handles unknowns.
 NO_HISTORY_FY: dict[str, set] = {
     "RIMK1238": {"2025-2026"},
     "RIMK1247": {"2025-2026"},
-    "RIMK1248": {"2025-2026"},
     "RIMK1249": {"2025-2026"},
     "RIMK1252": {"2025-2026"},
     "RIMK1256": {"2025-2026"},
