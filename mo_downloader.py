@@ -327,50 +327,80 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if not await navigate_to_trade_details(page):
             raise RuntimeError("Could not navigate to Trade Details page")
 
-    # Try to find the client filter — CBOS UI has changed; try multiple selectors
+    # Try to find the client filter — CBOS UI has changed; try multiple approaches
     filter_found = False
 
-    # Option A: original Select2 aria-controls trigger
+    # Option A: original aria-controls trigger (old CBOS)
     if await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').count() > 0:
         await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=5000)
         await asyncio.sleep(1)
         await page.locator('input.select2-search__field').fill(client)
         filter_found = True
-        print("  Filter: Select2 aria-controls")
+        print("  Filter: Select2 aria-controls (old)")
 
-    # Option B: underlying input directly (Select2 may have been replaced with plain input)
-    elif await page.locator('#txtEDP_TradeDetailsSumry_FilterSearch').count() > 0:
+    # Option B: jQuery Select2 open on the underlying input (works even if trigger span ID changed)
+    if not filter_found:
+        r = await page.evaluate("""
+            (inputId) => {
+                if (typeof $ !== 'undefined' && $(('#' + inputId)).length) {
+                    try {
+                        $('#' + inputId).select2('open');
+                        return 'select2-open';
+                    } catch(e) { return 'select2-open-failed: ' + e; }
+                }
+                return 'jquery-not-found';
+            }
+        """, 'txtEDP_TradeDetailsSumry_FilterSearch')
+        print(f"  Filter B: {r}")
+        if 'select2-open' == r:
+            await asyncio.sleep(1)
+            sf = page.locator('input.select2-search__field')
+            if await sf.count() > 0:
+                await sf.fill(client)
+                filter_found = True
+                print("  Filter: jQuery select2('open')")
+
+    # Option C: click any Select2 trigger span on the page, then type
+    if not filter_found:
+        spans = page.locator('span.select2-selection--single, span.select2-selection')
+        n = await spans.count()
+        for i in range(n):
+            try:
+                await spans.nth(i).click(timeout=3000)
+                await asyncio.sleep(1)
+                sf = page.locator('input.select2-search__field')
+                if await sf.count() > 0:
+                    await sf.fill(client)
+                    filter_found = True
+                    print(f"  Filter: Select2 span #{i}")
+                    break
+            except Exception:
+                continue
+
+    # Option D: direct plain input fill (if Select2 was replaced with plain input)
+    if not filter_found:
         inp = page.locator('#txtEDP_TradeDetailsSumry_FilterSearch')
-        await inp.click()
-        await asyncio.sleep(0.5)
-        await inp.fill(client)
-        filter_found = True
-        print("  Filter: direct input #txtEDP_TradeDetailsSumry_FilterSearch")
-
-    # Option C: any Select2 trigger on the page
-    elif await page.locator('.select2-selection, .select2-container').first.count() > 0:
-        await page.locator('.select2-selection, .select2-container').first.click()
-        await asyncio.sleep(1)
-        sf = page.locator('input.select2-search__field')
-        if await sf.count() > 0:
-            await sf.fill(client)
+        if await inp.count() > 0:
+            await inp.click()
+            await asyncio.sleep(0.5)
+            await inp.fill(client)
             filter_found = True
-            print("  Filter: Select2 generic")
+            print("  Filter: plain input fill")
 
     if not filter_found:
-        # Debug: dump what inputs/selects exist on the page
         debug = await page.evaluate("""
             () => {
                 const els = [];
-                for (const el of document.querySelectorAll('input, select, [class*="select2"], [aria-controls]')) {
+                for (const el of document.querySelectorAll('input, select, span[class*="select2"], [aria-controls], [aria-labelledby]')) {
                     const s = window.getComputedStyle(el);
-                    if (s.display === 'none') continue;
-                    els.push({tag: el.tagName, id: el.id, cls: el.className.substring(0,40), aria: el.getAttribute('aria-controls') || ''});
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    els.push({tag: el.tagName, id: el.id, cls: el.className.substring(0,50),
+                              aria: el.getAttribute('aria-controls') || el.getAttribute('aria-labelledby') || ''});
                 }
-                return els.slice(0, 20);
+                return els.slice(0, 25);
             }
         """)
-        print(f"  Filter debug: {debug}")
+        print(f"  FILTER DEBUG (all visible inputs): {debug}")
         raise RuntimeError("Could not find client filter input")
 
     await asyncio.sleep(2)
