@@ -8,6 +8,7 @@ from collections import defaultdict
 parser = argparse.ArgumentParser()
 parser.add_argument('--status', default='unknown')
 parser.add_argument('--full',   default='false')
+parser.add_argument('--csv-count', default='')
 parser.add_argument('--sync-gsheet-outcome',  default='skipped')
 parser.add_argument('--fetch-pnl-outcome',    default='skipped')
 parser.add_argument('--sync-vm-outcome',      default='skipped')
@@ -38,9 +39,17 @@ total        = len(trades)
 status_icon = '✅' if args.status == 'success' else '❌'
 mode_tag    = ' `[FULL]`' if args.full == 'true' else ''
 
+csv_line = ''
+if args.csv_count:
+    csv_count = int(args.csv_count)
+    csv_icon = '✅' if csv_count > 0 else '❌'
+    csv_line = f"`{csv_icon} CSVs downloaded: {csv_count}`"
+
 lines = [f"{status_icon} *Pipeline complete*{mode_tag}",
-         f"`{total} trades  |  {total_open} open  |  {total_closed} closed`",
-         ""]
+         f"`{total} trades  |  {total_open} open  |  {total_closed} closed`"]
+if csv_line:
+    lines.append(csv_line)
+lines.append("")
 
 # Per-client table
 lines.append("`Client          Open  Closed`")

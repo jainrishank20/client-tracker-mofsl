@@ -97,6 +97,19 @@ jobs:
           fi
         timeout-minutes: 40
 
+      # ── Step 1b: Verify CSVs were actually downloaded ────────────────────────
+      - name: Verify CSV download
+        id: verify-csvs
+        if: ${{ github.event.inputs.skip_download != 'true' }}
+        run: |
+          CSV_COUNT=$(find mo_csvs -name "*.csv" 2>/dev/null | wc -l)
+          echo "csv_count=$CSV_COUNT" >> $GITHUB_OUTPUT
+          echo "CSVs downloaded: $CSV_COUNT"
+          if [ "$CSV_COUNT" -eq 0 ]; then
+            echo "❌ CBOS download produced 0 CSVs — Playwright likely failed. Aborting pipeline."
+            exit 1
+          fi
+
       # ── Save all CSVs + ledger to cache after GHA download ───────────────────
       - name: Save CSVs to cache
         if: ${{ github.event.inputs.skip_download != 'true' }}
@@ -238,6 +251,7 @@ jobs:
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
             --full "$IS_FULL" \
+            --csv-count "${{ steps.verify-csvs.outputs.csv_count || '0' }}" \
             --sync-gsheet-outcome "${SYNC_GSHEET_OUTCOME:-skipped}" \
             --fetch-pnl-outcome "${FETCH_PNL_OUTCOME:-skipped}" \
             --sync-vm-outcome "${SYNC_VM_OUTCOME:-skipped}" \
