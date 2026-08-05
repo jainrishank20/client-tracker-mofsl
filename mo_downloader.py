@@ -230,58 +230,52 @@ async def login(page):
 
 
 async def navigate_to_trade_details(page):
-    """JS-click the Trade Details And Summary switch-page link (bypasses pointer intercept)."""
-    # Wait up to 10s for switch-page links to render (Angular may be slow after ledger scrape)
-    for _wait in range(10):
-        count = await page.evaluate("() => document.querySelectorAll('a.switch-page, a[class*=\"switch-page\"]').length")
-        if count > 0:
-            break
-        await asyncio.sleep(1)
+    """Navigate to the Trade Details And Summary page."""
+    await asyncio.sleep(2)  # let Angular render
 
+    # Attempt 1: Playwright text locator (most resilient to class/structure changes)
+    try:
+        loc = page.get_by_text('Trade Details And Summary', exact=False)
+        if await loc.count() > 0:
+            await loc.first.click()
+            await asyncio.sleep(3)
+            if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() > 0:
+                print("  On Trade Details page (text locator).")
+                return True
+    except Exception as e:
+        print(f"  Text locator attempt: {e}")
+
+    # Attempt 2: JS over all interactive elements — broader than switch-page only
     r = await page.evaluate("""
         () => {
-            // Primary: switch-page links matching Trade Details
-            for (const a of document.querySelectorAll('a.switch-page, a[class*="switch-page"]')) {
-                const txt = a.textContent.trim();
-                const bc  = a.getAttribute('data-breadcrumb') || '';
-                const jsn = a.getAttribute('data-jsname') || '';
-                if (txt.startsWith('Trade Details And S') ||
-                    bc.includes('Trade Details') ||
+            const tags = 'a, button, li, [role="menuitem"], [role="listitem"], mat-list-item';
+            for (const el of document.querySelectorAll(tags)) {
+                const txt = el.textContent.trim();
+                const bc  = el.getAttribute('data-breadcrumb') || '';
+                const jsn = el.getAttribute('data-jsname') || '';
+                if (txt.includes('Trade Detail') ||
+                    bc.includes('Trade Detail') ||
                     jsn.toLowerCase().includes('tradedetail')) {
-                    a.click();
-                    return {clicked: txt.substring(0, 40), jsn};
+                    el.click();
+                    return {clicked: txt.substring(0, 60), tag: el.tagName};
                 }
             }
-            // Fallback: any link whose text includes 'Trade Details'
-            for (const a of document.querySelectorAll('a')) {
-                const txt = a.textContent.trim();
-                if (txt.includes('Trade Details') && txt.includes('Summary')) {
-                    a.click();
-                    return {clicked_fallback: txt.substring(0, 40)};
-                }
+            // Debug: dump all visible link/button text so we can see what IS on the page
+            const visible = [];
+            for (const el of document.querySelectorAll('a, button, li')) {
+                const s = window.getComputedStyle(el);
+                if (s.display === 'none' || s.visibility === 'hidden') continue;
+                const txt = el.textContent.trim();
+                if (txt.length > 3 && txt.length < 60) visible.push(txt);
             }
-            return {notFound: true};
+            return {notFound: true, visibleLinks: [...new Set(visible)].slice(0, 30)};
         }
     """)
     print(f"  Nav: {r}")
     await asyncio.sleep(3)
 
-    if await page.locator('[name*="TradeDetailsSumry"]').count() > 0:
-        print("  On Trade Details page.")
-        return True
-
-    # Fallback: bookmark link in Home page table
-    await page.evaluate("""
-        () => {
-            for (const a of document.querySelectorAll('td a, table a')) {
-                if (a.textContent.trim().startsWith('Trade Details And S')) { a.click(); return; }
-            }
-        }
-    """)
-    await asyncio.sleep(3)
-
-    if await page.locator('[name*="TradeDetailsSumry"]').count() > 0:
-        print("  On Trade Details page (via bookmark).")
+    if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() > 0:
+        print("  On Trade Details page (JS click).")
         return True
 
     return False
@@ -347,7 +341,11 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     await asyncio.sleep(0.5)
 
     # ── Filter Search (Select2 autocomplete) ──
-    # Container div ID changed in CBOS UI update — use aria-controls attribute instead
+    # If we're not on Trade Details page (e.g. session expired mid-loop), navigate there first
+    if await page.locator('[name*="TradeDetailsSumry"], [id*="TradeDetailsSumry"]').count() == 0:
+        print("  Not on Trade Details page — navigating...")
+        if not await navigate_to_trade_details(page):
+            raise RuntimeError("Could not navigate to Trade Details page")
     await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=15000)
     await asyncio.sleep(1)
     await page.locator('input.select2-search__field').fill(client)
