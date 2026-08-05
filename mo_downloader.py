@@ -330,51 +330,28 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     """)
     await asyncio.sleep(0.5)
 
-    # ── Filter Search (plain text input or Select2 autocomplete) ──
-    # CBOS updated UI: Filter Search is now a plain text input (no select2)
-    _used_select2 = False
+    # ── Filter Search (Select2 autocomplete) ──
+    # Container div ID changed in CBOS UI update — use aria-controls attribute instead
+    await page.locator('[aria-controls="select2-txtEDP_TradeDetailsSumry_FilterSearch-results"]').click(timeout=15000)
+    await asyncio.sleep(1)
+    await page.locator('input.select2-search__field').fill(client)
+    await asyncio.sleep(2)
+    client_display = await page.evaluate("""
+        (code) => {
+            for (const li of document.querySelectorAll('li.select2-results__option')) {
+                if (li.textContent.includes(code)) return li.textContent.trim();
+            }
+            return null;
+        }
+    """, client)
+    if client_display:
+        print(f"  Client display name: {client_display}")
     try:
-        _s2 = page.locator('#DivTradeDetailsSumryFilterSearch .select2-selection')
-        if await _s2.count() > 0:
-            await _s2.click(timeout=5000)
-            await asyncio.sleep(1)
-            await page.locator('input.select2-search__field').fill(client)
-            await asyncio.sleep(2)
-            client_display = await page.evaluate("""
-                (code) => {
-                    for (const li of document.querySelectorAll('li.select2-results__option')) {
-                        if (li.textContent.includes(code)) return li.textContent.trim();
-                    }
-                    return null;
-                }
-            """, client)
-            if client_display:
-                print(f"  Client display name: {client_display}")
-            try:
-                await page.locator(f'li.select2-results__option:has-text("{client}")').first.click(timeout=5000)
-                print(f"  Client: selected from autocomplete (select2)")
-            except PWTimeout:
-                await page.keyboard.press("Enter")
-                print(f"  Client: accepted via Enter (select2)")
-            _used_select2 = True
-    except Exception:
-        pass
-
-    if not _used_select2:
-        # New CBOS UI: plain text input for Filter Search
-        _inp = page.locator('#DivTradeDetailsSumryFilterSearch input').first
-        if await _inp.count() == 0:
-            _inp = page.locator('input[placeholder*="Search"], input[placeholder*="search"], input[placeholder*="Filter"]').first
-        await _inp.click(timeout=10000)
-        await _inp.fill(client)
-        await asyncio.sleep(2)
-        # Try autocomplete dropdown first, else press Enter
-        try:
-            await page.locator(f'li:has-text("{client}"), .autocomplete-item:has-text("{client}"), .dropdown-item:has-text("{client}")').first.click(timeout=5000)
-            print(f"  Client: selected from autocomplete (new UI)")
-        except PWTimeout:
-            await page.keyboard.press("Enter")
-            print(f"  Client: accepted via Enter (new UI)")
+        await page.locator(f'li.select2-results__option:has-text("{client}")').first.click(timeout=5000)
+        print(f"  Client: selected from autocomplete")
+    except PWTimeout:
+        await page.keyboard.press("Enter")
+        print(f"  Client: accepted via Enter")
     await asyncio.sleep(0.5)
 
     # ── Segment = EQ, Report Type = Detail (via underlying <select> + jQuery) ──
