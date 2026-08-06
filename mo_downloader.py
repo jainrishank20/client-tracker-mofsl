@@ -1055,6 +1055,8 @@ async def main():
                 try:
                     await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=first)
                     first = False
+                    # Keepalive ping — prevents CBOS inactivity timeout between clients
+                    await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
                 except Exception as e:
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
@@ -1062,13 +1064,6 @@ async def main():
                     # Retry once after a short pause (handles CBOS throttle / transient timeout)
                     print(f"  Retrying {client} [{fy}] in 10s...")
                     await asyncio.sleep(10)
-                    # Session may have expired during the wait — re-login if needed
-                    await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
-                    await asyncio.sleep(1)
-                    if 'login' in page.url.lower() or await page.locator('input[type="password"]').count() > 0:
-                        print("  Session expired before retry — re-logging in...")
-                        await login(page)
-                        home_url = page.url
                     try:
                         await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True)
                         print(f"  Retry succeeded for {client} [{fy}]")
