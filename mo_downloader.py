@@ -499,6 +499,46 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     await page.keyboard.press("Escape")
     await asyncio.sleep(0.3)
 
+    # Verify Exchange count — must be ≥ 2 (NSE-EQ + BSE-EQ); retry once if not
+    exch_count = await page.evaluate("""
+        () => {
+            const exchSel = Array.from(document.querySelectorAll('select'))
+                                 .find(s => s.id && s.id.toLowerCase().includes('exchange'));
+            if (exchSel) return Array.from(exchSel.selectedOptions).length;
+            // Fallback: read the badge/count span shown by the multiselect widget
+            const badge = document.querySelector('[class*="multiselect"] [class*="count"], [class*="multiselect"] [class*="badge"]');
+            return badge ? parseInt(badge.textContent.trim()) : -1;
+        }
+    """)
+    print(f"  Exchange selected count: {exch_count}")
+    if exch_count != -1 and exch_count < 2:
+        print("  WARNING: Exchange not fully selected — retrying Select all")
+        await page.evaluate("""
+            () => {
+                const exchSel = Array.from(document.querySelectorAll('select'))
+                                     .find(s => s.id && s.id.toLowerCase().includes('exchange'));
+                if (exchSel) {
+                    const wrapper = exchSel.closest('.select2, [class*="multiselect"], [class*="dropdown"]')
+                                 || exchSel.nextElementSibling || exchSel.parentElement;
+                    if (wrapper) wrapper.click();
+                }
+            }
+        """)
+        await asyncio.sleep(0.8)
+        await page.evaluate("""
+            () => {
+                for (const el of document.querySelectorAll('li, label, span, div, input')) {
+                    const txt = el.textContent.trim();
+                    const s = window.getComputedStyle(el);
+                    if (s.display === 'none' || s.visibility === 'hidden') continue;
+                    if (txt === 'Select all' || txt === 'Select All') { el.click(); return; }
+                }
+            }
+        """)
+        await asyncio.sleep(0.5)
+        await page.keyboard.press("Escape")
+        await asyncio.sleep(0.3)
+
     # ── Trade Date ──
     # After FY change, the form may auto-populate the date field.
     # If it already has a value, use it (covers historical FY where "Current Financial Year"
