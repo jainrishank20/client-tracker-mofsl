@@ -1,11 +1,10 @@
 {
-  "date": "2026-08-06",
+  "date": "2026-08-07",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
     ],
     "RIMK1209": [
-      "AEGIS LOGISTICS",
       "AEGIS VOPAK TERMINALS",
       "ALEMBIC PHARMA",
       "ALKYL AMINES",
@@ -24,7 +23,6 @@
       "CLEAN SCIENCE & TECH",
       "COHANCE LIFESCIENCES",
       "DATA PATTERNS INDIA",
-      "DECCAN GOLD MINES",
       "DEEPAK NITRITE",
       "DIXON TECHNOLOGIES",
       "DR. REDDY S LABORATORIES",
@@ -37,6 +35,7 @@
       "GRAPHITE INDIA",
       "HDFC BANK",
       "HDFC LIFE INS",
+      "HEG",
       "HFCL",
       "HINDUSTAN COPPER",
       "IDBI BANK",
@@ -62,14 +61,13 @@
       "L&T TECHNOLOGY SERVICES",
       "LARSEN & TOUBRO",
       "LASER POWER & INFRA",
-      "LEELA PALACES HOTEL",
       "LIC",
       "LUX INDUSTRIES",
       "MAHANAGAR GAS",
       "MAHINDRA & MAHINDRA",
       "MIC ELECTRONICS",
       "MIRAEAMC MAGOLDETF",
-      "MISHRA DHATU NIGAM",
+      "MTAR TECHNOLOGIES",
       "NACL INDUSTRIES",
       "NATCO PHARMA",
       "NCC",
@@ -102,13 +100,12 @@
       "UCO BANK",
       "URBAN COMPANY",
       "VEDANTA IRON AND STEEL L",
-      "VIJAYA DIAGNOSTIC CEN",
       "VIKRAM SOLAR",
+      "WATERWAYS LEISURE TOUR L",
       "WELSPUN LIVING",
       "WHIRLPOOL INDIA",
       "WIPRO",
       "WOCKHARDT",
-      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
