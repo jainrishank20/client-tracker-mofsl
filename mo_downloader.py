@@ -1145,9 +1145,9 @@ async def main():
         # Client-outer loop: finish all FYs for one client before moving to next.
         # Always navigate to the clean HOME_URL constant (never page.url which may
         # contain one-time CBOS tokens that redirect to Login.aspx on re-use).
-        async def _ensure_session(pg, force=False):
+        async def _ensure_session(pg):
             cur = pg.url
-            if not force and 'backoffice.motilaloswal.com' in cur and 'login' not in cur.lower():
+            if 'backoffice.motilaloswal.com' in cur and 'login' not in cur.lower():
                 return  # Already on a live CBOS page — don't navigate (kills session tokens)
             await pg.goto(HOME_URL, wait_until='domcontentloaded', timeout=15000)
             await asyncio.sleep(1.5)
@@ -1177,7 +1177,7 @@ async def main():
                     await close_download_modal(page)
                     print(f"  Retrying {client} [{fy}] in 10s...")
                     await asyncio.sleep(10)
-                    await _ensure_session(page, force=True)  # Force nav-check after failure
+                    await _ensure_session(page)  # URL-based check only — HOME_URL nav always shows login.aspx
                     try:
                         await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                         print(f"  Retry succeeded for {client} [{fy}]")
