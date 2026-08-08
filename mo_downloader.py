@@ -313,10 +313,10 @@ async def _download_from_row(page, row_idx, save_path: str):
     page.on('response', _on_response)
 
     try:
-        for _attempt in range(3):
+        for _attempt in range(5):
             if _attempt > 0:
-                print(f"  Download link retry {_attempt}/2 — re-clicking row {row_idx}...")
-                await asyncio.sleep(3)
+                print(f"  Download link retry {_attempt}/4 — re-clicking row {row_idx}...")
+                await asyncio.sleep(5)
 
             sdc_error[0] = False  # reset for this attempt
 
@@ -402,7 +402,7 @@ async def _download_from_row(page, row_idx, save_path: str):
                 print(f"  Saved: {save_path} ({size} bytes)")
                 return
 
-        raise RuntimeError("Download failed after 3 attempts — secureDownloadChunked never triggered a save")
+        raise RuntimeError("Download failed after 5 attempts — secureDownloadChunked never triggered a save")
     finally:
         page.remove_listener('dialog', _accept_dialog)
         page.remove_listener('console', _on_console)
@@ -1165,6 +1165,11 @@ async def main():
             for fy in FINANCIAL_YEARS:
                 if fy in NO_HISTORY_FY.get(client, set()):
                     print(f"  Skipping {client} [{fy}] — no history for this FY")
+                    continue
+                fy_safe = fy.replace('-', '_')
+                local_path = os.path.join(DOWNLOAD_DIR, f"TradeDetailsAndSummary_{client}_{fy_safe}.csv")
+                if os.path.exists(local_path) and os.path.getsize(local_path) > 500:
+                    print(f"  Already downloaded {client} [{fy}] ({os.path.getsize(local_path)} bytes) — skipping")
                     continue
                 if _skip_next_session_check:
                     _skip_next_session_check = False
