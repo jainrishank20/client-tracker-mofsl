@@ -380,7 +380,7 @@ async def _download_from_row(page, row_idx, save_path: str):
                         print(f"  SDC error on attempt {_attempt+1} — retrying")
                         break
                     try:
-                        await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+                        await page.evaluate("() => fetch(window.location.href, {method:'HEAD'}).catch(()=>{})")
                     except Exception:
                         pass
                     try:
