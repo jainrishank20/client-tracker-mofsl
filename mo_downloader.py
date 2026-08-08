@@ -812,9 +812,9 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     fresh_row_idx = None
     _cutoff = _download_clicked_at - datetime.timedelta(minutes=3)
     for _poll_i in range(90):  # 90×2s = 3 min max
-        if _poll_i > 0 and _poll_i % 5 == 0:
-            # Full GET to keep CBOS session alive (HEAD alone doesn't reset the inactivity timer)
-            await page.evaluate("() => fetch('/Home.aspx', {method:'GET', credentials:'include'}).catch(()=>{})")
+        if _poll_i > 0 and _poll_i % 10 == 0:
+            # Keepalive ping — use a relative path that doesn't require session tokens
+            await page.evaluate("() => fetch(window.location.href, {method:'HEAD'}).catch(()=>{})")
         all_rows = await page.evaluate("""
             () => {
                 const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
@@ -1145,35 +1145,15 @@ async def main():
         # Client-outer loop: finish all FYs for one client before moving to next.
         # Always navigate to the clean HOME_URL constant (never page.url which may
         # contain one-time CBOS tokens that redirect to Login.aspx on re-use).
-        async def _ensure_session(pg):
-            # Use a background fetch to test the session WITHOUT navigating.
-            # Full navigation to HOME_URL invalidates the one-time CBOS session tokens
-            # and triggers logout even for still-alive sessions.
-            try:
-                redirect_type = await pg.evaluate("""
-                    async () => {
-                        try {
-                            const r = await fetch('/Home.aspx', {
-                                method: 'GET', credentials: 'include', redirect: 'manual'
-                            });
-                            return r.type;  // 'basic'=ok, 'opaqueredirect'=login redirect
-                        } catch(e) { return 'error'; }
-                    }
-                """)
-                if redirect_type == 'opaqueredirect':
-                    print("  Session expired (redirect detected) — re-logging in...")
-                    await pg.goto(HOME_URL, wait_until='domcontentloaded', timeout=15000)
-                    await asyncio.sleep(1.5)
-                    await login(pg)
-                else:
-                    print(f"  Session still alive (fetch={redirect_type}) — no re-login needed")
-            except Exception as e:
-                print(f"  _ensure_session fetch failed ({e}) — navigating to check")
-                await pg.goto(HOME_URL, wait_until='domcontentloaded', timeout=15000)
-                await asyncio.sleep(1.5)
-                if 'login.aspx' in pg.url.lower():
-                    print("  Session expired — re-logging in...")
-                    await login(pg)
+        async def _ensure_session(pg, force=False):
+            cur = pg.url
+            if not force and 'backoffice.motilaloswal.com' in cur and 'login' not in cur.lower():
+                return  # Already on a live CBOS page — don't navigate (kills session tokens)
+            await pg.goto(HOME_URL, wait_until='domcontentloaded', timeout=15000)
+            await asyncio.sleep(1.5)
+            if 'login.aspx' in pg.url.lower():
+                print("  Session expired — re-logging in...")
+                await login(pg)
 
         # Skip _ensure_session for the very first client — we just logged in and
         # are already on Home.aspx. Navigating to HOME_URL again right after login
@@ -1197,7 +1177,7 @@ async def main():
                     await close_download_modal(page)
                     print(f"  Retrying {client} [{fy}] in 10s...")
                     await asyncio.sleep(10)
-                    await _ensure_session(page)
+                    await _ensure_session(page, force=True)  # Force nav-check after failure
                     try:
                         await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                         print(f"  Retry succeeded for {client} [{fy}]")
