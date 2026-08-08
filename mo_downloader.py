@@ -6,6 +6,7 @@ Usage:
     python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
 import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hashlib, subprocess
+import datetime
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
@@ -31,6 +32,7 @@ HOME_URL     = "https://backoffice.motilaloswal.com/Home.aspx"
 DATE_OPTION  = "Current Financial Year"
 
 FULL_MODE = "--full" in sys.argv
+DOWNLOADS_ONLY = "--downloads-only" in sys.argv
 
 def _current_financial_years():
     today = date.today()
@@ -190,7 +192,7 @@ async def login(page):
     for attempt in range(3):
         try:
             if attempt == 0:
-                otp = get_otp_from_gmail(sent_after=login_time, max_wait=90)
+                otp = get_otp_from_gmail(sent_after=login_time - 30, max_wait=180)
             else:
                 # Click resend and wait for a fresh OTP
                 print(f"  OTP attempt {attempt+1}: clicking Resend...")
@@ -200,7 +202,7 @@ async def login(page):
                 except Exception:
                     print("  No Resend button found")
                 await asyncio.sleep(3)
-                otp = get_otp_from_gmail(sent_after=resend_time, max_wait=90)
+                otp = get_otp_from_gmail(sent_after=resend_time, max_wait=180)
         except RuntimeError:
             if attempt < 2:
                 print(f"  OTP not received on attempt {attempt+1}, trying Resend...")
@@ -279,90 +281,132 @@ async def close_download_modal(page):
 
 
 async def _download_from_row(page, row_idx, save_path: str):
-    """Click the download link/button and capture the resulting CSV response.
+    """Click the CBOS download link and save the resulting file.
 
-    The CBOS download button has no href — it fires onclick JS that either
-    navigates the page or opens a popup. We intercept whichever HTTP response
-    carries the CSV content (Content-Disposition: attachment or text/csv)
-    using page.route() which works in both headless and headed modes.
+    Uses Playwright's built-in download interception (accept_downloads=True on
+    the browser context) — works regardless of whether secureDownloadChunked()
+    uses blob URLs, window.location, iframes, or fetch-based chunking.
+
+    Retries the link click up to 3 times (8 min each) without re-submitting the
+    Download form, so no extra server-side files are generated on retry.
     """
-    body_holder: list = [None]
-    ev = asyncio.Event()
+    async def _accept_dialog(dialog):
+        print(f"  [dialog auto-accept] {dialog.type}: {dialog.message[:80]}")
+        await dialog.accept()
+    page.on('dialog', _accept_dialog)
 
-    async def _route_handler(route, request):
-        try:
-            response = await route.fetch()
-            if not ev.is_set():
-                ct = response.headers.get('content-type', '').lower()
-                cd = response.headers.get('content-disposition', '').lower()
-                if 'csv' in ct or 'attachment' in cd or 'octet-stream' in ct:
-                    body = await response.body()
-                    if len(body) > 100:
-                        body_holder[0] = body
-                        ev.set()
-            await route.fulfill(response=response)
-        except Exception:
-            await route.continue_()
+    sdc_error = [False]  # set by console listener when SDC throws
 
-    # Also handle popup pages that might open for the download
-    new_pgs: list = []
-    async def _on_new_pg(pg):
-        new_pgs.append(pg)
-        await pg.route('**/*', _route_handler)
+    def _on_console(msg):
+        if msg.type in ('error', 'warning'):
+            print(f"  [JS {msg.type}] {msg.text[:120]}")
+        if msg.type == 'error' and ('[SDC] error' in msg.text or '500' in msg.text or 'Failed to load resource' in msg.text):
+            sdc_error[0] = True
 
-    await page.route('**/*', _route_handler)
-    page.context.on('page', _on_new_pg)
+    def _on_response(resp):
+        ct = resp.headers.get('content-type', '')
+        cd = resp.headers.get('content-disposition', '')
+        if any(k in ct+cd for k in ('csv', 'attachment', 'octet', 'download')):
+            print(f"  [NET] {resp.status} {resp.url[:90]} | ct={ct[:40]} | cd={cd[:40]}")
+
+    page.on('console', _on_console)
+    page.on('response', _on_response)
 
     try:
-        # Print the download control's HTML for diagnosis if needed
-        link_html = await page.evaluate("""
-            (idx) => {
-                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                const row = rows[idx != null ? idx : 0] || rows[0];
-                if (!row) return 'no row';
-                const el = row.querySelector('a, button');
-                return el ? el.outerHTML.substring(0, 150) : 'no link';
-            }
-        """, row_idx if row_idx is not None else 0)
-        print(f"  Link HTML: {link_html}")
+        for _attempt in range(3):
+            if _attempt > 0:
+                print(f"  Download link retry {_attempt}/2 — re-clicking row {row_idx}...")
+                await asyncio.sleep(3)
 
-        await page.evaluate("""
-            (idx) => {
-                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                const row  = rows[idx != null ? idx : 0] || rows[0];
-                if (!row) return;
-                const link = row.querySelector('a, button');
-                if (link) link.click();
-            }
-        """, row_idx if row_idx is not None else 0)
+            sdc_error[0] = False  # reset for this attempt
 
-        deadline = asyncio.get_event_loop().time() + 90
-        while not ev.is_set():
-            remaining = deadline - asyncio.get_event_loop().time()
-            if remaining <= 0:
-                raise RuntimeError(f"Download response timeout after 90s")
-            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
-            await asyncio.sleep(min(5.0, remaining))
+            # Re-read link each attempt in case rows shifted
+            link_html = await page.evaluate("""
+                (idx) => {
+                    const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                    const row = rows[idx != null ? idx : 0] || rows[0];
+                    if (!row) return 'no row';
+                    const el = row.querySelector('a, button');
+                    return el ? el.outerHTML.substring(0, 150) : 'no link';
+                }
+            """, row_idx if row_idx is not None else 0)
+            print(f"  Link HTML: {link_html}")
 
-        if os.path.exists(save_path):
-            os.remove(save_path)
-        with open(save_path, 'wb') as f:
-            f.write(body_holder[0])
-        print(f"  Saved: {save_path} ({len(body_holder[0])} bytes)")
-    finally:
-        try:
-            await page.unroute('**/*', _route_handler)
-        except Exception:
-            pass
-        try:
-            page.context.remove_listener('page', _on_new_pg)
-        except Exception:
-            pass
-        for pg in new_pgs:
+            dl_holder: list = [None]
+            dl_event = asyncio.Event()
+
+            def _on_download(dl, _h=dl_holder, _e=dl_event):
+                _h[0] = dl
+                _e.set()
+
+            page.context.on('download', _on_download)
             try:
-                await pg.unroute('**/*', _route_handler)
-            except Exception:
-                pass
+                # Wrap secureDownloadChunked to log progress; reset each attempt
+                await page.evaluate("""
+                    () => {
+                        if (typeof secureDownloadChunked !== 'function') return;
+                        const orig = window.__sdcOrig || secureDownloadChunked;
+                        window.__sdcOrig = orig;
+                        window.secureDownloadChunked = async function(fileId, filename) {
+                            console.log('[SDC] called fileId=' + fileId + ' filename=' + filename);
+                            try {
+                                const result = await orig.apply(this, arguments);
+                                console.log('[SDC] completed fileId=' + fileId);
+                                return result;
+                            } catch(e) {
+                                console.error('[SDC] error fileId=' + fileId + ': ' + e);
+                                throw e;
+                            }
+                        };
+                    }
+                """)
+                await page.evaluate("""
+                    (idx) => {
+                        const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                        const row  = rows[idx != null ? idx : 0] || rows[0];
+                        if (!row) return;
+                        const link = row.querySelector('a, button');
+                        if (link) link.click();
+                    }
+                """, row_idx if row_idx is not None else 0)
+
+                # Wait up to 5 minutes; bail immediately on SDC error
+                deadline = asyncio.get_event_loop().time() + 300
+                while not dl_event.is_set():
+                    if asyncio.get_event_loop().time() > deadline:
+                        print(f"  Download timeout on attempt {_attempt+1}")
+                        break
+                    if sdc_error[0]:
+                        print(f"  SDC error on attempt {_attempt+1} — retrying")
+                        break
+                    try:
+                        await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+                    except Exception:
+                        pass
+                    try:
+                        await asyncio.wait_for(dl_event.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        pass
+            finally:
+                page.context.remove_listener('download', _on_download)
+
+            if dl_event.is_set():
+                download = dl_holder[0]
+                failure = await download.failure()
+                if failure:
+                    raise RuntimeError(f"Download stream failed: {failure}")
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                await download.save_as(save_path)
+                size = os.path.getsize(save_path)
+                print(f"  Saved: {save_path} ({size} bytes)")
+                return
+
+        raise RuntimeError("Download failed after 3 attempts — secureDownloadChunked never triggered a save")
+    finally:
+        page.remove_listener('dialog', _accept_dialog)
+        page.remove_listener('console', _on_console)
+        page.remove_listener('response', _on_response)
 
 
 # Shared JS helper — set a <select> value by text and trigger Select2/jQuery change.
@@ -379,7 +423,7 @@ _SET_SELECT_JS = """
 """
 
 
-async def download_client(page, client: str, download_dir: str, fy: str = "2026-2027", first: bool = False):
+async def download_client(page, client: str, download_dir: str, fy: str = "2026-2027", first: bool = False, used_filenames: set = None):
     print(f"\nProcessing {client} [{fy}]...")
 
     if first:
@@ -684,6 +728,15 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if not date_set:
             raise RuntimeError(f"Could not set date to {DATE_OPTION}")
 
+    _snap_js = """
+        () => {
+            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+            return Array.from(rows).map(r =>
+                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
+            );
+        }
+    """
+
     # ── Click Download button (JS — bypasses main-section pointer intercept) ──
     await page.evaluate("""
         () => {
@@ -728,67 +781,37 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     if modal_txt.startswith('error:'):
         raise RuntimeError(f"Validation — {modal_txt}")
 
-    # ── Wait for Download History AJAX to finish, then snapshot ─────────────────
-    # The modal loads its history rows via AJAX after opening.
-    # If we snapshot before AJAX completes, pre_set is empty and we mistake
-    # an old history row (e.g. RIMK1256's previous download) for our fresh one.
-    # Fix: poll until row count is stable for 1 second, THEN snapshot.
-    _snap_js = """
-        () => {
-            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-            return Array.from(rows).map(r =>
-                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
-            );
-        }
-    """
-    # Wait for history AJAX to finish: poll until row count is stable for 1.5s
-    # OR at least 3s have passed (first client — history table cold loads slowly)
-    _prev_count = -1
-    _stable_ticks = 0
-    _total_ticks  = 0
-    _STABLE_NEED  = 15   # 15 × 0.1s = 1.5s stable
-    _MAX_TICKS    = 50   # 50 × 0.1s = 5s max wait
-    while _total_ticks < _MAX_TICKS:
-        _sigs = await page.evaluate(_snap_js) or []
-        _cur  = len(_sigs)
-        if _cur == _prev_count:
-            _stable_ticks += 1
-            if _stable_ticks >= _STABLE_NEED:
-                break
-        else:
-            _stable_ticks = 0
-            _prev_count   = _cur
-        _total_ticks += 1
-        await asyncio.sleep(0.1)
-    pre_sigs  = await page.evaluate(_snap_js) or []
-    pre_set   = set(pre_sigs)
-    pre_count = len(pre_sigs)
-    print(f"  Pre-snapshot: {pre_count} rows (stable after {_total_ticks*0.1:.1f}s)")
+    # ── Detect fresh row by CREATEDON timestamp ──────────────────────────────────
+    # Record when Download was clicked. CBOS appends the filename timestamp at
+    # generation time. We match any row whose CREATEDON >= download_clicked_at - 3 min.
+    # This is immune to pagination limits and pre-snapshot races.
+    _download_clicked_at = datetime.datetime.now()
+    print(f"  Download clicked at: {_download_clicked_at.strftime('%H:%M:%S')}")
 
-    # If AJAX hasn't returned any rows yet (first client — cold load),
-    # keep waiting until rows actually appear. Without this, pre_set is empty
-    # and the poll erroneously picks an old SUCCESS row from a previous client.
-    if pre_count == 0:
-        print("  Pre-snapshot 0 — AJAX still loading, waiting up to 15s for history rows...")
-        _ext = 0
-        while _ext < 150:  # 150 × 0.1s = 15s
-            _sigs = await page.evaluate(_snap_js) or []
-            if len(_sigs) > 0:
-                await asyncio.sleep(0.5)  # let any remaining rows arrive
-                break
-            _ext += 1
-            await asyncio.sleep(0.1)
-        pre_sigs  = await page.evaluate(_snap_js) or []
-        pre_set   = set(pre_sigs)
-        pre_count = len(pre_sigs)
-        print(f"  Pre-snapshot extended: {pre_count} rows (after {_ext*0.1:.1f}s additional wait)")
+    def _parse_createdon(text):
+        """Parse 'Aug  8 2026  8:27PM' → datetime, or None."""
+        m = re.search(r'(\w{3})\s+(\d+)\s+(\d{4})\s+(\d+):(\d+)(AM|PM)', text)
+        if not m:
+            return None
+        mon_str, day, year, hr, mn, ampm = m.groups()
+        mon_map = {'Jan':1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,
+                   'Sep':9,'Oct':10,'Nov':11,'Dec':12}
+        hr = int(hr)
+        if ampm == 'PM' and hr != 12:
+            hr += 12
+        elif ampm == 'AM' and hr == 12:
+            hr = 0
+        try:
+            return datetime.datetime(int(year), mon_map.get(mon_str, 1), int(day), hr, int(mn))
+        except Exception:
+            return None
 
     # ── Poll: find the fresh row for THIS client ──────────────────────────────
     print("  Polling for SUCCESS...")
     row_cells = None
     fresh_row_idx = None
-    for _poll_i in range(90):  # 90×2s = 3 min max (was 60×2s=2min — not enough for large clients)
-        # Keepalive ping every 10 iterations so CBOS session doesn't expire during long waits
+    _cutoff = _download_clicked_at - datetime.timedelta(minutes=3)
+    for _poll_i in range(90):  # 90×2s = 3 min max
         if _poll_i > 0 and _poll_i % 10 == 0:
             await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
         all_rows = await page.evaluate("""
@@ -800,31 +823,29 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             }
         """) or []
 
-        # Identify the fresh row for THIS client.
-        # Pass 1 — client code must appear in the row (prevents picking another
-        #           client's SUCCESS row from the shared download history table).
-        # Pass 2 — fallback to position/sig heuristics when client code is absent.
         found = None
         found_idx = None
-        for _pass in (1, 2):
-            for i, cells in enumerate(all_rows):
-                sig = '|'.join(cells)
-                status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
-                row_is_mine = any(client in c for c in cells)
-                if _pass == 1 and not row_is_mine:
+        for i, cells in enumerate(all_rows):
+            status = next((c for c in cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING', 'IN PROGRESS')), None)
+            if not status:
+                # check for multi-word statuses
+                row_text = ' '.join(cells)
+                if 'IN PROGRESS' in row_text:
+                    status = 'IN PROGRESS'
+                else:
                     continue
-                if status in ('PROCESSING', 'PENDING'):
-                    found, found_idx = cells, i
-                    break
-                if status == 'SUCCESS':
-                    if len(all_rows) > pre_count and i == 0 and sig not in pre_set:
-                        found, found_idx = cells, i
-                        break
-                    if sig not in pre_set:
-                        found, found_idx = cells, i
-                        break
-            if found is not None:
-                break
+            # Skip filenames already used by a previous FY in this session
+            filename_cell = cells[0] if cells else ''
+            if used_filenames and filename_cell in used_filenames:
+                continue
+            # CREATEDON is the 3rd column (index 2)
+            createdon_text = cells[2] if len(cells) > 2 else ''
+            file_dt = _parse_createdon(createdon_text)
+            if file_dt is None or file_dt < _cutoff:
+                continue  # too old
+            # This row was generated at or after our download click — it's fresh
+            found, found_idx = cells, i
+            break
 
         if found is not None:
             row_cells = found
@@ -835,8 +856,9 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
                 break
             if status_cell == 'FAILED':
                 raise RuntimeError(f"Server reported FAILED for {client}")
+            # PROCESSING/PENDING — keep polling
         else:
-            print(f"  Waiting for fresh row (pre={len(pre_set)} sigs, cur={len(all_rows)} rows)...")
+            print(f"  Waiting for fresh row (cur={len(all_rows)} rows, cutoff={_cutoff.strftime('%H:%M')})...")
 
         # Refresh the modal table
         await page.evaluate("""
@@ -850,6 +872,11 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     else:
         raise RuntimeError(f"Timed out waiting for SUCCESS — {client}")
 
+    # Track this filename so subsequent FYs don't re-use it
+    cbos_filename = row_cells[0] if row_cells else ''
+    if used_filenames is not None and cbos_filename:
+        used_filenames.add(cbos_filename)
+
     # ── Check NOOFROWS — skip if 0 ──
     noofrows = next(
         (int(c) for c in row_cells if re.fullmatch(r'\d+', c)),
@@ -861,7 +888,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         await close_download_modal(page)
         return None
 
-    # ── Fetch CSV directly via HTTP (bypasses Playwright download interception) ──
+    # ── Trigger download and save via Playwright download interception ──
     fy_tag = fy.replace("-", "_")
     save_path = os.path.join(download_dir, f"TradeDetailsAndSummary_{client}_{fy_tag}.csv")
     try:
@@ -1106,49 +1133,50 @@ async def main():
         headless = os.name != 'nt'  # headless on Linux VM, visible on Windows
         launch_args = ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
         browser = await p.chromium.launch(headless=headless, args=launch_args)
-        page = await browser.new_page()
+        context = await browser.new_context(accept_downloads=True)
+        page = await context.new_page()
 
         await login(page)
-        home_url = page.url
-
         # Scrape ledger first — session is freshest right after login
-        await scrape_ledger_balances(page, home_url)
+        if not DOWNLOADS_ONLY:
+            await scrape_ledger_balances(page, HOME_URL)
 
-        # Return to Home.aspx after ledger (explicit goto — go_back unreliable after ledger scrape)
-        await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
-        await asyncio.sleep(1.5)
-
-        for fy in FINANCIAL_YEARS:
-            print(f"\n{'='*40}\nFinancial Year: {fy}\n{'='*40}")
-            # Navigate to home and check session is still alive before each FY
-            await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
+        # Client-outer loop: finish all FYs for one client before moving to next.
+        # Always navigate to the clean HOME_URL constant (never page.url which may
+        # contain one-time CBOS tokens that redirect to Login.aspx on re-use).
+        async def _ensure_session(pg):
+            await pg.goto(HOME_URL, wait_until='domcontentloaded', timeout=15000)
             await asyncio.sleep(1.5)
-            # If session expired, CBOS redirects to login page — re-authenticate
-            if 'login' in page.url.lower() or await page.locator('input[type="password"]').count() > 0:
+            if 'login.aspx' in pg.url.lower():
                 print("  Session expired — re-logging in...")
-                await login(page)
-                home_url = page.url
-            first = True
-            for client in CLIENTS:
+                await login(pg)
+
+        # Skip _ensure_session for the very first client — we just logged in and
+        # are already on Home.aspx. Navigating to HOME_URL again right after login
+        # strips CBOS session tokens from the URL and causes a redirect to Login.aspx.
+        _skip_next_session_check = True
+        _used_filenames: set = set()  # CBOS filenames already downloaded this session
+
+        for client in CLIENTS:
+            for fy in FINANCIAL_YEARS:
                 if fy in NO_HISTORY_FY.get(client, set()):
                     print(f"  Skipping {client} [{fy}] — no history for this FY")
                     continue
+                if _skip_next_session_check:
+                    _skip_next_session_check = False
+                else:
+                    await _ensure_session(page)
                 try:
-                    await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=first)
-                    first = False
-                    # Keepalive ping — prevents CBOS inactivity timeout between clients
-                    await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+                    await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                 except Exception as e:
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
-                    first = False
-                    # Retry once after a short pause (handles CBOS throttle / transient timeout)
                     print(f"  Retrying {client} [{fy}] in 10s...")
                     await asyncio.sleep(10)
+                    await _ensure_session(page)
                     try:
-                        await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True)
+                        await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                         print(f"  Retry succeeded for {client} [{fy}]")
-                        first = False
                     except Exception as e2:
                         print(f"  Retry also failed for {client} [{fy}]: {e2}")
                         await close_download_modal(page)
@@ -1159,4 +1187,10 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        if 'TargetClosed' in type(e).__name__ or 'TargetClosed' in str(e):
+            print("\nBrowser was closed — exiting cleanly.")
+        else:
+            raise
