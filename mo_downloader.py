@@ -278,6 +278,65 @@ async def close_download_modal(page):
     await asyncio.sleep(0.5)
 
 
+async def _download_from_row(page, row_idx, timeout: int = 120):
+    """Click download link and capture the file even if CBOS opens a popup window.
+
+    In headed Chromium, CBOS opens a new popup window for downloads.
+    page.expect_download() only catches downloads on the current page, so we
+    register a handler on all context pages (including any new popup) and send
+    keepalive pings while waiting.
+    """
+    dl_holder: list = [None]
+    ev = asyncio.Event()
+    new_pgs: list = []
+
+    def _on_dl(dl):
+        if not ev.is_set():
+            dl_holder[0] = dl
+            ev.set()
+
+    def _on_new_pg(pg):
+        new_pgs.append(pg)
+        pg.on('download', _on_dl)
+
+    page.on('download', _on_dl)
+    page.context.on('page', _on_new_pg)
+
+    try:
+        await page.evaluate("""
+            (idx) => {
+                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                const row  = rows[idx] || rows[0];
+                const link = row.querySelector('a, button');
+                if (link) link.click();
+            }
+        """, row_idx if row_idx is not None else 0)
+
+        deadline = asyncio.get_event_loop().time() + timeout
+        while not ev.is_set():
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                raise RuntimeError(f"Download timeout after {timeout}s")
+            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+            await asyncio.sleep(min(5.0, remaining))
+
+        return dl_holder[0]
+    finally:
+        try:
+            page.remove_listener('download', _on_dl)
+        except Exception:
+            pass
+        try:
+            page.context.remove_listener('page', _on_new_pg)
+        except Exception:
+            pass
+        for pg in new_pgs:
+            try:
+                pg.remove_listener('download', _on_dl)
+            except Exception:
+                pass
+
+
 # Shared JS helper — set a <select> value by text and trigger Select2/jQuery change.
 _SET_SELECT_JS = """
     function setSelect(select, valueUpper) {
@@ -777,16 +836,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     # ── Click Download link in the FRESH row (not always row[0]) ─────────────
     fy_tag = fy.replace("-", "_")
     save_path = os.path.join(download_dir, f"TradeDetailsAndSummary_{client}_{fy_tag}.csv")
-    async with page.expect_download(timeout=60000) as dl_info:
-        await page.evaluate("""
-            (idx) => {
-                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                const row  = rows[idx] || rows[0];
-                const link = row.querySelector('a, button');
-                if (link) link.click();
-            }
-        """, fresh_row_idx if fresh_row_idx is not None else 0)
-    dl = await dl_info.value
+    dl = await _download_from_row(page, fresh_row_idx)
     try:
         if os.path.exists(save_path):
             os.remove(save_path)
@@ -939,7 +989,7 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         print(f"\n  {client}...")
         try:
             if not first_client:
-                await page.go_back(wait_until='domcontentloaded', timeout=15000)
+                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
                 await asyncio.sleep(1.5)
             else:
                 await asyncio.sleep(1)
