@@ -700,7 +700,10 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     print("  Polling for SUCCESS...")
     row_cells = None
     fresh_row_idx = None
-    for _ in range(60):
+    for _poll_i in range(90):  # 90×2s = 3 min max (was 60×2s=2min — not enough for large clients)
+        # Keepalive ping every 10 iterations so CBOS session doesn't expire during long waits
+        if _poll_i > 0 and _poll_i % 10 == 0:
+            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
         all_rows = await page.evaluate("""
             () => {
                 const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
@@ -1000,6 +1003,8 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 print(f"    MTF row not found")
 
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
+            # Keepalive ping — prevents CBOS session timeout between ledger clients
+            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
 
         except Exception as e:
             print(f"    ERROR: {e}")
