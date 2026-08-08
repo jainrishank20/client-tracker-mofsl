@@ -279,43 +279,90 @@ async def close_download_modal(page):
 
 
 async def _download_from_row(page, row_idx, save_path: str):
-    """Fetch the CSV directly via HTTP using the page's session cookies.
+    """Click the download link/button and capture the resulting CSV response.
 
-    Extracts the download link href from the modal row and issues a GET
-    request through the Playwright API request context (which shares the
-    browser's cookies). This bypasses Playwright's download interception
-    entirely and works identically in both headless and headed modes.
+    The CBOS download button has no href — it fires onclick JS that either
+    navigates the page or opens a popup. We intercept whichever HTTP response
+    carries the CSV content (Content-Disposition: attachment or text/csv)
+    using page.route() which works in both headless and headed modes.
     """
-    download_url = await page.evaluate("""
-        (idx) => {
-            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-            const row  = rows[idx != null ? idx : 0] || rows[0];
-            if (!row) return null;
-            const link = row.querySelector('a[href], a');
-            if (!link) return null;
-            // Return absolute URL — link.href is always absolute in browsers
-            return link.href || null;
-        }
-    """, row_idx if row_idx is not None else 0)
+    body_holder: list = [None]
+    ev = asyncio.Event()
 
-    if not download_url or download_url.startswith('javascript:') or download_url == page.url:
-        raise RuntimeError(f"Could not extract download URL from row {row_idx} (got: {download_url!r})")
+    async def _route_handler(route, request):
+        try:
+            response = await route.fetch()
+            if not ev.is_set():
+                ct = response.headers.get('content-type', '').lower()
+                cd = response.headers.get('content-disposition', '').lower()
+                if 'csv' in ct or 'attachment' in cd or 'octet-stream' in ct:
+                    body = await response.body()
+                    if len(body) > 100:
+                        body_holder[0] = body
+                        ev.set()
+            await route.fulfill(response=response)
+        except Exception:
+            await route.continue_()
 
-    print(f"  Fetching: {download_url[:80]}")
-    response = await page.context.request.get(download_url)
-    if response.status != 200:
-        raise RuntimeError(f"Download request failed: HTTP {response.status}")
+    # Also handle popup pages that might open for the download
+    new_pgs: list = []
+    async def _on_new_pg(pg):
+        new_pgs.append(pg)
+        await pg.route('**/*', _route_handler)
 
-    body = await response.body()
-    if len(body) < 50:
-        raise RuntimeError(f"Downloaded file too small ({len(body)} bytes) — likely an error page")
+    await page.route('**/*', _route_handler)
+    page.context.on('page', _on_new_pg)
 
-    if os.path.exists(save_path):
-        os.remove(save_path)
-    with open(save_path, 'wb') as f:
-        f.write(body)
-    print(f"  Saved: {save_path}")
-    return save_path
+    try:
+        # Print the download control's HTML for diagnosis if needed
+        link_html = await page.evaluate("""
+            (idx) => {
+                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                const row = rows[idx != null ? idx : 0] || rows[0];
+                if (!row) return 'no row';
+                const el = row.querySelector('a, button');
+                return el ? el.outerHTML.substring(0, 150) : 'no link';
+            }
+        """, row_idx if row_idx is not None else 0)
+        print(f"  Link HTML: {link_html}")
+
+        await page.evaluate("""
+            (idx) => {
+                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                const row  = rows[idx != null ? idx : 0] || rows[0];
+                if (!row) return;
+                const link = row.querySelector('a, button');
+                if (link) link.click();
+            }
+        """, row_idx if row_idx is not None else 0)
+
+        deadline = asyncio.get_event_loop().time() + 90
+        while not ev.is_set():
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                raise RuntimeError(f"Download response timeout after 90s")
+            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+            await asyncio.sleep(min(5.0, remaining))
+
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        with open(save_path, 'wb') as f:
+            f.write(body_holder[0])
+        print(f"  Saved: {save_path} ({len(body_holder[0])} bytes)")
+    finally:
+        try:
+            await page.unroute('**/*', _route_handler)
+        except Exception:
+            pass
+        try:
+            page.context.remove_listener('page', _on_new_pg)
+        except Exception:
+            pass
+        for pg in new_pgs:
+            try:
+                await pg.unroute('**/*', _route_handler)
+            except Exception:
+                pass
 
 
 # Shared JS helper — set a <select> value by text and trigger Select2/jQuery change.
