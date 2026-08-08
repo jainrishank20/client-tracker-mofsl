@@ -5,7 +5,7 @@ Usage:
     python mo_downloader.py           # current FY only (daily use)
     python mo_downloader.py --full    # both FYs (initial setup / new client)
 """
-import asyncio, imaplib, email, email.utils, re, os, sys, time, glob, json, hashlib, subprocess
+import asyncio, imaplib, email, email.utils, re, os, sys, time, json, hashlib
 import datetime
 from datetime import date, timezone
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
@@ -728,15 +728,6 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if not date_set:
             raise RuntimeError(f"Could not set date to {DATE_OPTION}")
 
-    _snap_js = """
-        () => {
-            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-            return Array.from(rows).map(r =>
-                Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim()).join('|')
-            );
-        }
-    """
-
     # ── Click Download button (JS — bypasses main-section pointer intercept) ──
     await page.evaluate("""
         () => {
@@ -852,7 +843,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             row_cells = found
             fresh_row_idx = found_idx
             status_cell = next((c for c in row_cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING', 'IN PROGRESS')), None)
-            if not status_cell and any('IN PROGRESS' in ' '.join(row_cells) for _ in [1]):
+            if not status_cell and 'IN PROGRESS' in ' '.join(row_cells):
                 status_cell = 'IN PROGRESS'
             print(f"  Row[{fresh_row_idx}] status={status_cell}: {row_cells}")
             if status_cell == 'SUCCESS':
