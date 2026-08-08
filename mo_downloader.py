@@ -1162,19 +1162,20 @@ async def main():
                 if os.path.exists(local_path) and os.path.getsize(local_path) > 500:
                     print(f"  Already downloaded {client} [{fy}] ({os.path.getsize(local_path)} bytes) — skipping")
                     continue
-                if _skip_next_session_check:
-                    _skip_next_session_check = False
-                else:
-                    await _ensure_session(page)
                 try:
+                    if _skip_next_session_check:
+                        _skip_next_session_check = False
+                    else:
+                        await _ensure_session(page)
                     await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                 except Exception as e:
+                    _skip_next_session_check = False  # reset even on failure
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
                     print(f"  Retrying {client} [{fy}] in 10s...")
                     await asyncio.sleep(10)
-                    await _ensure_session(page)  # URL-based check only — HOME_URL nav always shows login.aspx
                     try:
+                        await _ensure_session(page)
                         await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                         print(f"  Retry succeeded for {client} [{fy}]")
                     except Exception as e2:
