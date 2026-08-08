@@ -984,13 +984,27 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
     ledger = {}
     print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
 
+    # Auto-accept any "Leave page?" beforeunload dialogs so goto() doesn't stall
+    async def _auto_accept(dialog):
+        try:
+            await dialog.accept()
+        except Exception:
+            pass
+    page.on('dialog', _auto_accept)
+
     first_client = True
     for client in CLIENTS:
         print(f"\n  {client}...")
         try:
             if not first_client:
-                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
-                await asyncio.sleep(1.5)
+                # Nuke beforeunload to prevent Chrome "Leave page?" dialog stalling goto
+                try:
+                    await page.evaluate("() => { window.onbeforeunload = null; }")
+                except Exception:
+                    pass
+                await page.goto(home_url, wait_until='networkidle', timeout=25000)
+                await asyncio.sleep(2)
+                print(f"    Navigated to home: {page.url[:60]}")
             else:
                 await asyncio.sleep(1)
             first_client = False
@@ -1059,12 +1073,17 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
         except Exception as e:
             print(f"    ERROR: {e}")
             ledger[client] = {'combined': 0.0, 'mtf': 0.0}
-            # Reset to home page so go_back() for the next client starts from a known state
             try:
-                await page.goto(home_url, wait_until='domcontentloaded', timeout=15000)
-                await asyncio.sleep(1)
+                await page.evaluate("() => { window.onbeforeunload = null; }")
             except Exception:
                 pass
+            try:
+                await page.goto(home_url, wait_until='networkidle', timeout=25000)
+                await asyncio.sleep(2)
+            except Exception:
+                pass
+
+    page.remove_listener('dialog', _auto_accept)
 
     out_path = os.path.join(BASE, 'ledger.json')
     with open(out_path, 'w') as f:
