@@ -278,63 +278,44 @@ async def close_download_modal(page):
     await asyncio.sleep(0.5)
 
 
-async def _download_from_row(page, row_idx, timeout: int = 120):
-    """Click download link and capture the file even if CBOS opens a popup window.
+async def _download_from_row(page, row_idx, save_path: str):
+    """Fetch the CSV directly via HTTP using the page's session cookies.
 
-    In headed Chromium, CBOS opens a new popup window for downloads.
-    page.expect_download() only catches downloads on the current page, so we
-    register a handler on all context pages (including any new popup) and send
-    keepalive pings while waiting.
+    Extracts the download link href from the modal row and issues a GET
+    request through the Playwright API request context (which shares the
+    browser's cookies). This bypasses Playwright's download interception
+    entirely and works identically in both headless and headed modes.
     """
-    dl_holder: list = [None]
-    ev = asyncio.Event()
-    new_pgs: list = []
+    download_url = await page.evaluate("""
+        (idx) => {
+            const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+            const row  = rows[idx != null ? idx : 0] || rows[0];
+            if (!row) return null;
+            const link = row.querySelector('a[href], a');
+            if (!link) return null;
+            // Return absolute URL — link.href is always absolute in browsers
+            return link.href || null;
+        }
+    """, row_idx if row_idx is not None else 0)
 
-    def _on_dl(dl):
-        if not ev.is_set():
-            dl_holder[0] = dl
-            ev.set()
+    if not download_url or download_url.startswith('javascript:') or download_url == page.url:
+        raise RuntimeError(f"Could not extract download URL from row {row_idx} (got: {download_url!r})")
 
-    def _on_new_pg(pg):
-        new_pgs.append(pg)
-        pg.on('download', _on_dl)
+    print(f"  Fetching: {download_url[:80]}")
+    response = await page.context.request.get(download_url)
+    if response.status != 200:
+        raise RuntimeError(f"Download request failed: HTTP {response.status}")
 
-    page.on('download', _on_dl)
-    page.context.on('page', _on_new_pg)
+    body = await response.body()
+    if len(body) < 50:
+        raise RuntimeError(f"Downloaded file too small ({len(body)} bytes) — likely an error page")
 
-    try:
-        await page.evaluate("""
-            (idx) => {
-                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
-                const row  = rows[idx] || rows[0];
-                const link = row.querySelector('a, button');
-                if (link) link.click();
-            }
-        """, row_idx if row_idx is not None else 0)
-
-        deadline = asyncio.get_event_loop().time() + timeout
-        while not ev.is_set():
-            remaining = deadline - asyncio.get_event_loop().time()
-            if remaining <= 0:
-                raise RuntimeError(f"Download timeout after {timeout}s")
-            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
-            await asyncio.sleep(min(5.0, remaining))
-
-        return dl_holder[0]
-    finally:
-        try:
-            page.remove_listener('download', _on_dl)
-        except Exception:
-            pass
-        try:
-            page.context.remove_listener('page', _on_new_pg)
-        except Exception:
-            pass
-        for pg in new_pgs:
-            try:
-                pg.remove_listener('download', _on_dl)
-            except Exception:
-                pass
+    if os.path.exists(save_path):
+        os.remove(save_path)
+    with open(save_path, 'wb') as f:
+        f.write(body)
+    print(f"  Saved: {save_path}")
+    return save_path
 
 
 # Shared JS helper — set a <select> value by text and trigger Select2/jQuery change.
@@ -833,21 +814,15 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         await close_download_modal(page)
         return None
 
-    # ── Click Download link in the FRESH row (not always row[0]) ─────────────
+    # ── Fetch CSV directly via HTTP (bypasses Playwright download interception) ──
     fy_tag = fy.replace("-", "_")
     save_path = os.path.join(download_dir, f"TradeDetailsAndSummary_{client}_{fy_tag}.csv")
-    dl = await _download_from_row(page, fresh_row_idx)
     try:
-        if os.path.exists(save_path):
-            os.remove(save_path)
-        await dl.save_as(save_path)
-        print(f"  Saved: {save_path}")
+        await _download_from_row(page, fresh_row_idx, save_path)
     except PermissionError:
-        # File is open in Excel — save with timestamp suffix
         ts = date.today().strftime("%Y%m%d")
         save_path = os.path.join(download_dir, f"TradeDetailsAndSummary_{client}_{fy_tag}_{ts}.csv")
-        await dl.save_as(save_path)
-        print(f"  Saved (Excel was open): {save_path}")
+        await _download_from_row(page, fresh_row_idx, save_path)
     finally:
         await close_download_modal(page)
 
