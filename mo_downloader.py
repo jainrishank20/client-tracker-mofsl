@@ -984,29 +984,11 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
     ledger = {}
     print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
 
-    # Auto-accept any "Leave page?" beforeunload dialogs so goto() doesn't stall
-    async def _auto_accept(dialog):
-        try:
-            await dialog.accept()
-        except Exception:
-            pass
-    page.on('dialog', _auto_accept)
-
     first_client = True
     for client in CLIENTS:
         print(f"\n  {client}...")
         try:
-            if not first_client:
-                # Nuke beforeunload to prevent Chrome "Leave page?" dialog stalling goto
-                try:
-                    await page.evaluate("() => { window.onbeforeunload = null; }")
-                except Exception:
-                    pass
-                await page.goto(home_url, wait_until='networkidle', timeout=25000)
-                await asyncio.sleep(2)
-                print(f"    Navigated to home: {page.url[:60]}")
-            else:
-                await asyncio.sleep(1)
+            await asyncio.sleep(1)
             first_client = False
             await _dismiss_alert(page)
 
@@ -1021,69 +1003,72 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             await page.keyboard.press('Enter')
             await asyncio.sleep(0.5)
 
-            # Force View Dashboard to open in same tab (new tab kills the session)
-            await page.evaluate("""
-                () => { window._origOpen = window.open;
-                        window.open = (url) => { window.location.href = url; return window; }; }
-            """)
-            await page.locator('#btnView_ClientDashboard').click()
-            await page.wait_for_load_state('domcontentloaded', timeout=15000)
+            # Open dashboard in a popup tab so the original page stays at Home.aspx.
+            # The popup shares the same browser context (cookies/session) so it is
+            # fully authenticated; closing it leaves the main page untouched.
+            popup = None
+            async with page.context.expect_page() as popup_info:
+                await page.locator('#btnView_ClientDashboard').click()
+            popup = await popup_info.value
+            await popup.wait_for_load_state('domcontentloaded', timeout=15000)
             await asyncio.sleep(2)
 
-            fs_loaded = await _nav_fin_summary(page)
+            pg = popup  # all dashboard operations use the popup
+
+            fs_loaded = await _nav_fin_summary(pg)
             if not fs_loaded:
                 await asyncio.sleep(2)
-                fs_loaded = await _nav_fin_summary(page)
+                fs_loaded = await _nav_fin_summary(pg)
             if not fs_loaded:
                 print(f"    Financial Summary not found")
                 ledger[client] = {'combined': 0.0, 'mtf': 0.0}
+                if popup:
+                    await popup.close()
                 continue
 
             await asyncio.sleep(1)
-            await _dismiss_alert(page)
+            await _dismiss_alert(pg)
 
             combined_bal = 0.0
-            if await _click_segment(page, 'COMBINED'):
-                combined_bal = await _get_popup_balance(page)
+            if await _click_segment(pg, 'COMBINED'):
+                combined_bal = await _get_popup_balance(pg)
                 if combined_bal == 0.0:
                     await asyncio.sleep(2)
-                    combined_bal = await _get_popup_balance(page)
+                    combined_bal = await _get_popup_balance(pg)
                 print(f"    COMBINED = {combined_bal:,.2f}")
-                await _close_popup(page)
+                await _close_popup(pg)
             else:
                 print(f"    COMBINED row not found")
 
             await asyncio.sleep(0.5)
 
             mtf_bal = 0.0
-            if await _click_segment(page, 'MTF'):
-                mtf_bal = await _get_popup_balance(page)
+            if await _click_segment(pg, 'MTF'):
+                mtf_bal = await _get_popup_balance(pg)
                 if mtf_bal == 0.0:
                     await asyncio.sleep(2)
-                    mtf_bal = await _get_popup_balance(page)
+                    mtf_bal = await _get_popup_balance(pg)
                 print(f"    MTF      = {mtf_bal:,.2f}")
-                await _close_popup(page)
+                await _close_popup(pg)
             else:
                 print(f"    MTF row not found")
 
+            await popup.close()
+            popup = None
+
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
-            # Keepalive ping — prevents CBOS session timeout between ledger clients
+            # Keepalive on the MAIN page so its session stays alive
             await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
 
         except Exception as e:
             print(f"    ERROR: {e}")
             ledger[client] = {'combined': 0.0, 'mtf': 0.0}
-            try:
-                await page.evaluate("() => { window.onbeforeunload = null; }")
-            except Exception:
-                pass
-            try:
-                await page.goto(home_url, wait_until='networkidle', timeout=25000)
-                await asyncio.sleep(2)
-            except Exception:
-                pass
-
-    page.remove_listener('dialog', _auto_accept)
+            if 'popup' in dir() and popup:
+                try:
+                    await popup.close()
+                except Exception:
+                    pass
+                popup = None
 
     out_path = os.path.join(BASE, 'ledger.json')
     with open(out_path, 'w') as f:
