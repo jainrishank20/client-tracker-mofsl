@@ -287,8 +287,8 @@ async def _download_from_row(page, row_idx, save_path: str):
     the browser context) — works regardless of whether secureDownloadChunked()
     uses blob URLs, window.location, iframes, or fetch-based chunking.
 
-    Retries the link click up to 3 times (8 min each) without re-submitting the
-    Download form, so no extra server-side files are generated on retry.
+    Retries the link click up to 5 times without re-submitting the Download form,
+    so no extra server-side files are generated on retry.
     """
     async def _accept_dialog(dialog):
         print(f"  [dialog auto-accept] {dialog.type}: {dialog.message[:80]}")
@@ -851,13 +851,15 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
         if found is not None:
             row_cells = found
             fresh_row_idx = found_idx
-            status_cell = next((c for c in row_cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING')), None)
-            print(f"  Row[{fresh_row_idx}]: {row_cells}")
+            status_cell = next((c for c in row_cells if c in ('SUCCESS', 'FAILED', 'PENDING', 'PROCESSING', 'IN PROGRESS')), None)
+            if not status_cell and any('IN PROGRESS' in ' '.join(row_cells) for _ in [1]):
+                status_cell = 'IN PROGRESS'
+            print(f"  Row[{fresh_row_idx}] status={status_cell}: {row_cells}")
             if status_cell == 'SUCCESS':
                 break
             if status_cell == 'FAILED':
                 raise RuntimeError(f"Server reported FAILED for {client}")
-            # PROCESSING/PENDING — keep polling
+            # PENDING / PROCESSING / IN PROGRESS — keep polling
         else:
             print(f"  Waiting for fresh row (cur={len(all_rows)} rows, cutoff={_cutoff.strftime('%H:%M')})...")
 
@@ -1034,12 +1036,10 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
     ledger = {}
     print(f"\n{'='*40}\nScraping Ledger Balances\n{'='*40}")
 
-    first_client = True
     for client in CLIENTS:
         print(f"\n  {client}...")
         try:
             await asyncio.sleep(1)
-            first_client = False
             await _dismiss_alert(page)
 
             inp = page.locator('#txtClientCode')
@@ -1107,8 +1107,8 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
             popup = None
 
             ledger[client] = {'combined': combined_bal, 'mtf': mtf_bal}
-            # Keepalive on the MAIN page so its session stays alive
-            await page.evaluate("() => fetch('/Home.aspx', {method:'HEAD'}).catch(()=>{})")
+            # Keepalive on the MAIN page (use current URL so session tokens are included)
+            await page.evaluate("() => fetch(window.location.href, {method:'HEAD'}).catch(()=>{})")
 
         except Exception as e:
             print(f"    ERROR: {e}")
