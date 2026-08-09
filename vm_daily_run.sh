@@ -50,24 +50,11 @@ except Exception as e:
     sys.exit(1)
 ")
 
-# ── Ensure git is installed (Oracle Linux uses yum, not apt) ─────────────────
-if ! command -v git &>/dev/null; then
-  echo "Installing git..."
-  sudo yum install -y git-core 2>/dev/null || sudo dnf install -y git-core 2>/dev/null || true
-  export PATH=/usr/bin:/usr/local/bin:/bin:/home/opc/.local/bin:$PATH
-fi
-
-# ── Ensure playwright + chromium system libs are installed ───────────────────
+# ── Ensure playwright + chromium are installed ───────────────────────────────
 if ! python3 -c "import playwright" 2>/dev/null; then
   echo "Installing playwright..."
   python3 -m pip install playwright --quiet || true
   python3 -m playwright install chromium || true
-fi
-# Install chromium system deps via yum (Oracle Linux = RHEL-based, not Debian)
-if ! ldconfig -p 2>/dev/null | grep -q libatk-1; then
-  echo "Installing chromium system dependencies via yum..."
-  sudo yum install -y atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage \
-    libXfixes libXrandr mesa-libgbm pango alsa-lib 2>/dev/null || true
 fi
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
@@ -84,21 +71,61 @@ fi
 echo "Importing CSVs..."
 python3 import_all.py
 
-# ── Step 3: Push trades.json + ledger.json to repo ──────────────────────────
-# GHA will check out the repo and use these files for GSheet sync + notify
+# ── Step 3: Push trades.json + ledger.json to repo via GitHub API ───────────
+# No git binary needed — uses Python + urllib (stdlib only)
 echo "Pushing data files to repo..."
-git config user.email "vm-runner@client-tracker" 2>/dev/null || true
-git config user.name "VM Runner" 2>/dev/null || true
-git remote set-url origin "https://${GITHUB_TOKEN}@github.com/${REPO}.git"
-git add trades.json ledger.json open_positions_snapshot.json ticker_overrides.json 2>/dev/null || true
-if git diff --cached --quiet; then
-  echo "No data changes to commit — skipping push."
-else
-  git pull --rebase origin main 2>/dev/null || true
-  git commit -m "chore: update data files from VM download [skip ci]"
-  git push origin main
-  echo "Pushed trades.json to repo."
-fi
+python3 - <<'PYEOF'
+import json, base64, urllib.request, os, sys
+
+TOKEN = os.environ.get('GITHUB_TOKEN', '')
+REPO  = 'jainrishank20/client-tracker-mofsl'
+API   = f'https://api.github.com/repos/{REPO}/contents'
+FILES = ['trades.json', 'ledger.json', 'open_positions_snapshot.json', 'ticker_overrides.json']
+DIR   = '/home/opc/app'
+
+pushed = 0
+for fname in FILES:
+    fpath = os.path.join(DIR, fname)
+    if not os.path.exists(fpath):
+        continue
+    with open(fpath, 'rb') as f:
+        raw = f.read()
+    content_b64 = base64.b64encode(raw).decode()
+
+    # Get current SHA (needed for update)
+    url = f'{API}/{fname}'
+    req = urllib.request.Request(url, headers={
+        'Authorization': f'token {TOKEN}',
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'vm-runner'
+    })
+    try:
+        resp = urllib.request.urlopen(req)
+        sha = json.loads(resp.read().decode()).get('sha')
+    except Exception:
+        sha = None
+
+    body = {'message': f'chore: update {fname} from VM download [skip ci]',
+            'content': content_b64, 'branch': 'main'}
+    if sha:
+        body['sha'] = sha
+
+    req = urllib.request.Request(url,
+        data=json.dumps(body).encode(),
+        headers={'Authorization': f'token {TOKEN}',
+                 'Content-Type': 'application/json',
+                 'Accept': 'application/vnd.github.v3+json',
+                 'User-Agent': 'vm-runner'},
+        method='PUT')
+    try:
+        urllib.request.urlopen(req)
+        print(f'  Pushed {fname}')
+        pushed += 1
+    except Exception as e:
+        print(f'  WARN: failed to push {fname}: {e}', file=sys.stderr)
+
+print(f'Done — pushed {pushed}/{len(FILES)} files to repo.')
+PYEOF
 
 # ── Step 4: Trigger GHA with skip_download=true ─────────────────────────────
 # GHA handles: GSheet sync (needs gsheet_key secret) + Telegram notification

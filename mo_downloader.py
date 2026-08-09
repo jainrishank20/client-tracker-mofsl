@@ -1189,7 +1189,9 @@ async def main():
         raise RuntimeError("playwright is not installed — run: pip install playwright && playwright install chromium")
     async with async_playwright() as p:
         headless = os.name != 'nt'  # headless on Linux VM, visible on Windows
-        launch_args = ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
+        launch_args = ['--no-sandbox', '--disable-setuid-sandbox', '--no-zygote',
+                       '--disable-dev-shm-usage', '--disable-gpu',
+                       '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
         browser = await p.chromium.launch(headless=headless, args=launch_args)
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
