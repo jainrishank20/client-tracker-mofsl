@@ -115,7 +115,7 @@ def _tg_send(msg: str):
         pass
 
 
-def _poll_otp_file(deadline: float) -> str | None:
+def _poll_otp_file(deadline: float):
     """Check OTP_FILE for a fresh 6-digit OTP written by the Telegram /otp command."""
     if not os.path.exists(OTP_FILE):
         return None
