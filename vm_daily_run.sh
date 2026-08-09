@@ -50,12 +50,24 @@ except Exception as e:
     sys.exit(1)
 ")
 
-# ── Ensure playwright is installed ──────────────────────────────────────────
+# ── Ensure git is installed (Oracle Linux uses yum, not apt) ─────────────────
+if ! command -v git &>/dev/null; then
+  echo "Installing git..."
+  sudo yum install -y git-core 2>/dev/null || sudo dnf install -y git-core 2>/dev/null || true
+  export PATH=/usr/bin:/usr/local/bin:/bin:/home/opc/.local/bin:$PATH
+fi
+
+# ── Ensure playwright + chromium system libs are installed ───────────────────
 if ! python3 -c "import playwright" 2>/dev/null; then
   echo "Installing playwright..."
   python3 -m pip install playwright --quiet || true
   python3 -m playwright install chromium || true
-  python3 -m playwright install-deps chromium 2>/dev/null || true
+fi
+# Install chromium system deps via yum (Oracle Linux = RHEL-based, not Debian)
+if ! ldconfig -p 2>/dev/null | grep -q libatk-1; then
+  echo "Installing chromium system dependencies via yum..."
+  sudo yum install -y atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage \
+    libXfixes libXrandr mesa-libgbm pango alsa-lib 2>/dev/null || true
 fi
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
