@@ -909,6 +909,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             "/today — trades entered/exited today\n\n"
             "*⚙️ Pipeline*\n"
             "/run — trigger fresh download + GSheet sync\n"
+            "/otp 123456 — relay OTP when Gmail is unavailable from VM\n"
             "/fixcron — daily run stopped? use this to fix it\n"
             "/vmlog — show VM cron status + last 40 lines of run log\n"
             "/update — pull latest bot code & restart\n\n"
@@ -1013,7 +1014,21 @@ def handle(text: str, chat_id: str) -> Optional[str]:
 
     # /run
     if tl == '/run':
-        trigger_daily_run(chat_id)
+        # Run pipeline locally on VM (Indian IP can reach CBOS; GHA runners cannot)
+        def _run_local():
+            try:
+                import subprocess
+                send(chat_id,
+                     "Starting full VM pipeline (download → import → GSheet sync)...\n"
+                     "Check /vmlog in ~20 mins. If CBOS sends an OTP you can't see, use /otp 123456.")
+                subprocess.Popen(
+                    ['bash', '/home/opc/app/vm_daily_run.sh'],
+                    stdout=open('/home/opc/vm_daily_run.log', 'a'),
+                    stderr=subprocess.STDOUT
+                )
+            except Exception as e:
+                send(chat_id, f"Failed to start pipeline: {e}")
+        threading.Thread(target=_run_local, daemon=True).start()
         return None  # sent async
 
     # /fixdeps — reinstall Playwright system dependencies on VM
@@ -1050,6 +1065,21 @@ def handle(text: str, chat_id: str) -> Optional[str]:
             except Exception as e:
                 send(chat_id, f"fixdeps failed: {e}")
         threading.Thread(target=_fixdeps, daemon=True).start()
+        return None
+
+    # /otp XXXXXX — relay a 6-digit OTP to mo_downloader when Gmail IMAP is unavailable
+    if tl.startswith('/otp'):
+        parts = text.strip().split()
+        if len(parts) == 2 and re.fullmatch(r'\d{6}', parts[1]):
+            otp_val = parts[1]
+            try:
+                with open('/tmp/pending_otp.txt', 'w') as f:
+                    f.write(otp_val)
+                send(chat_id, f"✅ OTP {otp_val} relayed to downloader.")
+            except Exception as e:
+                send(chat_id, f"Failed to write OTP: {e}")
+        else:
+            send(chat_id, "Usage: /otp 123456  (6-digit code)")
         return None
 
     # /vmrun — manually trigger the full VM pipeline (download + import + GHA dispatch)

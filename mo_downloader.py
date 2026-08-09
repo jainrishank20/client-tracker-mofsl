@@ -16,6 +16,10 @@ MO_USERNAME        = _cfg['mo_username']
 MO_PASSWORD        = _cfg['mo_password']
 GMAIL_USER         = _cfg['gmail_user']
 GMAIL_APP_PASSWORD = _cfg['gmail_app_password']
+TG_TOKEN           = _cfg.get('telegram_token', '')
+TG_CHAT            = str(_cfg.get('allowed_chat_id', '')).split(',')[0].strip()
+
+OTP_FILE = '/tmp/pending_otp.txt'  # written by Telegram bot /otp command
 
 if "clients" not in _cfg or not _cfg["clients"]:
     raise RuntimeError("bot_config.json missing 'clients' key — cannot determine which accounts to download")
@@ -96,61 +100,117 @@ if _unclassified:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _tg_send(msg: str):
+    """Send a Telegram message (best-effort, no raise on failure)."""
+    if not TG_TOKEN or not TG_CHAT:
+        return
+    try:
+        import urllib.request, urllib.parse
+        data = urllib.parse.urlencode({'chat_id': TG_CHAT, 'text': msg}).encode()
+        urllib.request.urlopen(
+            f'https://api.telegram.org/bot{TG_TOKEN}/sendMessage',
+            data=data, timeout=10
+        )
+    except Exception:
+        pass
+
+
+def _poll_otp_file(deadline: float) -> str | None:
+    """Check OTP_FILE for a fresh 6-digit OTP written by the Telegram /otp command."""
+    if not os.path.exists(OTP_FILE):
+        return None
+    try:
+        mtime = os.path.getmtime(OTP_FILE)
+        if mtime < deadline - 300:  # ignore stale files older than 5 min before deadline
+            return None
+        val = open(OTP_FILE).read().strip()
+        if re.fullmatch(r'\d{6}', val):
+            os.remove(OTP_FILE)  # consume it
+            return val
+    except Exception:
+        pass
+    return None
+
+
 def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
-    """Poll Gmail for the latest OTP email received after sent_after."""
+    """Poll Gmail IMAP for OTP. Falls back to Telegram /otp command if IMAP fails."""
     print("  Waiting for OTP email...")
     deadline = time.time() + max_wait
+    imap_failed = False
+    tg_prompted = False
+
     while time.time() < deadline:
-        mail = None
-        try:
-            mail = imaplib.IMAP4_SSL("imap.gmail.com")
-            mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            # Search inbox AND all mail (catches spam/promotions tabs)
-            mail.select('"[Gmail]/All Mail"')
+        # 1. Check Telegram OTP file first (user may have already sent /otp)
+        otp = _poll_otp_file(deadline)
+        if otp:
+            print(f"  OTP received via Telegram: {otp}")
+            return otp
 
-            today_imap = date.today().strftime("%d-%b-%Y")
-            _, data = mail.search(None, f'SUBJECT "OTP For CBOS" SINCE {today_imap}')
-            ids = data[0].split() if data[0] else []
-            print(f"  Found {len(ids)} OTP email(s) today")
-
-            best_otp, best_time = None, 0
-            for uid in ids:
-                _, msg_data = mail.fetch(uid, "(RFC822)")
-                msg = email.message_from_bytes(msg_data[0][1])
-                try:
-                    dt = email.utils.parsedate_to_datetime(msg.get("Date", ""))
-                    email_ts = dt.astimezone(timezone.utc).timestamp()
-                except Exception:
-                    email_ts = 0
-
-                print(f"  Email ts={email_ts:.0f} sent_after={sent_after:.0f} diff={(email_ts-sent_after):.0f}s")
-                if email_ts < sent_after - 30:  # 30s grace for clock drift
-                    continue
-
-                body = ""
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        if part.get_content_type() in ("text/plain", "text/html"):
-                            candidate = part.get_payload(decode=True).decode(errors="ignore")
-                            if len(candidate.strip()) > len(body.strip()):
-                                body = candidate  # keep longest non-empty part
-                else:
-                    body = msg.get_payload(decode=True).decode(errors="ignore")
-
-                m = re.search(r"\b(\d{6})\b", body)
-                if m and email_ts >= best_time:
-                    best_otp, best_time = m.group(1), email_ts
-
-            if best_otp:
-                return best_otp
-        except Exception as e:
-            print(f"  Gmail error: {e}")
-        finally:
+        # 2. Try Gmail IMAP
+        if not imap_failed:
+            mail = None
             try:
-                if mail:
-                    mail.logout()
-            except Exception:
-                pass
+                mail = imaplib.IMAP4_SSL("imap.gmail.com", timeout=15)
+                mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                mail.select('"[Gmail]/All Mail"')
+
+                today_imap = date.today().strftime("%d-%b-%Y")
+                _, data = mail.search(None, f'SUBJECT "OTP For CBOS" SINCE {today_imap}')
+                ids = data[0].split() if data[0] else []
+                print(f"  Found {len(ids)} OTP email(s) today")
+
+                best_otp, best_time = None, 0
+                for uid in ids:
+                    _, msg_data = mail.fetch(uid, "(RFC822)")
+                    msg = email.message_from_bytes(msg_data[0][1])
+                    try:
+                        dt = email.utils.parsedate_to_datetime(msg.get("Date", ""))
+                        email_ts = dt.astimezone(timezone.utc).timestamp()
+                    except Exception:
+                        email_ts = 0
+
+                    print(f"  Email ts={email_ts:.0f} sent_after={sent_after:.0f} diff={(email_ts-sent_after):.0f}s")
+                    if email_ts < sent_after - 30:
+                        continue
+
+                    body = ""
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() in ("text/plain", "text/html"):
+                                candidate = part.get_payload(decode=True).decode(errors="ignore")
+                                if len(candidate.strip()) > len(body.strip()):
+                                    body = candidate
+                    else:
+                        body = msg.get_payload(decode=True).decode(errors="ignore")
+
+                    m = re.search(r"\b(\d{6})\b", body)
+                    if m and email_ts >= best_time:
+                        best_otp, best_time = m.group(1), email_ts
+
+                if best_otp:
+                    print(f"  OTP attempt 1: {best_otp}")
+                    return best_otp
+
+            except Exception as e:
+                print(f"  Gmail IMAP error: {e}")
+                imap_failed = True
+            finally:
+                try:
+                    if mail:
+                        mail.logout()
+                except Exception:
+                    pass
+
+        # 3. If IMAP not working, prompt via Telegram once
+        if imap_failed and not tg_prompted:
+            _tg_send(
+                "⚠️ CBOS login needs OTP — Gmail IMAP unavailable from VM.\n"
+                "Check your email for a 6-digit OTP from CBOS and reply:\n"
+                "/otp 123456"
+            )
+            tg_prompted = True
+            print("  Gmail IMAP unavailable — sent Telegram prompt for manual OTP.")
+
         time.sleep(5)
 
     raise RuntimeError(f"OTP not received within {max_wait} seconds.")
