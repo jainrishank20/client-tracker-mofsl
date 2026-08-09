@@ -79,38 +79,27 @@ jobs:
         if: ${{ github.event.inputs.skip_download != 'true' }}
         run: touch /tmp/pipeline_start
 
-      # ── Step 1: Download CSVs from CBOS via VM SSH ───────────────────────────
-      # GHA runners can't reach backoffice.motilaloswal.com (IP blocked).
-      # We SSH into the Oracle VM (Indian IP) to run the download, then scp CSVs back.
-      - name: Download CSVs from CBOS (via VM SSH)
+      # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────
+      # NOTE: Normal flow has skip_download=true (VM runs the download and pushes
+      # trades.json before triggering this workflow). This step only runs when
+      # triggered manually with skip_download=false — GHA runners may not reach
+      # backoffice.motilaloswal.com from outside India.
+      - name: Download CSVs from CBOS (Playwright headless)
         if: ${{ github.event.inputs.skip_download != 'true' }}
         continue-on-error: true
-        env:
-          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
-          printf '%s' "$VM_SSH_KEY" > /tmp/vm_key_dl
-          chmod 600 /tmp/vm_key_dl
-          trap 'rm -f /tmp/vm_key_dl' EXIT
-
-          SSH="ssh -i /tmp/vm_key_dl -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=20 -o ServerAliveCountMax=15 opc@${{ secrets.VM_HOST }}"
-          SCP="scp -i /tmp/vm_key_dl -o StrictHostKeyChecking=no -o ConnectTimeout=60"
-
+          pip install playwright
+          playwright install chromium
+          playwright install-deps chromium
           IS_MANUAL_FULL="${{ github.event.inputs.full_history == 'true' }}"
           IS_SUNDAY_CRON="${{ github.event.schedule == '30 5 * * 0' }}"
           if [ "$IS_MANUAL_FULL" = "true" ] || [ "$IS_SUNDAY_CRON" = "true" ]; then
-            echo "Running FULL history download on VM..."
-            $SSH "cd /home/opc/app && python3 mo_downloader.py --full --downloads-only"
+            echo "Running FULL history download..."
+            python mo_downloader.py --full --downloads-only
           else
-            echo "Running incremental download on VM..."
-            $SSH "cd /home/opc/app && python3 mo_downloader.py --downloads-only"
+            echo "Running incremental download..."
+            python mo_downloader.py --downloads-only
           fi
-
-          # Pull CSVs back to GHA runner for import + GSheet sync
-          mkdir -p mo_csvs
-          $SCP "opc@${{ secrets.VM_HOST }}:/home/opc/app/mo_csvs/*.csv" mo_csvs/ 2>/dev/null || true
-          # Also pull ledger from VM cache if available
-          $SCP "opc@${{ secrets.VM_HOST }}:/home/opc/app/ledger.json" ledger.json 2>/dev/null || true
-          echo "CSVs pulled: $(ls mo_csvs/*.csv 2>/dev/null | wc -l)"
         timeout-minutes: 40
 
       # ── Step 1b: Verify CSVs were actually downloaded ────────────────────────
