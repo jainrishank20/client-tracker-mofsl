@@ -50,6 +50,14 @@ except Exception as e:
     sys.exit(1)
 ")
 
+# ── Ensure playwright is installed ──────────────────────────────────────────
+if ! python3 -c "import playwright" 2>/dev/null; then
+  echo "Installing playwright..."
+  pip3 install playwright --quiet
+  python3 -m playwright install chromium
+  python3 -m playwright install-deps chromium
+fi
+
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
 if [ "$IS_FULL" = "true" ]; then
