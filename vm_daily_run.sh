@@ -57,8 +57,39 @@ if ! python3 -c "import playwright" 2>/dev/null; then
   python3 -m playwright install chromium || true
 fi
 
+# ── Install chromium system libs (no yum/apt — uses rpm2cpio, no sudo) ───────
+# CentOS 8 vault = RHEL 8 / Oracle Linux 8 compatible
+_install_so() {
+  local so_name="$1" rpm_url="$2"
+  ldconfig -p 2>/dev/null | grep -q "$so_name" && return 0
+  ls /home/opc/lib/"${so_name}"* 2>/dev/null | grep -q . && return 0
+  echo "  Installing $so_name from RPM..."
+  local f="/tmp/_chromedep.rpm" ex="/tmp/_chromedep_ex"
+  curl -sfL "$rpm_url" -o "$f" 2>/dev/null || { echo "  WARN: download failed for $so_name"; return 1; }
+  mkdir -p "$ex" /home/opc/lib
+  ( cd "$ex" && rpm2cpio "$f" | cpio -idm --quiet 2>/dev/null )
+  find "$ex" -name "${so_name}*" -exec cp -f {} /home/opc/lib/ \;
+  rm -rf "$ex" "$f"
+}
+export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
+C8="https://vault.centos.org/8.5.2111/BaseOS/x86_64/os/Packages"
+C8A="https://vault.centos.org/8.5.2111/AppStream/x86_64/os/Packages"
+_install_so libatk-1.0.so.0        "$C8/atk-2.28.1-1.el8.x86_64.rpm"
+_install_so libatk-bridge-2.0.so.0 "$C8A/at-spi2-atk-2.26.2-1.el8.x86_64.rpm"
+_install_so libcups.so.2            "$C8/cups-libs-2.2.6-38.el8.x86_64.rpm"
+_install_so libdrm.so.2             "$C8/libdrm-2.4.103-1.el8.x86_64.rpm"
+_install_so libXcomposite.so.1      "$C8/libXcomposite-0.4.4-14.el8.x86_64.rpm"
+_install_so libXdamage.so.1         "$C8/libXdamage-1.1.4-14.el8.x86_64.rpm"
+_install_so libXfixes.so.3          "$C8/libXfixes-5.0.3-7.el8.x86_64.rpm"
+_install_so libXrandr.so.2          "$C8/libXrandr-1.5.2-1.el8.x86_64.rpm"
+_install_so libgbm.so.1             "$C8A/mesa-libgbm-20.3.3-2.el8.x86_64.rpm"
+_install_so libpango-1.0.so.0       "$C8/pango-1.42.4-6.el8.x86_64.rpm"
+_install_so libasound.so.2          "$C8/alsa-lib-1.2.1.2-4.el8.x86_64.rpm"
+
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
+# LD_LIBRARY_PATH carries the manually installed .so files into the chromium process
+export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
 if [ "$IS_FULL" = "true" ]; then
   echo "Running FULL history download..."
   python3 mo_downloader.py --full --downloads-only
