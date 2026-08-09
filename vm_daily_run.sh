@@ -53,9 +53,9 @@ except Exception as e:
 # ── Ensure playwright is installed ──────────────────────────────────────────
 if ! python3 -c "import playwright" 2>/dev/null; then
   echo "Installing playwright..."
-  pip3 install playwright --quiet
-  python3 -m playwright install chromium
-  python3 -m playwright install-deps chromium
+  python3 -m pip install playwright --quiet || true
+  python3 -m playwright install chromium || true
+  python3 -m playwright install-deps chromium 2>/dev/null || true
 fi
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
