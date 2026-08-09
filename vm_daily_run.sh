@@ -57,43 +57,50 @@ if ! python3 -c "import playwright" 2>/dev/null; then
   python3 -m playwright install chromium || true
 fi
 
-# ── Install chromium system libs (no yum/apt — uses rpm2cpio, no sudo) ───────
-# CentOS 8 vault = RHEL 8 / Oracle Linux 8 compatible
-_install_so() {
-  local so_name="$1"; shift
-  ldconfig -p 2>/dev/null | grep -q "$so_name" && return 0
-  ls /home/opc/lib/"${so_name}"* 2>/dev/null | grep -q . && return 0
-  echo "  Installing $so_name..."
-  local f="/tmp/_chromedep.rpm" ex="/tmp/_chromedep_ex" ok=false
-  # Use Python urllib — more reliable than curl in restricted Oracle Cloud envs
-  for url in "$@"; do
-    python3 -c "import urllib.request; urllib.request.urlretrieve('$url','$f')" 2>/dev/null && ok=true && break
-  done
-  if ! $ok; then echo "  WARN: download failed for $so_name"; return 1; fi
-  mkdir -p "$ex" /home/opc/lib
-  ( cd "$ex" && rpm2cpio "$f" | cpio -idm --quiet 2>/dev/null )
-  find "$ex" -name "${so_name}*" -exec cp -f {} /home/opc/lib/ \;
-  rm -rf "$ex" "$f"
-}
+# ── Install chromium system libs ─────────────────────────────────────────────
+if ! ldconfig -p 2>/dev/null | grep -q libatk-1.0; then
+  echo "libatk-1.0 missing — trying dnf (chromium already cached, low mem pressure)..."
+  sudo dnf install -y --quiet --setopt=install_weak_deps=False \
+    atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage libXfixes \
+    libXrandr mesa-libgbm pango alsa-lib 2>&1 | tail -5 || true
+
+  # If dnf failed, diagnose why urllib can't reach Oracle repo, then try rpm2cpio
+  if ! ldconfig -p 2>/dev/null | grep -q libatk-1.0; then
+    echo "dnf did not install libatk — testing network access..."
+    python3 - <<'PYEOF'
+import urllib.request, sys
+test_url = "https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/atk-2.28.1-1.0.1.el8.x86_64.rpm"
+try:
+    with urllib.request.urlopen(test_url, timeout=20) as r:
+        data = r.read(1024)
+        with open('/tmp/_atk.rpm', 'wb') as f:
+            f.write(data)
+            import shutil
+            shutil.copyfileobj(r, f)
+        print(f"Oracle repo OK, downloaded {r.length or '?'} bytes")
+        sys.exit(0)
+except Exception as e:
+    print(f"Oracle repo FAILED: {e}")
+
+# Try AlmaLinux
+alt_url = "https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/atk-2.28.1-1.el8.x86_64.rpm"
+try:
+    urllib.request.urlretrieve(alt_url, '/tmp/_atk.rpm')
+    print(f"AlmaLinux repo OK")
+except Exception as e2:
+    print(f"AlmaLinux repo FAILED: {e2}")
+    sys.exit(1)
+PYEOF
+    if [ -f /tmp/_atk.rpm ]; then
+      mkdir -p /tmp/_atkex /home/opc/lib
+      ( cd /tmp/_atkex && rpm2cpio /tmp/_atk.rpm | cpio -idm --quiet 2>/dev/null )
+      find /tmp/_atkex -name "libatk*.so*" -exec cp -f {} /home/opc/lib/ \;
+      rm -rf /tmp/_atkex /tmp/_atk.rpm
+      echo "Extracted libatk via rpm2cpio"
+    fi
+  fi
+fi
 export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
-mkdir -p /home/opc/lib
-# Oracle Linux 8 official repo (same VM cloud — always reachable)
-OL8="https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage"
-OL8A="https://yum.oracle.com/repo/OracleLinux/OL8/appstream/latest/x86_64/getPackage"
-# AlmaLinux 8 as fallback (RHEL 8 / OL8 compatible)
-AL8="https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages"
-AL8A="https://repo.almalinux.org/almalinux/8/AppStream/x86_64/os/Packages"
-_install_so libatk-1.0.so.0        "$OL8/atk-2.28.1-1.0.1.el8.x86_64.rpm"        "$AL8/atk-2.28.1-1.el8.x86_64.rpm"
-_install_so libatk-bridge-2.0.so.0 "$OL8A/at-spi2-atk-2.26.2-1.el8.x86_64.rpm"  "$AL8A/at-spi2-atk-2.26.2-1.el8.x86_64.rpm"
-_install_so libcups.so.2            "$OL8/cups-libs-2.2.6-38.el8.x86_64.rpm"      "$AL8/cups-libs-2.2.6-38.el8.x86_64.rpm"
-_install_so libdrm.so.2             "$OL8/libdrm-2.4.103-1.el8.x86_64.rpm"        "$AL8/libdrm-2.4.103-1.el8.x86_64.rpm"
-_install_so libXcomposite.so.1      "$OL8/libXcomposite-0.4.4-14.el8.x86_64.rpm"  "$AL8/libXcomposite-0.4.4-14.el8.x86_64.rpm"
-_install_so libXdamage.so.1         "$OL8/libXdamage-1.1.4-14.el8.x86_64.rpm"     "$AL8/libXdamage-1.1.4-14.el8.x86_64.rpm"
-_install_so libXfixes.so.3          "$OL8/libXfixes-5.0.3-7.el8.x86_64.rpm"       "$AL8/libXfixes-5.0.3-7.el8.x86_64.rpm"
-_install_so libXrandr.so.2          "$OL8/libXrandr-1.5.2-1.el8.x86_64.rpm"       "$AL8/libXrandr-1.5.2-1.el8.x86_64.rpm"
-_install_so libgbm.so.1             "$OL8A/mesa-libgbm-20.3.3-2.el8.x86_64.rpm"   "$AL8A/mesa-libgbm-20.3.3-2.el8.x86_64.rpm"
-_install_so libpango-1.0.so.0       "$OL8/pango-1.42.4-6.el8.x86_64.rpm"          "$AL8/pango-1.42.4-6.el8.x86_64.rpm"
-_install_so libasound.so.2          "$OL8/alsa-lib-1.2.1.2-4.el8.x86_64.rpm"      "$AL8/alsa-lib-1.2.1.2-4.el8.x86_64.rpm"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
