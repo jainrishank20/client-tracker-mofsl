@@ -57,55 +57,100 @@ if ! python3 -c "import playwright" 2>/dev/null; then
   python3 -m playwright install chromium || true
 fi
 
-# ── Install chromium system libs ─────────────────────────────────────────────
-if ! ldconfig -p 2>/dev/null | grep -q libatk-1.0; then
-  echo "libatk-1.0 missing — trying dnf (chromium already cached, low mem pressure)..."
-  sudo dnf install -y --quiet --setopt=install_weak_deps=False \
-    atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage libXfixes \
-    libXrandr mesa-libgbm pango alsa-lib 2>&1 | tail -5 || true
-
-  # If dnf failed, diagnose why urllib can't reach Oracle repo, then try rpm2cpio
-  if ! ldconfig -p 2>/dev/null | grep -q libatk-1.0; then
-    echo "dnf did not install libatk — testing network access..."
-    python3 - <<'PYEOF'
-import urllib.request, sys
-test_url = "https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/atk-2.28.1-1.0.1.el8.x86_64.rpm"
-try:
-    with urllib.request.urlopen(test_url, timeout=20) as r:
-        data = r.read(1024)
-        with open('/tmp/_atk.rpm', 'wb') as f:
-            f.write(data)
-            import shutil
-            shutil.copyfileobj(r, f)
-        print(f"Oracle repo OK, downloaded {r.length or '?'} bytes")
-        sys.exit(0)
-except Exception as e:
-    print(f"Oracle repo FAILED: {e}")
-
-# Try AlmaLinux
-alt_url = "https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/atk-2.28.1-1.el8.x86_64.rpm"
-try:
-    urllib.request.urlretrieve(alt_url, '/tmp/_atk.rpm')
-    print(f"AlmaLinux repo OK")
-except Exception as e2:
-    print(f"AlmaLinux repo FAILED: {e2}")
-    sys.exit(1)
-PYEOF
-    if [ -f /tmp/_atk.rpm ]; then
-      mkdir -p /tmp/_atkex /home/opc/lib
-      ( cd /tmp/_atkex && rpm2cpio /tmp/_atk.rpm | cpio -idm --quiet 2>/dev/null )
-      find /tmp/_atkex -name "libatk*.so*" -exec cp -f {} /home/opc/lib/ \;
-      rm -rf /tmp/_atkex /tmp/_atk.rpm
-      echo "Extracted libatk via rpm2cpio"
-    fi
-  fi
-fi
+# ── Install chromium system libs (browse repo to find correct version) ────────
 export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
+if ! ls /home/opc/lib/libatk-1.0* 2>/dev/null | grep -q .; then
+  echo "Installing chromium system libs via AlmaLinux 8 repo..."
+  python3 - <<'PYEOF'
+import urllib.request, urllib.error, re, subprocess, os, shutil, sys, glob
+
+LIBDIR = '/home/opc/lib'
+os.makedirs(LIBDIR, exist_ok=True)
+
+# Packages: (so_prefix, [repo_base_urls_to_search], pkg_name_prefix)
+PKGS = [
+    ('libatk-1.0',        ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'atk'),
+    ('libatk-bridge-2.0', ['https://repo.almalinux.org/almalinux/8/AppStream/x86_64/os/Packages/'], 'at-spi2-atk'),
+    ('libcups',           ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'cups-libs'),
+    ('libdrm',            ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'libdrm'),
+    ('libXcomposite',     ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'libXcomposite'),
+    ('libXdamage',        ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'libXdamage'),
+    ('libXfixes',         ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'libXfixes'),
+    ('libXrandr',         ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'libXrandr'),
+    ('libgbm',            ['https://repo.almalinux.org/almalinux/8/AppStream/x86_64/os/Packages/'], 'mesa-libgbm'),
+    ('libpango-1.0',      ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'pango'),
+    ('libasound',         ['https://repo.almalinux.org/almalinux/8/BaseOS/x86_64/os/Packages/'],  'alsa-lib'),
+]
+
+def find_rpm_url(bases, pkg_prefix):
+    for base in bases:
+        try:
+            with urllib.request.urlopen(base, timeout=20) as r:
+                html = r.read().decode(errors='replace')
+            # Match e.g. atk-2.28.1-3.el8.x86_64.rpm (not debuginfo/devel/src)
+            pat = rf'href="({re.escape(pkg_prefix)}-[\d][^"]*\.x86_64\.rpm)"'
+            hits = [m for m in re.findall(pat, html)
+                    if 'debug' not in m and 'devel' not in m and 'src' not in m]
+            if hits:
+                return base + hits[0]
+        except Exception as e:
+            print(f"  Browse {base}: {e}")
+    return None
+
+def install_rpm(url, so_prefix):
+    f, ex = '/tmp/_cdep.rpm', '/tmp/_cdepex'
+    try:
+        urllib.request.urlretrieve(url, f)
+        os.makedirs(ex, exist_ok=True)
+        subprocess.run(f'cd {ex} && rpm2cpio {f} | cpio -idm --quiet',
+                       shell=True, capture_output=True)
+        for src in glob.glob(f'{ex}/**/{so_prefix}*.so*', recursive=True):
+            dst = os.path.join(LIBDIR, os.path.basename(src))
+            shutil.copy2(src, dst)
+            print(f"  Copied {os.path.basename(src)}")
+            # create unversioned symlink if needed
+            base = os.path.basename(src).split('.so')[0] + '.so.' + os.path.basename(src).split('.so.')[1].split('.')[0] if '.so.' in os.path.basename(src) else None
+        return True
+    except Exception as e:
+        print(f"  install_rpm error: {e}")
+        return False
+    finally:
+        shutil.rmtree(ex, ignore_errors=True)
+        try: os.remove(f)
+        except: pass
+
+errors = []
+for so_prefix, bases, pkg in PKGS:
+    if glob.glob(f'{LIBDIR}/{so_prefix}*'):
+        continue
+    print(f"Fetching {pkg} ({so_prefix})...")
+    url = find_rpm_url(bases, pkg)
+    if not url:
+        errors.append(f"No RPM found for {pkg}")
+        continue
+    print(f"  URL: {url}")
+    install_rpm(url, so_prefix)
+
+# Create missing symlinks (e.g. libatk-1.0.so.0 -> libatk-1.0.so.0.28100.1)
+for f in glob.glob(f'{LIBDIR}/*.so.*'):
+    base = f
+    parts = os.path.basename(f).split('.so.')
+    if len(parts) == 2 and '.' in parts[1]:
+        major = parts[1].split('.')[0]
+        link = os.path.join(LIBDIR, parts[0] + '.so.' + major)
+        if not os.path.exists(link):
+            os.symlink(os.path.basename(f), link)
+            print(f"  Symlinked {os.path.basename(link)}")
+
+if errors:
+    print('Errors:', errors)
+else:
+    print('All libs installed OK')
+PYEOF
+fi
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
-# LD_LIBRARY_PATH carries the manually installed .so files into the chromium process
-export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
 if [ "$IS_FULL" = "true" ]; then
   echo "Running FULL history download..."
   python3 mo_downloader.py --full --downloads-only
