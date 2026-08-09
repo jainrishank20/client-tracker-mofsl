@@ -77,7 +77,8 @@ echo "Pushing data files to repo..."
 python3 - <<'PYEOF'
 import json, base64, urllib.request, os, sys
 
-TOKEN = os.environ.get('GITHUB_TOKEN', '')
+import json as _json
+TOKEN = os.environ.get('GITHUB_TOKEN') or _json.load(open('/home/opc/app/bot_config.json', encoding='utf-8-sig')).get('github_token', '')
 REPO  = 'jainrishank20/client-tracker-mofsl'
 API   = f'https://api.github.com/repos/{REPO}/contents'
 FILES = ['trades.json', 'ledger.json', 'open_positions_snapshot.json', 'ticker_overrides.json']

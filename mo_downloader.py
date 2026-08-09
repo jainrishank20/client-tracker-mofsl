@@ -1260,6 +1260,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except Exception as e:
         if 'TargetClosed' in type(e).__name__ or 'TargetClosed' in str(e):
-            print("\nBrowser was closed — exiting cleanly.")
+            print(f"\nBrowser was closed (TargetClosed): {e}")
+            raise  # re-raise so the caller sees a real failure
         else:
             raise
