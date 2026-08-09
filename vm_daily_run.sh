@@ -57,37 +57,57 @@ if ! python3 -c "import playwright" 2>/dev/null; then
   python3 -m playwright install chromium || true
 fi
 
-# ── Install chromium system libs via dnf download (no sudo, uses Oracle repo) ──
-export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
-if ! ls /home/opc/lib/libatk-1.0* 2>/dev/null | grep -q .; then
-  echo "Downloading chromium system libs via dnf (no sudo needed)..."
-  mkdir -p /tmp/chromedeps /tmp/chromedepex /home/opc/lib
-  # dnf download: non-privileged, finds correct version from Oracle repo
-  dnf download --destdir=/tmp/chromedeps \
-    atk at-spi2-atk cups-libs libdrm libXcomposite libXdamage libXfixes \
-    libXrandr mesa-libgbm pango alsa-lib 2>&1 | tail -5
-  # Extract all downloaded RPMs
-  for rpm in /tmp/chromedeps/*.rpm; do
+# ── Install chromium system libs ─────────────────────────────────────────────
+CHROME_BIN="/home/opc/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell"
+LIBDIR=/home/opc/lib
+mkdir -p "$LIBDIR"
+export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
+
+# Check if chromium already patched with our RPATH (skip if already done)
+if [ -f "$CHROME_BIN" ] && ! python3 -c "
+import subprocess, sys
+r = subprocess.run(['strings', sys.argv[1]], capture_output=True, text=True)
+sys.exit(0 if '/home/opc/lib' in r.stdout else 1)
+" "$CHROME_BIN" 2>/dev/null; then
+
+  # Step A: Get libs via dnf download (no sudo, non-privileged)
+  echo "Getting chromium libs via dnf download..."
+  mkdir -p /tmp/cdeps /tmp/cdepex
+  dnf download --destdir=/tmp/cdeps \
+    atk at-spi2-atk cups-libs libXcomposite libXdamage libXfixes libXrandr \
+    mesa-libgbm pango alsa-lib 2>&1 | grep -v "^$" | tail -8 || true
+  N=$(ls /tmp/cdeps/*.rpm 2>/dev/null | wc -l)
+  echo "dnf download: $N RPMs downloaded"
+  for rpm in /tmp/cdeps/*.rpm; do
     [ -f "$rpm" ] || continue
-    echo "  Extracting $rpm..."
-    ( cd /tmp/chromedepex && rpm2cpio "$rpm" | cpio -idm --quiet 2>/dev/null )
+    ( cd /tmp/cdepex && rpm2cpio "$rpm" | cpio -idm --quiet 2>/dev/null )
   done
-  find /tmp/chromedepex -name "*.so*" ! -name "*debug*" -exec cp -f {} /home/opc/lib/ \;
-  rm -rf /tmp/chromedeps /tmp/chromedepex
-  # Create major-version symlinks (e.g. libatk-1.0.so.0 -> libatk-1.0.so.0.28100.1)
-  python3 -c "
-import os, glob
-libdir='/home/opc/lib'
-for f in glob.glob(libdir+'/*.so.*'):
-    parts = os.path.basename(f).split('.so.')
-    if len(parts)==2 and '.' in parts[1]:
-        link = os.path.join(libdir, parts[0]+'.so.'+parts[1].split('.')[0])
-        if not os.path.exists(link):
-            os.symlink(os.path.basename(f), link)
-            print('  Symlinked', os.path.basename(link))
-" 2>/dev/null || true
-  echo "Libs in /home/opc/lib: $(ls /home/opc/lib/ | wc -l) files"
-  ls /home/opc/lib/libatk* 2>/dev/null && echo "libatk OK" || echo "WARN: libatk still missing"
+  find /tmp/cdepex -name "*.so*" ! -name "*debug*" ! -name "*.py" \
+    -exec cp -f {} "$LIBDIR/" \; 2>/dev/null || true
+  rm -rf /tmp/cdeps /tmp/cdepex
+
+  # Step B: Bake LIBDIR into chromium RPATH (patchelf — no root needed)
+  pip3 install patchelf --quiet 2>/dev/null || true
+  PELF=$(command -v patchelf 2>/dev/null || python3 -c "
+import subprocess, sys
+r=subprocess.run(['pip3','show','-f','patchelf'],capture_output=True,text=True)
+for l in r.stdout.splitlines():
+    if 'patchelf' in l and not l.startswith('Name'):
+        import os,site
+        for d in site.getsitepackages()+[site.getusersitepackages()]:
+            p=os.path.join(os.path.dirname(d),'bin','patchelf')
+            if os.path.isfile(p): print(p); sys.exit()
+" 2>/dev/null)
+  if [ -n "$PELF" ] && [ -x "$PELF" ]; then
+    "$PELF" --add-rpath "$LIBDIR" "$CHROME_BIN" 2>/dev/null \
+      && echo "Patched chromium RPATH → $LIBDIR" \
+      || echo "patchelf --add-rpath failed (non-fatal)"
+  else
+    echo "patchelf not found — relying on LD_LIBRARY_PATH only"
+  fi
+
+  echo "Libs in $LIBDIR: $(ls $LIBDIR/ | wc -l) files"
+  ls "$LIBDIR"/libatk* 2>/dev/null && echo "libatk: OK" || echo "WARN: libatk not in $LIBDIR (will use LD_LIBRARY_PATH)"
 fi
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
