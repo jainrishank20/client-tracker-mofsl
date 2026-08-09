@@ -60,31 +60,36 @@ fi
 # ── Install chromium system libs (no yum/apt — uses rpm2cpio, no sudo) ───────
 # CentOS 8 vault = RHEL 8 / Oracle Linux 8 compatible
 _install_so() {
-  local so_name="$1" rpm_url="$2"
+  local so_name="$1"; shift
   ldconfig -p 2>/dev/null | grep -q "$so_name" && return 0
   ls /home/opc/lib/"${so_name}"* 2>/dev/null | grep -q . && return 0
-  echo "  Installing $so_name from RPM..."
-  local f="/tmp/_chromedep.rpm" ex="/tmp/_chromedep_ex"
-  curl -sfL "$rpm_url" -o "$f" 2>/dev/null || { echo "  WARN: download failed for $so_name"; return 1; }
+  echo "  Installing $so_name..."
+  local f="/tmp/_chromedep.rpm" ex="/tmp/_chromedep_ex" ok=false
+  for url in "$@"; do
+    curl -sfL --max-time 30 "$url" -o "$f" 2>/dev/null && ok=true && break
+  done
+  if ! $ok; then echo "  WARN: download failed for $so_name"; return 1; fi
   mkdir -p "$ex" /home/opc/lib
   ( cd "$ex" && rpm2cpio "$f" | cpio -idm --quiet 2>/dev/null )
   find "$ex" -name "${so_name}*" -exec cp -f {} /home/opc/lib/ \;
   rm -rf "$ex" "$f"
 }
 export LD_LIBRARY_PATH=/home/opc/lib:${LD_LIBRARY_PATH:-}
-C8="https://vault.centos.org/8.5.2111/BaseOS/x86_64/os/Packages"
-C8A="https://vault.centos.org/8.5.2111/AppStream/x86_64/os/Packages"
-_install_so libatk-1.0.so.0        "$C8/atk-2.28.1-1.el8.x86_64.rpm"
-_install_so libatk-bridge-2.0.so.0 "$C8A/at-spi2-atk-2.26.2-1.el8.x86_64.rpm"
-_install_so libcups.so.2            "$C8/cups-libs-2.2.6-38.el8.x86_64.rpm"
-_install_so libdrm.so.2             "$C8/libdrm-2.4.103-1.el8.x86_64.rpm"
-_install_so libXcomposite.so.1      "$C8/libXcomposite-0.4.4-14.el8.x86_64.rpm"
-_install_so libXdamage.so.1         "$C8/libXdamage-1.1.4-14.el8.x86_64.rpm"
-_install_so libXfixes.so.3          "$C8/libXfixes-5.0.3-7.el8.x86_64.rpm"
-_install_so libXrandr.so.2          "$C8/libXrandr-1.5.2-1.el8.x86_64.rpm"
-_install_so libgbm.so.1             "$C8A/mesa-libgbm-20.3.3-2.el8.x86_64.rpm"
-_install_so libpango-1.0.so.0       "$C8/pango-1.42.4-6.el8.x86_64.rpm"
-_install_so libasound.so.2          "$C8/alsa-lib-1.2.1.2-4.el8.x86_64.rpm"
+mkdir -p /home/opc/lib
+# Rocky Linux 8 = RHEL 8 / Oracle Linux 8 compatible; packages in alphabetical subdirs
+RL8="https://dl.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/Packages"
+RL8A="https://dl.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/Packages"
+_install_so libatk-1.0.so.0        "$RL8/a/atk-2.28.1-1.el8.x86_64.rpm"
+_install_so libatk-bridge-2.0.so.0 "$RL8A/a/at-spi2-atk-2.26.2-1.el8.x86_64.rpm"
+_install_so libcups.so.2            "$RL8/c/cups-libs-2.2.6-38.el8.x86_64.rpm"
+_install_so libdrm.so.2             "$RL8/l/libdrm-2.4.103-1.el8.x86_64.rpm"
+_install_so libXcomposite.so.1      "$RL8/l/libXcomposite-0.4.4-14.el8.x86_64.rpm"
+_install_so libXdamage.so.1         "$RL8/l/libXdamage-1.1.4-14.el8.x86_64.rpm"
+_install_so libXfixes.so.3          "$RL8/l/libXfixes-5.0.3-7.el8.x86_64.rpm"
+_install_so libXrandr.so.2          "$RL8/l/libXrandr-1.5.2-1.el8.x86_64.rpm"
+_install_so libgbm.so.1             "$RL8A/m/mesa-libgbm-20.3.3-2.el8.x86_64.rpm"
+_install_so libpango-1.0.so.0       "$RL8/p/pango-1.42.4-6.el8.x86_64.rpm"
+_install_so libasound.so.2          "$RL8/a/alsa-lib-1.2.1.2-4.el8.x86_64.rpm"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
