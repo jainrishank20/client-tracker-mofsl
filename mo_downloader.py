@@ -8,7 +8,11 @@ Usage:
 import asyncio, imaplib, email, email.utils, re, os, sys, time, json, hashlib
 import datetime
 from datetime import date, timezone
-from playwright.async_api import async_playwright, TimeoutError as PWTimeout
+try:
+    from playwright.async_api import async_playwright, TimeoutError as PWTimeout
+except ImportError:
+    async_playwright = None  # type: ignore
+    PWTimeout = Exception    # type: ignore
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 _cfg = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot_config.json'), encoding='utf-8-sig').read())
@@ -1181,6 +1185,8 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
 async def main():
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+    if async_playwright is None:
+        raise RuntimeError("playwright is not installed — run: pip install playwright && playwright install chromium")
     async with async_playwright() as p:
         headless = os.name != 'nt'  # headless on Linux VM, visible on Windows
         launch_args = ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
