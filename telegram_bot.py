@@ -504,7 +504,7 @@ def self_update(chat_id: str):
             bot_dir = os.path.dirname(os.path.abspath(__file__))
 
             # Download files from GitHub — write to .tmp first, syntax-check before replacing
-            for fname in ('telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json', 'mo_downloader.py'):
+            for fname in ('telegram_bot.py', 'symbol_map.py', 'ticker_overrides.json', 'mo_downloader.py', 'vm_daily_run.sh'):
                 url = f"https://api.github.com/repos/{repo}/contents/{fname}"
                 req = urllib.request.Request(url, headers={
                     'Authorization': f'token {token}',
@@ -527,6 +527,8 @@ def self_update(chat_id: str):
                         send(chat_id, f"Update aborted — syntax error in {fname}:\n{result.stderr}")
                         return
                 os.replace(tmp, dest)
+                if fname.endswith('.sh'):
+                    os.chmod(dest, 0o755)
 
             send(chat_id, "Files updated. Restarting bot now...")
             # os.execv replaces current process with fresh Python — works regardless of service name
