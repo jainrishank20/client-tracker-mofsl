@@ -555,6 +555,9 @@ CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
+# Clear stale CSVs so downloader always fetches fresh data from CBOS
+rm -f /home/opc/app/mo_csvs/TradeDetailsAndSummary_*.csv
+echo "Cleared mo_csvs for fresh download."
 # VM has Indian IP — can reach backoffice.motilaloswal.com
 if [ "$IS_FULL" = "true" ]; then
   echo "Running FULL history download..."
