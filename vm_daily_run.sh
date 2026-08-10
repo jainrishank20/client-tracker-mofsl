@@ -63,143 +63,184 @@ if ! python3 -c "import playwright" 2>/dev/null; then
 fi
 
 # ── Patch chromium: remove unneeded system lib deps ──────────────────────────
-# On minimal Oracle Linux 8, several libs chromium lists as DT_NEEDED are absent
-# but are never actually called in --headless --no-sandbox --disable-gpu mode.
-# Two-pronged approach (no network, no sudo, no RPMs):
-#   1) patchelf --remove-needed  → strips libs from the binary's DT_NEEDED list
-#   2) Python stub .so files     → minimal valid ELF shared libs (pure stdlib)
+# Oracle Linux 8 minimal lacks several libs in chromium's DT_NEEDED list.
+# Fix: pure-Python ELF patcher removes them from the binary's DT_NEEDED in-place.
+# Fallback: stub .so files satisfy the dynamic linker for any remaining missing libs.
 
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 LIBDIR=/home/opc/lib
-PATCH_MARKER=/home/opc/.chromium_patched
+PATCH_MARKER=/home/opc/.chromium_elf_patched
 mkdir -p "$LIBDIR"
 export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
-# Libs safe to remove/stub in headless mode (accessibility, printing, audio, GPU)
-STRIP_LIBS="libatk-1.0.so.0 libatk-bridge-2.0.so.0 libcups.so.2 \
-  libXcomposite.so.1 libXdamage.so.1 libXfixes.so.3 libXrandr.so.2 \
-  libgbm.so.1 libasound.so.2"
-
 if [ -n "$CHROME_BIN" ] && [ -f "$CHROME_BIN" ] && [ ! -f "$PATCH_MARKER" ]; then
-  echo "Patching chromium for Oracle Linux 8 (first-time setup)..."
+  echo "Patching chromium for Oracle Linux 8..."
 
-  # ── Method 1: patchelf --remove-needed ─────────────────────────────────────
-  pip3 install patchelf --quiet 2>/dev/null || true
-  PELF=$(command -v patchelf 2>/dev/null || echo "")
-  if [ -z "$PELF" ]; then
-    # pip may put it in ~/.local/bin which is in PATH, but try explicit path too
-    PELF=$(python3 -c "import sys,os; b=os.path.join(os.path.dirname(sys.executable),'patchelf'); print(b) if os.path.isfile(b) else None" 2>/dev/null || echo "")
-  fi
-  if [ -n "$PELF" ] && [ -x "$PELF" ]; then
-    echo "  patchelf found: $PELF — removing unneeded deps..."
-    for lib in $STRIP_LIBS; do
-      "$PELF" --remove-needed "$lib" "$CHROME_BIN" 2>/dev/null \
-        && echo "    Removed: $lib" || true
-    done
-    echo "  patchelf step complete."
-  else
-    echo "  patchelf not available (will rely on stub .so files)."
-  fi
-
-  # ── Method 2: stub .so files (pure Python, always runs as safety net) ──────
-  # IMPORTANT: || true so set -e never kills the pipeline if Python hits an error
-  echo "  Creating stub .so files in $LIBDIR..."
+  # Pure-Python ELF patcher: removes missing libs from DT_NEEDED (no patchelf binary needed),
+  # then creates stub .so files as a safety net for any remaining missing libs.
+  # || true: never let this block kill the pipeline via set -e.
   python3 - <<'PYEOF' || true
-import struct, os, sys, subprocess
+import struct, os, glob, subprocess
 
-LIBDIR = '/home/opc/lib'
+LIBDIR   = '/home/opc/lib'
 os.makedirs(LIBDIR, exist_ok=True)
 
-# Known-missing on Oracle Linux 8 minimal + any dynamically detected missing
-ALWAYS_STUB = [
-    'libatk-1.0.so.0', 'libatk-bridge-2.0.so.0', 'libcups.so.2',
-    'libXcomposite.so.1', 'libXdamage.so.1', 'libXfixes.so.3',
-    'libXrandr.so.2', 'libgbm.so.1', 'libasound.so.2',
-    'libpango-1.0.so.0', 'libpangocairo-1.0.so.0',
+# ── Find chromium binary ─────────────────────────────────────────────────────
+ch = glob.glob('/home/opc/.cache/ms-playwright/**/chrome-headless-shell', recursive=True)
+CHROME = ch[0] if ch else None
+if not CHROME:
+    print('ERROR: chrome-headless-shell not found'); raise SystemExit(1)
+print(f'Chromium: {CHROME} ({os.path.getsize(CHROME)//1024//1024} MB)')
+
+# ── ldd: detect ALL missing libs for this binary ────────────────────────────
+ALWAYS = [
+    'libatk-1.0.so.0','libatk-bridge-2.0.so.0','libcups.so.2',
+    'libXcomposite.so.1','libXdamage.so.1','libXfixes.so.3','libXrandr.so.2',
+    'libgbm.so.1','libasound.so.2','libpango-1.0.so.0','libpangocairo-1.0.so.0',
 ]
+missing = []
+try:
+    r = subprocess.Popen(['ldd', CHROME], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, _ = r.communicate(timeout=20)
+    for line in out.decode(errors='replace').splitlines():
+        if '=>' in line and 'not found' in line:
+            lib = line.strip().split()[0]
+            if '.so' in lib:
+                missing.append(lib)
+    print(f'ldd missing: {missing}')
+except Exception as e:
+    print(f'ldd failed ({e}), using fixed list')
+    missing = list(ALWAYS)
 
-# Try ldd to detect ALL missing libs for this specific chromium binary
-import os, glob
-chrome_candidates = glob.glob('/home/opc/.cache/ms-playwright/**/chrome-headless-shell', recursive=True)
-CHROME = chrome_candidates[0] if chrome_candidates else ''
+if not missing:
+    print('No missing libs — chromium should work as-is.')
+    raise SystemExit(0)
 
-ldd_missing = []
-if CHROME:
-    try:
-        r = subprocess.Popen(['ldd', CHROME], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, _ = r.communicate(timeout=15)
-        for line in out.decode('utf-8', errors='replace').splitlines():
-            if 'not found' in line:
-                lib = line.strip().split()[0]
-                if lib.endswith('.so') or '.so.' in lib:
-                    ldd_missing.append(lib)
-        print(f'  ldd detected missing: {ldd_missing}')
-    except Exception as e:
-        print(f'  ldd failed ({e}), using fixed list only')
+# ── Step 1: ELF binary patch — remove DT_NEEDED for missing libs ─────────────
+# This is patchelf --remove-needed implemented in pure Python (no external tools).
+# It shifts DT_NEEDED entries up to fill gaps, null-terminates the section.
+def elf_remove_needed(path, remove_set):
+    with open(path, 'r+b') as f:
+        data = bytearray(f.read())
+    assert data[:4] == b'\x7fELF', 'Not ELF'
+    assert data[4] == 2 and data[5] == 1, 'Expected 64-bit LE ELF'
+    E = '<'
+    e_phoff     = struct.unpack_from(E+'Q', data, 32)[0]
+    e_phentsize = struct.unpack_from(E+'H', data, 54)[0]
+    e_phnum     = struct.unpack_from(E+'H', data, 56)[0]
 
-STUBS = list(set(ALWAYS_STUB + ldd_missing))
+    dyn_off = dyn_sz = None
+    loads = []
+    for i in range(e_phnum):
+        ph = e_phoff + i * e_phentsize
+        ptype  = struct.unpack_from(E+'I', data, ph)[0]
+        poff   = struct.unpack_from(E+'Q', data, ph+8)[0]
+        pvaddr = struct.unpack_from(E+'Q', data, ph+16)[0]
+        pfsz   = struct.unpack_from(E+'Q', data, ph+32)[0]
+        if ptype == 2:   dyn_off, dyn_sz = poff, pfsz   # PT_DYNAMIC
+        elif ptype == 1: loads.append((pvaddr, poff, pfsz))  # PT_LOAD
 
-def make_stub(path):
-    """Minimal valid ELF64 shared library (192 bytes, DT_NULL-only .dynamic)."""
-    EH, PH, DE = 64, 56, 16
-    dyn_off = EH + 2 * PH   # 176
-    total   = dyn_off + DE  # 192
-    ehdr = struct.pack('<4sBBBBBxxxxxxxHHIQQQIHHHHHH',
-        b'\x7fELF', 2, 1, 1, 0, 0,
-        3, 0x3e, 1,
-        0, EH, 0,
-        0, EH, PH, 2,
-        64, 0, 0)
-    phdr_load = struct.pack('<IIQQQQQQ', 1, 5, 0, 0, 0, total, total, 0x1000)
-    phdr_dyn  = struct.pack('<IIQQQQQQ', 2, 6, dyn_off, dyn_off, dyn_off, DE, DE, 8)
-    dynamic   = struct.pack('<QQ', 0, 0)
-    data = ehdr + phdr_load + phdr_dyn + dynamic
-    with open(path, 'wb') as f:
+    if dyn_off is None: raise ValueError('No PT_DYNAMIC')
+
+    def va2off(va):
+        for v,o,sz in loads:
+            if v <= va < v+sz: return o+(va-v)
+        raise ValueError(f'VA 0x{va:x} unmapped')
+
+    DT_NULL=0; DT_NEEDED=1; DT_STRTAB=5; ESIZ=16
+    strtab_vaddr = None
+    entries = []
+    for i in range(dyn_sz // ESIZ):
+        base = dyn_off + i*ESIZ
+        tag  = struct.unpack_from(E+'q', data, base)[0]
+        val  = struct.unpack_from(E+'Q', data, base+8)[0]
+        entries.append((base, tag, val))
+        if tag == DT_NULL: break
+        if tag == DT_STRTAB: strtab_vaddr = val
+
+    if strtab_vaddr is None: raise ValueError('No DT_STRTAB')
+    strtab_off = va2off(strtab_vaddr)
+
+    def rstr(off):
+        end = data.index(b'\x00', strtab_off+off)
+        return data[strtab_off+off:end].decode()
+
+    # Partition entries: keep vs remove
+    removed = []
+    keep = []
+    for base, tag, val in entries:
+        if tag == DT_NEEDED and rstr(val) in remove_set:
+            removed.append(rstr(val))
+        else:
+            keep.append((base, tag, val))
+
+    if not removed: return []
+
+    # Write kept entries at original positions (shifts removed entries out)
+    bases = [e[0] for e in entries]
+    for i, (_, tag, val) in enumerate(keep):
+        struct.pack_into(E+'q', data, bases[i], tag)
+        struct.pack_into(E+'Q', data, bases[i]+8, val)
+    # Null out trailing positions
+    for i in range(len(keep), len(entries)):
+        struct.pack_into(E+'Q', data, bases[i], 0)
+        struct.pack_into(E+'Q', data, bases[i]+8, 0)
+
+    with open(path, 'r+b') as f:
         f.write(data)
-    os.chmod(path, 0o755)
+    return removed
 
-# Check ldconfig — /sbin/ldconfig not in default PATH, try both
+try:
+    removed = elf_remove_needed(CHROME, set(missing))
+    print(f'Removed from DT_NEEDED: {removed}')
+except Exception as e:
+    print(f'ELF patch failed ({e}) — will rely on stub .so files')
+
+# ── Step 2: Stub .so files for any remaining missing libs ────────────────────
+# Stubs are a safety net: if ELF patch worked, these never get loaded.
+# If ELF patch failed, stubs satisfy the dynamic linker at load time.
+# They contain no symbols — safe only if the missing functions are never called.
+def make_stub(path):
+    EH,PH,DE = 64,56,16
+    dyn_off = EH+2*PH; total = dyn_off+DE
+    ehdr = struct.pack('<4sBBBBBxxxxxxxHHIQQQIHHHHHH',
+        b'\x7fELF',2,1,1,0,0, 3,0x3e,1, 0,EH,0, 0,EH,PH,2, 64,0,0)
+    phdr_load = struct.pack('<IIQQQQQQ',1,5,0,0,0,total,total,0x1000)
+    phdr_dyn  = struct.pack('<IIQQQQQQ',2,6,dyn_off,dyn_off,dyn_off,DE,DE,8)
+    dynamic   = struct.pack('<QQ',0,0)
+    with open(path,'wb') as f: f.write(ehdr+phdr_load+phdr_dyn+dynamic)
+    os.chmod(path,0o755)
+
 ldcfg = ''
-for ldcfg_cmd in ['ldconfig', '/sbin/ldconfig', '/usr/sbin/ldconfig']:
+for cmd in ['ldconfig','/sbin/ldconfig','/usr/sbin/ldconfig']:
     try:
-        r = subprocess.Popen([ldcfg_cmd, '-p'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, _ = r.communicate(timeout=5)
-        ldcfg = out.decode('utf-8', errors='replace')
-        break
-    except Exception:
-        continue
+        r = subprocess.Popen([cmd,'-p'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        ldcfg = r.communicate(timeout=5)[0].decode(errors='replace'); break
+    except: pass
 
-for name in STUBS:
-    if not (name.endswith('.so') or '.so.' in name):
-        continue
-    if name in ldcfg:
-        print(f'    {name}: in ldconfig, skipping')
-        continue
-    # Also check common system lib paths
-    found_on_system = any(
-        os.path.exists(os.path.join(d, name))
-        for d in ['/lib64', '/usr/lib64', '/lib', '/usr/lib']
-    )
-    if found_on_system:
-        print(f'    {name}: found on system, skipping')
-        continue
-    p = os.path.join(LIBDIR, name)
-    if os.path.exists(p) and os.path.getsize(p) >= 192:
-        print(f'    {name}: stub exists')
-        continue
-    make_stub(p)
-    print(f'    Created stub: {name}')
+stub_list = list(set(missing + ALWAYS))
+for lib in stub_list:
+    if not '.so' in lib: continue
+    if lib in ldcfg: continue
+    if any(os.path.exists(os.path.join(d,lib)) for d in ['/lib64','/usr/lib64','/lib','/usr/lib']): continue
+    p = os.path.join(LIBDIR, lib)
+    if os.path.exists(p) and os.path.getsize(p) >= 192: continue
+    make_stub(p); print(f'Stub: {lib}')
 
-print('  Stub step done.')
+print('Patch complete.')
 PYEOF
 
   touch "$PATCH_MARKER"
-  echo "Chromium patch done. Stubs in $LIBDIR: $(ls $LIBDIR/*.so* 2>/dev/null | wc -l) files."
+  echo "Chromium patched. Stubs in $LIBDIR: $(ls $LIBDIR/*.so* 2>/dev/null | wc -l)"
+
 elif [ -z "$CHROME_BIN" ]; then
-  echo "WARN: chromium binary not found — playwright install may have failed"
+  echo "WARN: chromium binary not found"
 else
-  echo "Chromium already patched (marker exists), skipping lib setup."
+  echo "Chromium already patched (marker exists)."
 fi
+
+# ── Always export LD_LIBRARY_PATH so stubs are findable ─────────────────────
+export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
