@@ -69,16 +69,19 @@ fi
 
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 LIBDIR=/home/opc/lib
-PATCH_MARKER=/home/opc/.chromium_elf_patched_v3
+PATCH_MARKER=/home/opc/.chromium_elf_patched_v4
 mkdir -p "$LIBDIR"
 export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
 if [ -n "$CHROME_BIN" ] && [ -f "$CHROME_BIN" ] && [ ! -f "$PATCH_MARKER" ]; then
   echo "Patching chromium for Oracle Linux 8..."
 
-  # Try dnf first — cleanest solution if OL8 repos are reachable
-  sudo dnf install -y --quiet libxkbcommon atk at-spi2-atk cups-libs \
-    libXcomposite libXdamage libXfixes libXrandr mesa-libgbm alsa-lib pango 2>/dev/null || true
+  # Try playwright install-deps first (knows exactly what chromium needs)
+  python3 -m playwright install-deps chromium 2>/dev/null || true
+  # Also try dnf directly as backup
+  sudo dnf install -y --quiet at-spi2-core at-spi2-atk atk libxkbcommon cups-libs \
+    libXcomposite libXdamage libXfixes libXrandr libXtst libXss \
+    mesa-libgbm libdrm alsa-lib pango gtk3 2>/dev/null || true
 
   # Pure-Python ELF patcher: removes missing libs from DT_NEEDED (no patchelf binary needed),
   # then creates stub .so files as a safety net for any remaining missing libs.
@@ -98,11 +101,22 @@ print(f'Chromium: {CHROME} ({os.path.getsize(CHROME)//1024//1024} MB)')
 
 # ── ldd: detect ALL missing libs for this binary ────────────────────────────
 ALWAYS = [
-    'libatk-1.0.so.0','libatk-bridge-2.0.so.0','libcups.so.2',
+    # AT accessibility stack
+    'libatk-1.0.so.0','libatk-bridge-2.0.so.0','libatspi.so.0',
+    # printing / audio
+    'libcups.so.2','libasound.so.2',
+    # X11 extensions
     'libXcomposite.so.1','libXdamage.so.1','libXfixes.so.3','libXrandr.so.2',
-    'libgbm.so.1','libasound.so.2','libpango-1.0.so.0','libpangocairo-1.0.so.0',
-    'libxkbcommon.so.0','libXss.so.1','libXtst.so.6','libgtk-3.so.0',
-    'libgdk-3.so.0','libdrm.so.2','libEGL.so.1','libGL.so.1',
+    'libXss.so.1','libXtst.so.6','libX11-xcb.so.1',
+    # graphics
+    'libgbm.so.1','libdrm.so.2','libEGL.so.1','libGL.so.1','libGLdispatch.so.0',
+    # font / text
+    'libpango-1.0.so.0','libpangocairo-1.0.so.0','libpangoft2-1.0.so.0',
+    'libfontconfig.so.1','libfreetype.so.6',
+    # input / keyboard
+    'libxkbcommon.so.0','libxkbcommon-x11.so.0',
+    # GTK (needed by some chromium internal libs even in headless)
+    'libgtk-3.so.0','libgdk-3.so.0',
 ]
 missing = []
 try:
