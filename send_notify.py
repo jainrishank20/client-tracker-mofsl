@@ -30,8 +30,18 @@ except FileNotFoundError:
 # clients list from config, fallback to ledger keys
 CLIENTS = list(cfg.get('clients', {}).keys()) or sorted(ledger.keys())
 
-open_count   = sum(1 for t in trades if not t.get('exit_date'))
-closed_count = sum(1 for t in trades if t.get('exit_date'))
+# Count unique open companies (net buy_qty - sell_qty > 0 per client+script pair)
+from collections import defaultdict as _dd
+_net = _dd(float)
+_closed_scripts = _dd(set)
+for t in trades:
+    if not t.get('exit_date'):
+        _net[(t['client'], t['script'])] += (t.get('buy_qty') or 0) - (t.get('sell_qty') or 0)
+    else:
+        _closed_scripts[t['client']].add(t['script'])
+
+open_count   = sum(1 for v in _net.values() if v > 0)
+closed_count = len(set(s for ss in _closed_scripts.values() for s in ss))
 today        = date.today().strftime('%d %b %Y')
 today_iso    = date.today().isoformat()
 
@@ -39,12 +49,14 @@ today_iso    = date.today().isoformat()
 _td = date.today()
 FY_START = date(_td.year if _td.month >= 4 else _td.year - 1, 4, 1)
 
-# Per-client open position counts (for health check footer)
-from collections import defaultdict as _dd
+# Per-client open position counts (unique companies per client)
 _by_client = _dd(lambda: {'open': 0, 'closed': 0})
-for t in trades:
-    key = 'open' if not t.get('exit_date') else 'closed'
-    _by_client[t['client']][key] += 1
+_client_net = _dd(float)
+for (client, script), qty in _net.items():
+    if qty > 0:
+        _by_client[client]['open'] += 1
+for client, scripts in _closed_scripts.items():
+    _by_client[client]['closed'] = len(scripts)
 
 
 def fmt(val: float) -> str:
