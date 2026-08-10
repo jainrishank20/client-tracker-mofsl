@@ -836,12 +836,26 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     if modal_txt.startswith('error:'):
         raise RuntimeError(f"Validation — {modal_txt}")
 
-    # ── Detect fresh row by CREATEDON timestamp ──────────────────────────────────
-    # Record when Download was clicked. CBOS appends the filename timestamp at
-    # generation time. We match any row whose CREATEDON >= download_clicked_at - 3 min.
-    # This is immune to pagination limits and pre-snapshot races.
+    # ── Snapshot filenames already in the modal BEFORE our click ─────────────────
+    # Only rows whose filename wasn't present pre-click belong to this client.
+    # This fixes the "previous client's SUCCESS row" false-match when downloads
+    # run close together (clients 1-2 min apart, 3-min window caught old rows).
+    _pre_click_filenames = set()
+    try:
+        _pre_rows = await page.evaluate("""
+            () => {
+                const rows = document.querySelectorAll('#Commn_Download_Master tbody tr, .modal tbody tr');
+                return Array.from(rows).map(r => {
+                    const tds = r.querySelectorAll('td');
+                    return tds.length ? tds[0].textContent.trim() : '';
+                }).filter(Boolean);
+            }
+        """) or []
+        _pre_click_filenames = set(_pre_rows)
+    except Exception:
+        pass
     _download_clicked_at = datetime.datetime.now()
-    print(f"  Download clicked at: {_download_clicked_at.strftime('%H:%M:%S')}")
+    print(f"  Download clicked at: {_download_clicked_at.strftime('%H:%M:%S')} | pre-click rows: {len(_pre_click_filenames)}")
 
     def _parse_createdon(text):
         """Parse 'Aug  8 2026  8:27PM' → datetime, or None."""
@@ -865,7 +879,7 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
     print("  Polling for SUCCESS...")
     row_cells = None
     fresh_row_idx = None
-    _cutoff = _download_clicked_at - datetime.timedelta(minutes=3)
+    _cutoff = _download_clicked_at - datetime.timedelta(minutes=1)
     for _poll_i in range(90):  # 90×2s = 3 min max
         if _poll_i > 0 and _poll_i % 10 == 0:
             # Keepalive ping — use a relative path that doesn't require session tokens
@@ -893,6 +907,9 @@ async def download_client(page, client: str, download_dir: str, fy: str = "2026-
             # Skip filenames already used by a previous FY in this session
             filename_cell = cells[0] if cells else ''
             if used_filenames and filename_cell in used_filenames:
+                continue
+            # Skip rows that existed before we clicked Download — belongs to a prior client
+            if filename_cell and filename_cell in _pre_click_filenames:
                 continue
             # CREATEDON is the 3rd column (index 2)
             createdon_text = cells[2] if len(cells) > 2 else ''
