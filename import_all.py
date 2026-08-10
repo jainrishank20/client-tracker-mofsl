@@ -167,11 +167,31 @@ for client in list(CLIENT_FILES.keys()):
 if __name__ == '__main__':
     all_trades, trade_id = [], 1
 
-    for client, files in CLIENT_FILES.items():
-        frames = [load_csv(f) for f in files if os.path.exists(f)]
-        if not frames:
-            continue
-        df = pd.concat(frames, ignore_index=True).sort_values('TRADE DATE')
+    # Load ALL files across all clients into one dataframe, then deduplicate by TRADE NO.
+    # CBOS pollutes each client CSV with other clients' trades — CLIENTCODE col is the truth.
+    _all_frames = []
+    for _files in CLIENT_FILES.values():
+        for _f in _files:
+            if os.path.exists(_f):
+                _all_frames.append(load_csv(_f))
+
+    if not _all_frames:
+        print("No CSV files found!")
+        import sys; sys.exit(1)
+
+    _big = pd.concat(_all_frames, ignore_index=True)
+
+    # Deduplicate by TRADE NO so cross-file duplicates are removed
+    if 'TRADE NO' in _big.columns:
+        _big['_tno'] = _big['TRADE NO'].astype(str).str.strip().str.lstrip("'")
+        _big = _big.drop_duplicates(subset=['_tno']).drop(columns=['_tno'])
+
+    # Group by actual CLIENTCODE from column 1 (not filename)
+    _client_col = _big['CLIENTCODE'].str.strip() if 'CLIENTCODE' in _big.columns else pd.Series(['UNKNOWN'] * len(_big))
+    _client_groups = list(_big.groupby(_client_col))
+
+    for client, df in _client_groups:
+        df = df.sort_values('TRADE DATE').reset_index(drop=True)
 
         charge_cols = ['BROKERAGE','TRANSACTION CHARGES','GST','STAMP DUTY','STT/CTT','SEBI CHARGES','IPFT CHARGES']
         for col in charge_cols:
@@ -246,7 +266,7 @@ if __name__ == '__main__':
                         _gross = round((float(row['price']) - float(buy['price'])) * qty, 2)
                         all_trades.append({
                             'id':            trade_id,
-                            'client':        str(row.get('CLIENTCODE', client) if 'CLIENTCODE' in row.index else client).strip(),
+                            'client':        client,
                             'script':        canonical_scrip,
                             'type':          'Long',
                             'entry_date':    buy['date'].strftime('%Y-%m-%d'),
@@ -286,7 +306,7 @@ if __name__ == '__main__':
                 buy = buy_queue.popleft()
                 all_trades.append({
                     'id':            trade_id,
-                    'client':        str(row.get('CLIENTCODE', client) if 'CLIENTCODE' in row.index else client).strip(),
+                    'client':        client,
                     'script':        canonical_scrip,
                     'type':          'Long',
                     'entry_date':    buy['date'].strftime('%Y-%m-%d'),
