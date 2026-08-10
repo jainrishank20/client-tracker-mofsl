@@ -69,12 +69,16 @@ fi
 
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 LIBDIR=/home/opc/lib
-PATCH_MARKER=/home/opc/.chromium_elf_patched
+PATCH_MARKER=/home/opc/.chromium_elf_patched_v2
 mkdir -p "$LIBDIR"
 export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
 if [ -n "$CHROME_BIN" ] && [ -f "$CHROME_BIN" ] && [ ! -f "$PATCH_MARKER" ]; then
   echo "Patching chromium for Oracle Linux 8..."
+
+  # Try dnf first — cleanest solution if OL8 repos are reachable
+  sudo dnf install -y --quiet libxkbcommon atk at-spi2-atk cups-libs \
+    libXcomposite libXdamage libXfixes libXrandr mesa-libgbm alsa-lib pango 2>/dev/null || true
 
   # Pure-Python ELF patcher: removes missing libs from DT_NEEDED (no patchelf binary needed),
   # then creates stub .so files as a safety net for any remaining missing libs.
@@ -97,6 +101,8 @@ ALWAYS = [
     'libatk-1.0.so.0','libatk-bridge-2.0.so.0','libcups.so.2',
     'libXcomposite.so.1','libXdamage.so.1','libXfixes.so.3','libXrandr.so.2',
     'libgbm.so.1','libasound.so.2','libpango-1.0.so.0','libpangocairo-1.0.so.0',
+    'libxkbcommon.so.0','libXss.so.1','libXtst.so.6','libgtk-3.so.0',
+    'libgdk-3.so.0','libdrm.so.2','libEGL.so.1','libGL.so.1',
 ]
 missing = []
 try:
