@@ -956,7 +956,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         return (
             f"*Summary*\n"
             f"Total trades: {len(trades)}\n"
-            f"Open: {open_co} companies ({len(open_t)} lots)  |  Closed: {closed_co}\n"
+            f"Open: {open_co}  |  Closed: {closed_co}\n"
             f"Total realised P&L: {sign}Rs {fmt_inr(total_pnl)}"
         )
 
