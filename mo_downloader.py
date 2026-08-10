@@ -1192,7 +1192,11 @@ async def main():
         launch_args = ['--no-sandbox', '--disable-setuid-sandbox', '--no-zygote',
                        '--disable-dev-shm-usage', '--disable-gpu',
                        '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
-        browser = await p.chromium.launch(headless=headless, args=launch_args)
+        lib_dir = '/home/opc/lib'
+        pw_env = {**os.environ}
+        if os.name != 'nt' and os.path.isdir(lib_dir):
+            pw_env['LD_LIBRARY_PATH'] = lib_dir + ':' + pw_env.get('LD_LIBRARY_PATH', '')
+        browser = await p.chromium.launch(headless=headless, args=launch_args, env=pw_env)
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
 
