@@ -166,6 +166,13 @@ else
   echo "Chromium setup already done (marker exists)."
 fi
 
+# Belt-and-suspenders: set LD_LIBRARY_PATH so linker finds stubs even if ldconfig failed.
+# Stubs only exist for libs NOT in system paths, so no shadowing of real libs.
+if ls /home/opc/lib/*.so* 2>/dev/null | grep -q .; then
+  export LD_LIBRARY_PATH="/home/opc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  echo "Stubs present → LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+fi
+
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 

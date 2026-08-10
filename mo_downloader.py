@@ -1193,10 +1193,14 @@ async def main():
                        '--disable-dev-shm-usage', '--disable-gpu',
                        '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
         # Pass env explicitly so playwright's Node.js driver forwards it to chromium.
-        # Do NOT prepend /home/opc/lib to LD_LIBRARY_PATH here — ldconfig registers it
-        # system-wide (after real system dirs), so real libs take priority over stubs.
-        # Prepending would cause stubs to shadow real libs → SIGSEGV.
-        pw_env = {k: v for k, v in os.environ.items() if k != 'LD_LIBRARY_PATH'}
+        # Keep LD_LIBRARY_PATH so stubs in /home/opc/lib are found (set by vm_daily_run.sh).
+        # Stubs only exist for libs missing from system paths, so no shadowing of real libs.
+        # Suppress ATK/AT-SPI initialisation so stub functions are never actually called.
+        pw_env = dict(os.environ)
+        pw_env['NO_AT_BRIDGE'] = '1'           # prevent ATK bridge init
+        pw_env['DBUS_SESSION_BUS_ADDRESS'] = 'disabled:'  # no D-Bus → AT-SPI skipped
+        pw_env['AT_SPI_BUS_ADDRESS'] = 'disabled:'
+        pw_env['GTK_A11Y'] = 'none'            # GTK4: disable accessibility
         browser = await p.chromium.launch(headless=headless, args=launch_args, env=pw_env)
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
