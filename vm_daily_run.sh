@@ -69,7 +69,7 @@ fi
 
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 LIBDIR=/home/opc/lib
-PATCH_MARKER=/home/opc/.chromium_elf_patched_v2
+PATCH_MARKER=/home/opc/.chromium_elf_patched_v3
 mkdir -p "$LIBDIR"
 export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
@@ -119,8 +119,7 @@ except Exception as e:
     missing = list(ALWAYS)
 
 if not missing:
-    print('No missing libs — chromium should work as-is.')
-    raise SystemExit(0)
+    print('ldd found no missing libs — will still create ALWAYS stubs for transitive deps.')
 
 # ── Step 1: ELF binary patch — remove DT_NEEDED for missing libs ─────────────
 # This is patchelf --remove-needed implemented in pure Python (no external tools).
@@ -226,12 +225,21 @@ for cmd in ['ldconfig','/sbin/ldconfig','/usr/sbin/ldconfig']:
 
 stub_list = list(set(missing + ALWAYS))
 for lib in stub_list:
-    if not '.so' in lib: continue
+    if '.so' not in lib: continue
     if lib in ldcfg: continue
     if any(os.path.exists(os.path.join(d,lib)) for d in ['/lib64','/usr/lib64','/lib','/usr/lib']): continue
     p = os.path.join(LIBDIR, lib)
-    if os.path.exists(p) and os.path.getsize(p) >= 192: continue
     make_stub(p); print(f'Stub: {lib}')
+
+# Register /home/opc/lib with the system linker cache so stubs are found
+# by ALL processes (including chromium subprocesses) without LD_LIBRARY_PATH.
+try:
+    subprocess.run(
+        ['sudo', 'bash', '-c', 'echo /home/opc/lib > /etc/ld.so.conf.d/vm-stubs.conf && /sbin/ldconfig'],
+        timeout=15, check=False)
+    print('ldconfig updated — stubs registered system-wide.')
+except Exception as e:
+    print(f'ldconfig registration failed ({e}) — relying on LD_LIBRARY_PATH.')
 
 print('Patch complete.')
 PYEOF
@@ -268,8 +276,7 @@ echo "Pushing data files to repo..."
 python3 - <<'PYEOF'
 import json, base64, urllib.request, os, sys
 
-import json as _json
-TOKEN = os.environ.get('GITHUB_TOKEN') or _json.load(open('/home/opc/app/bot_config.json', encoding='utf-8-sig')).get('github_token', '')
+TOKEN = os.environ.get('GITHUB_TOKEN') or json.load(open('/home/opc/app/bot_config.json', encoding='utf-8-sig')).get('github_token', '')
 REPO  = 'jainrishank20/client-tracker-mofsl'
 API   = f'https://api.github.com/repos/{REPO}/contents'
 FILES = ['trades.json', 'ledger.json', 'open_positions_snapshot.json', 'ticker_overrides.json']
