@@ -944,10 +944,19 @@ def handle(text: str, chat_id: str) -> Optional[str]:
         closed_t = [t for t in trades if t.get('exit_date')]
         total_pnl = sum(_net_pnl(t) for t in closed_t)
         sign = '+' if total_pnl >= 0 else ''
+        from collections import defaultdict as _dd2
+        _snet = _dd2(float)
+        _scl  = _dd2(set)
+        for _t in open_t:
+            _snet[(_t['client'],_t['script'])] += (_t.get('buy_qty') or 0)-(_t.get('sell_qty') or 0)
+        for _t in closed_t:
+            _scl[_t['client']].add(_t['script'])
+        open_co   = sum(1 for v in _snet.values() if v > 0)
+        closed_co = sum(len(ss) for ss in _scl.values())
         return (
             f"*Summary*\n"
             f"Total trades: {len(trades)}\n"
-            f"Open: {len(open_t)}  |  Closed: {len(closed_t)}\n"
+            f"Open: {open_co} companies ({len(open_t)} lots)  |  Closed: {closed_co}\n"
             f"Total realised P&L: {sign}Rs {fmt_inr(total_pnl)}"
         )
 
@@ -1132,8 +1141,7 @@ def handle(text: str, chat_id: str) -> Optional[str]:
                 send(chat_id, "Re-installing crontab on VM...")
                 script = (
                     "crontab -l 2>/dev/null | grep -vE 'vm_daily|pull_from_github|streamlit' > /tmp/new_crontab || true\n"
-                    "echo '0 14 * * 1-6 /home/opc/app/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
-                    "echo '30 5 * * 0  /home/opc/app/vm_daily_run.sh true  >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
+                    "echo '30 15 * * 1-6 /home/opc/app/vm_daily_run.sh false >> /home/opc/vm_daily_run.log 2>&1' >> /tmp/new_crontab\n"
                     "crontab /tmp/new_crontab\n"
                     "echo 'Crontab installed:'\n"
                     "crontab -l\n"
