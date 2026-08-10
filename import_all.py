@@ -246,7 +246,7 @@ if __name__ == '__main__':
                         _gross = round((float(row['price']) - float(buy['price'])) * qty, 2)
                         all_trades.append({
                             'id':            trade_id,
-                            'client':        client,
+                            'client':        str(row.get('CLIENTCODE', client) if 'CLIENTCODE' in row.index else client).strip(),
                             'script':        canonical_scrip,
                             'type':          'Long',
                             'entry_date':    buy['date'].strftime('%Y-%m-%d'),
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                 buy = buy_queue.popleft()
                 all_trades.append({
                     'id':            trade_id,
-                    'client':        client,
+                    'client':        str(row.get('CLIENTCODE', client) if 'CLIENTCODE' in row.index else client).strip(),
                     'script':        canonical_scrip,
                     'type':          'Long',
                     'entry_date':    buy['date'].strftime('%Y-%m-%d'),
