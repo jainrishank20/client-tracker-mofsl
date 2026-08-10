@@ -1192,10 +1192,11 @@ async def main():
         launch_args = ['--no-sandbox', '--disable-setuid-sandbox', '--no-zygote',
                        '--disable-dev-shm-usage', '--disable-gpu',
                        '--disable-software-rasterizer', '--ozone-platform=headless'] if os.name != 'nt' else []
-        lib_dir = '/home/opc/lib'
-        pw_env = {**os.environ}
-        if os.name != 'nt' and os.path.isdir(lib_dir):
-            pw_env['LD_LIBRARY_PATH'] = lib_dir + ':' + pw_env.get('LD_LIBRARY_PATH', '')
+        # Pass env explicitly so playwright's Node.js driver forwards it to chromium.
+        # Do NOT prepend /home/opc/lib to LD_LIBRARY_PATH here — ldconfig registers it
+        # system-wide (after real system dirs), so real libs take priority over stubs.
+        # Prepending would cause stubs to shadow real libs → SIGSEGV.
+        pw_env = {k: v for k, v in os.environ.items() if k != 'LD_LIBRARY_PATH'}
         browser = await p.chromium.launch(headless=headless, args=launch_args, env=pw_env)
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
