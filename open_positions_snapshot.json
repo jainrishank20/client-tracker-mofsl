@@ -4,7 +4,14 @@
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
     ],
-    "RIMK1209": [
+    "RIMK1215": [
+      "ANAND RATHI SH N STK BR L",
+      "EMMVEE PHOTOVOLTAIC",
+      "GUJARAT FLUOROCHEM",
+      "HCL TECHNOLOGIES",
+      "LEELA PALACES HOTEL"
+    ],
+    "RIMK1220": [
       "AEGIS LOGISTICS",
       "AEGIS VOPAK TERMINALS",
       "ALEMBIC PHARMA",
@@ -36,7 +43,6 @@
       "FORCE MOTORS",
       "FRACTAL ANALYTICS",
       "GRANULES INDIA",
-      "GRAPHITE INDIA",
       "GUJARAT FLUOROCHEM",
       "HDFC LIFE INS",
       "HFCL",
@@ -63,7 +69,6 @@
       "LASER POWER & INFRA",
       "LEELA PALACES HOTEL",
       "LUX INDUSTRIES",
-      "MAHANAGAR GAS",
       "MAHINDRA & MAHINDRA",
       "MIC ELECTRONICS",
       "MISHRA DHATU NIGAM",
@@ -89,8 +94,6 @@
       "SUZLON ENERGY",
       "SWAN CORP",
       "TATA MOTORS",
-      "TD POWER SYSTEMS",
-      "THANGAMAYIL JEWELLERY",
       "THE GE SHPG.LTD",
       "THE NEW INDIA ASSU",
       "TRANS & RECTI.",
@@ -106,24 +109,6 @@
       "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
-    "RIMK1215": [
-      "ANAND RATHI SH N STK BR L",
-      "EMMVEE PHOTOVOLTAIC",
-      "GUJARAT FLUOROCHEM",
-      "HCL TECHNOLOGIES",
-      "LEELA PALACES HOTEL"
-    ],
-    "RIMK1220": [
-      "BHEL",
-      "BIOCON",
-      "HDFC LIFE INS",
-      "INOX WIND",
-      "NUVOCO VISTAS CORP",
-      "SHIPPING CORP OF INDIA LT",
-      "SUZLON ENERGY",
-      "TRANSPORT CORP OF INDIA",
-      "VIKRAM SOLAR"
-    ],
     "RIMK1238": [
       "BSE",
       "ICICI PRUDENTIAL AMC",
@@ -137,9 +122,21 @@
       "WIPRO"
     ],
     "RIMK1247": [
-      "WOCKHARDT"
+      "BHEL",
+      "BIOCON",
+      "HDFC LIFE INS",
+      "INOX WIND",
+      "NUVOCO VISTAS CORP",
+      "SHIPPING CORP OF INDIA LT",
+      "SUZLON ENERGY",
+      "TRANSPORT CORP OF INDIA",
+      "VIKRAM SOLAR"
     ],
-    "RIMK1248": [
+    "RIMK1249": [
+      "BSE",
+      "NUVOCO VISTAS CORP"
+    ],
+    "RIMK1252": [
       "AEGIS VOPAK TERMINALS",
       "BERGER PAINTS (I)",
       "BIOCON",
@@ -156,7 +153,6 @@
       "ION EXCHANGE (INDIA)",
       "ITC",
       "LEELA PALACES HOTEL",
-      "MAHINDRA & MAHINDRA",
       "MISHRA DHATU NIGAM",
       "NATCO PHARMA",
       "NATIONAL ALUMINIUM",
@@ -170,27 +166,16 @@
       "SHIPPING CORP OF INDIA LT",
       "THE GE SHPG.LTD"
     ],
-    "RIMK1249": [
-      "BSE",
-      "MISHRA DHATU NIGAM",
-      "NUVOCO VISTAS CORP"
-    ],
-    "RIMK1252": [
-      "INTELLECT DESIGN ARENA",
-      "SBI FUNDS MANAGEMENT",
-      "SHIPPING CORP OF INDIA LT"
-    ],
     "RIMK1256": [
       "MAX HEALTHCARE INS"
     ],
     "RIMK1258": [
-      "NATCO PHARMA"
+      "INTELLECT DESIGN ARENA",
+      "SBI FUNDS MANAGEMENT",
+      "SHIPPING CORP OF INDIA LT"
     ],
     "SHU9BH": [
-      "BHEL",
-      "CAMS",
-      "EPACK PREFAB TECHN",
-      "MARKSANS PHARMA"
+      "NATCO PHARMA"
     ]
   }
 }
