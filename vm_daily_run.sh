@@ -555,14 +555,15 @@ CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
-# Delete CSVs downloaded before 7 PM IST today — CBOS refreshes at 7 PM
+# Delete only current-FY CSVs downloaded before 7 PM IST today — CBOS refreshes at 7 PM
+# Historical FY CSVs (e.g. 2025_2026) are never deleted — that data never changes
 CUTOFF_UTC=$(TZ=Asia/Kolkata date -d "today 19:00" +%s 2>/dev/null)
-for f in /home/opc/app/mo_csvs/TradeDetailsAndSummary_*.csv; do
+for f in /home/opc/app/mo_csvs/TradeDetailsAndSummary_*_2026_2027.csv; do
   [ -f "$f" ] || continue
   FMTIME=$(stat -c %Y "$f" 2>/dev/null)
   if [ -n "$FMTIME" ] && [ "$FMTIME" -lt "$CUTOFF_UTC" ]; then
     rm -f "$f"
-    echo "Cleared stale CSV (pre-7PM): $(basename $f)"
+    echo "Cleared stale current-FY CSV (pre-7PM): $(basename $f)"
   fi
 done
 # VM has Indian IP — can reach backoffice.motilaloswal.com
