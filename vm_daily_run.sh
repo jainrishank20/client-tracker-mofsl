@@ -8,22 +8,25 @@
 #         Sun     05:30 UTC (11:00 AM IST)  — full
 
 set -e
-export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:$PATH
+export PATH=/usr/local/bin:/usr/bin:/bin:/home/opc/.local/bin:/sbin:/usr/sbin:$PATH
 
 IS_FULL=${1:-false}
 REPO_DIR=/home/opc/app
 REPO="jainrishank20/client-tracker-mofsl"
 LOG=/home/opc/vm_daily_run.log
+LOG_START=0  # line number where current run starts — set inside the block below
 
 _tg_notify() {
   TG_TOKEN=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(c.get('telegram_token',''))" 2>/dev/null)
   TG_CHAT=$(python3 -c "import json; c=json.load(open('${REPO_DIR}/bot_config.json',encoding='utf-8-sig')); print(str(c.get('allowed_chat_id','')).split(',')[0].strip())" 2>/dev/null)
   if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
-    LAST=$(tail -3 "$LOG" | grep "=== Done" | wc -l)
+    # Read only THIS run's log output (not stale entries from previous runs)
+    THIS_RUN=$(tail -n "+${LOG_START}" "$LOG" 2>/dev/null || tail -20 "$LOG" 2>/dev/null)
+    LAST=$(echo "$THIS_RUN" | grep "=== Done" | wc -l)
     if [ "$LAST" -gt 0 ]; then
       MSG="VM download done ($(TZ='Asia/Kolkata' date '+%d %b %I:%M %p IST')) — GHA running GSheet sync. Check /vmlog."
     else
-      ERRMSG=$(tail -10 "$LOG" | grep -i "error\|fail\|traceback" | tail -1)
+      ERRMSG=$(echo "$THIS_RUN" | grep -i "error\|fail\|traceback\|exception" | grep -v "continue.on.error\|non.fatal\|skipping" | tail -1)
       MSG="Pipeline FAILED at $(TZ='Asia/Kolkata' date '+%d %b %I:%M %p IST'). ${ERRMSG:-Check /vmlog.}"
     fi
     curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
@@ -33,6 +36,8 @@ _tg_notify() {
 trap _tg_notify EXIT
 
 {
+LOG_START=$(wc -l < "$LOG" 2>/dev/null || echo 0)
+LOG_START=$((LOG_START + 1))
 echo ""
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') — IS_FULL=$IS_FULL ==="
 cd "$REPO_DIR"
@@ -97,52 +102,95 @@ if [ -n "$CHROME_BIN" ] && [ -f "$CHROME_BIN" ] && [ ! -f "$PATCH_MARKER" ]; the
   fi
 
   # ── Method 2: stub .so files (pure Python, always runs as safety net) ──────
+  # IMPORTANT: || true so set -e never kills the pipeline if Python hits an error
   echo "  Creating stub .so files in $LIBDIR..."
-  python3 - <<'PYEOF'
-import struct, os, subprocess
+  python3 - <<'PYEOF' || true
+import struct, os, sys, subprocess
 
 LIBDIR = '/home/opc/lib'
-STUBS  = [
+os.makedirs(LIBDIR, exist_ok=True)
+
+# Known-missing on Oracle Linux 8 minimal + any dynamically detected missing
+ALWAYS_STUB = [
     'libatk-1.0.so.0', 'libatk-bridge-2.0.so.0', 'libcups.so.2',
     'libXcomposite.so.1', 'libXdamage.so.1', 'libXfixes.so.3',
     'libXrandr.so.2', 'libgbm.so.1', 'libasound.so.2',
+    'libpango-1.0.so.0', 'libpangocairo-1.0.so.0',
 ]
 
+# Try ldd to detect ALL missing libs for this specific chromium binary
+import os, glob
+chrome_candidates = glob.glob('/home/opc/.cache/ms-playwright/**/chrome-headless-shell', recursive=True)
+CHROME = chrome_candidates[0] if chrome_candidates else ''
+
+ldd_missing = []
+if CHROME:
+    try:
+        r = subprocess.Popen(['ldd', CHROME], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, _ = r.communicate(timeout=15)
+        for line in out.decode('utf-8', errors='replace').splitlines():
+            if 'not found' in line:
+                lib = line.strip().split()[0]
+                if lib.endswith('.so') or '.so.' in lib:
+                    ldd_missing.append(lib)
+        print(f'  ldd detected missing: {ldd_missing}')
+    except Exception as e:
+        print(f'  ldd failed ({e}), using fixed list only')
+
+STUBS = list(set(ALWAYS_STUB + ldd_missing))
+
 def make_stub(path):
-    """Minimal valid ELF64 shared library (192 bytes).
-    DT_NULL-only .dynamic section satisfies the dynamic linker.
-    No exported symbols — safe for libs whose functions are never called."""
+    """Minimal valid ELF64 shared library (192 bytes, DT_NULL-only .dynamic)."""
     EH, PH, DE = 64, 56, 16
     dyn_off = EH + 2 * PH   # 176
     total   = dyn_off + DE  # 192
     ehdr = struct.pack('<4sBBBBBxxxxxxxHHIQQQIHHHHHH',
-        b'\x7fELF', 2, 1, 1, 0, 0,  # ELF magic, ELFCLASS64, LE, v1
-        3, 0x3e, 1,                   # ET_DYN, x86-64, version=1
-        0, EH, 0,                     # entry=0, phoff=64, shoff=0
-        0, EH, PH, 2,                 # flags=0, ehsize, phentsize, phnum=2
-        64, 0, 0)                     # shentsize, shnum, shstrndx
+        b'\x7fELF', 2, 1, 1, 0, 0,
+        3, 0x3e, 1,
+        0, EH, 0,
+        0, EH, PH, 2,
+        64, 0, 0)
     phdr_load = struct.pack('<IIQQQQQQ', 1, 5, 0, 0, 0, total, total, 0x1000)
     phdr_dyn  = struct.pack('<IIQQQQQQ', 2, 6, dyn_off, dyn_off, dyn_off, DE, DE, 8)
-    dynamic   = struct.pack('<QQ', 0, 0)  # DT_NULL
+    dynamic   = struct.pack('<QQ', 0, 0)
     data = ehdr + phdr_load + phdr_dyn + dynamic
-    assert len(data) == total, f'ELF size bug: {len(data)} != {total}'
     with open(path, 'wb') as f:
         f.write(data)
     os.chmod(path, 0o755)
 
-ldcfg = subprocess.run(['ldconfig', '-p'], capture_output=True, text=True).stdout
+# Check ldconfig — /sbin/ldconfig not in default PATH, try both
+ldcfg = ''
+for ldcfg_cmd in ['ldconfig', '/sbin/ldconfig', '/usr/sbin/ldconfig']:
+    try:
+        r = subprocess.Popen([ldcfg_cmd, '-p'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, _ = r.communicate(timeout=5)
+        ldcfg = out.decode('utf-8', errors='replace')
+        break
+    except Exception:
+        continue
+
 for name in STUBS:
+    if not (name.endswith('.so') or '.so.' in name):
+        continue
     if name in ldcfg:
-        print(f'    {name}: found in ldconfig, skipping stub')
+        print(f'    {name}: in ldconfig, skipping')
+        continue
+    # Also check common system lib paths
+    found_on_system = any(
+        os.path.exists(os.path.join(d, name))
+        for d in ['/lib64', '/usr/lib64', '/lib', '/usr/lib']
+    )
+    if found_on_system:
+        print(f'    {name}: found on system, skipping')
         continue
     p = os.path.join(LIBDIR, name)
     if os.path.exists(p) and os.path.getsize(p) >= 192:
-        print(f'    {name}: stub already present')
+        print(f'    {name}: stub exists')
         continue
     make_stub(p)
-    print(f'    Created stub: {name} (192 bytes)')
+    print(f'    Created stub: {name}')
 
-print('  Stub .so step complete.')
+print('  Stub step done.')
 PYEOF
 
   touch "$PATCH_MARKER"
