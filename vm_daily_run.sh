@@ -69,9 +69,10 @@ fi
 
 CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -type f 2>/dev/null | head -1)
 LIBDIR=/home/opc/lib
-PATCH_MARKER=/home/opc/.chromium_elf_patched_v4
+PATCH_MARKER=/home/opc/.chromium_elf_patched_v5
 mkdir -p "$LIBDIR"
-export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
+# Do NOT export LD_LIBRARY_PATH=/home/opc/lib — it would make stubs shadow real system libs.
+# We rely on ldconfig (which puts /home/opc/lib AFTER system dirs) instead.
 
 if [ -n "$CHROME_BIN" ] && [ -f "$CHROME_BIN" ] && [ ! -f "$PATCH_MARKER" ]; then
   echo "Patching chromium for Oracle Linux 8..."
@@ -238,6 +239,20 @@ for cmd in ['ldconfig','/sbin/ldconfig','/usr/sbin/ldconfig']:
     except: pass
 
 stub_list = list(set(missing + ALWAYS))
+
+# First: DELETE old stubs that now shadow real system libs.
+# Stubs have no symbols; if a real lib was installed (by dnf/playwright) but an old stub
+# still exists in LIBDIR, anything finding the stub first would crash on symbol lookup.
+for lib in stub_list:
+    if '.so' not in lib: continue
+    p = os.path.join(LIBDIR, lib)
+    if not os.path.exists(p): continue
+    is_real = lib in ldcfg or any(os.path.exists(os.path.join(d,lib)) for d in ['/lib64','/usr/lib64','/lib','/usr/lib'])
+    if is_real:
+        try: os.remove(p); print(f'Removed shadowing stub: {lib}')
+        except Exception as e: print(f'Could not remove stub {lib}: {e}')
+
+# Then: create stubs only for libs still not available on the system.
 for lib in stub_list:
     if '.so' not in lib: continue
     if lib in ldcfg: continue
@@ -266,9 +281,6 @@ elif [ -z "$CHROME_BIN" ]; then
 else
   echo "Chromium already patched (marker exists)."
 fi
-
-# ── Always export LD_LIBRARY_PATH so stubs are findable ─────────────────────
-export LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
 # VM has Indian IP — can reach backoffice.motilaloswal.com
