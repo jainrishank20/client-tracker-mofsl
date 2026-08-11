@@ -121,6 +121,13 @@ def _calc_unrealized_pnl() -> dict:
             ticker_map[sc] = sym_resolve(sc, overrides)
 
     unique = [t for t in set(ticker_map.values()) if t]
+    # Load CMP cache — last successful price per ticker
+    _cache_path = os.path.join(BASE, 'cmp_cache.json')
+    try:
+        _cmp_cache = json.load(open(_cache_path))
+    except Exception:
+        _cmp_cache = {}
+
     cmp_data = {}
     try:
         ns_tickers = [s + '.NS' for s in unique]
@@ -128,7 +135,6 @@ def _calc_unrealized_pnl() -> dict:
             df = yf.download(ns_tickers, period='5d', interval='1d',
                              progress=False, auto_adjust=True, timeout=20)
             try:
-                # yfinance ≥0.2.18 returns MultiIndex even for one ticker
                 cmp_data[unique[0]] = float(df['Close'].squeeze().dropna().iloc[-1])
             except Exception:
                 try:
@@ -154,7 +160,20 @@ def _calc_unrealized_pnl() -> dict:
                         pass
     except Exception as e:
         print(f"yfinance fetch failed: {e}")
-        return {}
+
+    # Fill any misses from cache; update cache with fresh prices
+    for sym in unique:
+        if sym not in cmp_data or not cmp_data[sym]:
+            if sym in _cmp_cache:
+                cmp_data[sym] = _cmp_cache[sym]
+                print(f"  CMP fallback (cached): {sym} -> {_cmp_cache[sym]}")
+        else:
+            _cmp_cache[sym] = cmp_data[sym]
+
+    try:
+        json.dump(_cmp_cache, open(_cache_path, 'w'), indent=2)
+    except Exception:
+        pass
 
     pnl = {}
     for t in open_t:
