@@ -175,8 +175,7 @@ def resolve(script: str, overrides: dict) -> str:
     # 1. User overrides take priority (case-insensitive)
     if su in overrides_upper:
         v = overrides_upper[su]
-        if v:
-            return v.strip().upper().replace(".NS", "")
+        return v.strip().upper().replace(".NS", "") if v else ""
     # 2. Direct map lookup
     if su in SYMBOL_MAP:
         return SYMBOL_MAP[su]
