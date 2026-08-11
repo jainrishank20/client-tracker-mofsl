@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-10",
+  "date": "2026-08-11",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
@@ -9,7 +9,6 @@
       "AEGIS VOPAK TERMINALS",
       "ALEMBIC PHARMA",
       "ALKYL AMINES",
-      "ARVIND SMARTSPACES",
       "BAJAJ HOUSING FINANCE",
       "BASF INDIA",
       "BEML",
@@ -74,15 +73,16 @@
       "OLECTRA GREENTECH",
       "PARAS DEF AND SPCE TECH L",
       "PCBL CHEMICAL",
-      "POLY MEDICURE",
       "RAILTEL CORP OF IND",
       "REC",
       "REDINGTON",
       "RITES",
       "SBI FUNDS MANAGEMENT",
       "SHADOWFAX TECHNOLOGIES L",
+      "SHAILY ENGINEERING",
       "SHIPPING CORP OF INDIA LT",
       "SNOWMAN LOGISTICS",
+      "STATE BANK OF INDIA",
       "SUZLON ENERGY",
       "SWAN CORP",
       "TATA MOTORS",
@@ -176,6 +176,12 @@
     ],
     "RIMK1258": [
       "NATCO PHARMA"
+    ],
+    "SHU9BH": [
+      "BHEL",
+      "CAMS",
+      "EPACK PREFAB TECHN",
+      "MARKSANS PHARMA"
     ]
   }
 }
