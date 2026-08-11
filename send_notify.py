@@ -120,7 +120,7 @@ def _calc_unrealized_pnl() -> dict:
         if sc not in ticker_map:
             ticker_map[sc] = sym_resolve(sc, overrides)
 
-    unique = list(set(ticker_map.values()))
+    unique = [t for t in set(ticker_map.values()) if t]
     cmp_data = {}
     try:
         ns_tickers = [s + '.NS' for s in unique]
