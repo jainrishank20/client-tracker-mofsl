@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-11",
+  "date": "2026-08-12",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
@@ -33,7 +33,6 @@
       "EMMVEE PHOTOVOLTAIC",
       "FORCE MOTORS",
       "FRACTAL ANALYTICS",
-      "GRANULES INDIA",
       "GUJARAT FLUOROCHEM",
       "HDFC LIFE INS",
       "HFCL",
@@ -50,12 +49,12 @@
       "JIO FIN SERVICES",
       "JSW ENERGY",
       "KALPATARU",
+      "KALPATARU PROJECTS",
       "KARUR VYSYA BANK",
       "KAVERI SEED",
       "KIRLOSKAR OIL ENG",
       "KNR CONSTRU",
       "KPI GREEN ENERGY",
-      "L&T TECHNOLOGY SERVICES",
       "LARSEN & TOUBRO",
       "LASER POWER & INFRA",
       "LEELA PALACES HOTEL",
@@ -82,7 +81,6 @@
       "SHAILY ENGINEERING",
       "SHIPPING CORP OF INDIA LT",
       "SNOWMAN LOGISTICS",
-      "STATE BANK OF INDIA",
       "SUZLON ENERGY",
       "SWAN CORP",
       "TATA MOTORS",
@@ -91,8 +89,6 @@
       "TRANS & RECTI.",
       "UCO BANK",
       "URBAN COMPANY",
-      "VEDANTA IRON AND STEEL L",
-      "VIJAYA DIAGNOSTIC CEN",
       "VIKRAM SOLAR",
       "WELSPUN LIVING",
       "WHIRLPOOL INDIA",
@@ -104,9 +100,7 @@
     "RIMK1215": [
       "ANAND RATHI SH N STK BR L",
       "EMMVEE PHOTOVOLTAIC",
-      "GUJARAT FLUOROCHEM",
-      "HCL TECHNOLOGIES",
-      "LEELA PALACES HOTEL"
+      "HCL TECHNOLOGIES"
     ],
     "RIMK1220": [
       "BHEL",
@@ -133,14 +127,12 @@
     ],
     "RIMK1248": [
       "AEGIS VOPAK TERMINALS",
-      "BERGER PAINTS (I)",
       "BIOCON",
       "BSE",
       "DATA PATTERNS INDIA",
       "EPACK PREFAB TECHN",
       "FORCE MOTORS",
       "FRACTAL ANALYTICS",
-      "GAIL (INDIA)",
       "GUJARAT FLUOROCHEM",
       "ICICI PRUDENTIAL AMC",
       "INOX WIND",
@@ -150,7 +142,6 @@
       "LEELA PALACES HOTEL",
       "MISHRA DHATU NIGAM",
       "NATCO PHARMA",
-      "NATIONAL ALUMINIUM",
       "NEWGEN SOFTWARE",
       "NHPC",
       "NUVAMA WEALTH MANAGE",
@@ -172,7 +163,7 @@
       "SHIPPING CORP OF INDIA LT"
     ],
     "RIMK1256": [
-      "MAX HEALTHCARE INS"
+      "DR. LAL PATH LABS"
     ],
     "RIMK1258": [
       "NATCO PHARMA"
@@ -180,8 +171,7 @@
     "SHU9BH": [
       "BHEL",
       "CAMS",
-      "EPACK PREFAB TECHN",
-      "MARKSANS PHARMA"
+      "EPACK PREFAB TECHN"
     ]
   }
 }
