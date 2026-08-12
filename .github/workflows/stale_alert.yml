@@ -2,7 +2,7 @@ name: Stale Data Alert
 
 on:
   schedule:
-    - cron: '45 15 * * 0-6'   # 9:15 PM IST every day (Sun: 10h after VM run; Mon-Sat: 45m after daily_run)
+    - cron: '0 18 * * 1-6'   # 11:30 PM IST Mon-Sat — 2h after pipeline fires, always done by then
   workflow_dispatch:
 
 jobs:
