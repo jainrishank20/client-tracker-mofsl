@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # Daily trade pipeline — download + import run on VM (Indian IP can reach CBOS).
 # GHA runners cannot reach backoffice.motilaloswal.com or be SSH'd into from outside.
 # So: VM downloads CSVs, imports to trades.json, pushes to git, then triggers
@@ -555,16 +555,12 @@ CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
-# Delete only current-FY CSVs downloaded before 7 PM IST today — CBOS refreshes at 7 PM
-# Historical FY CSVs (e.g. 2025_2026) are never deleted — that data never changes
-CUTOFF_UTC=$(TZ=Asia/Kolkata date -d "today 19:00" +%s 2>/dev/null)
+# Always delete current-FY CSVs before downloading — cron runs at 9:30 PM IST,
+# CBOS is always updated by then. Historical FY CSVs are never deleted.
 for f in /home/opc/app/mo_csvs/TradeDetailsAndSummary_*_2026_2027.csv; do
   [ -f "$f" ] || continue
-  FMTIME=$(stat -c %Y "$f" 2>/dev/null)
-  if [ -n "$FMTIME" ] && [ "$FMTIME" -lt "$CUTOFF_UTC" ]; then
-    rm -f "$f"
-    echo "Cleared stale current-FY CSV (pre-7PM): $(basename $f)"
-  fi
+  rm -f "$f"
+  echo "Cleared current-FY CSV: $(basename $f)"
 done
 # VM has Indian IP — can reach backoffice.motilaloswal.com
 if [ "$IS_FULL" = "true" ]; then
