@@ -356,22 +356,34 @@ def closed_trades_for(client: str, trades: list, names: dict) -> str:
         return f"No closed trades for {name} ({client})."
     closed.sort(key=lambda t: t.get('exit_date') or '', reverse=True)
     total_pnl = sum(_net_pnl(t) for t in closed)
-    lines = [f"*{name}* ({client}) — Closed trades ({len(closed)})", ""]
-    for i, t in enumerate(closed[:30], 1):
-        script = t.get('script', '?')
+
+    # Build compact table: Script | Qty | P&L
+    rows = []
+    for t in closed:
+        script = (t.get('script') or '?')[:16]
         qty    = t.get('sell_qty') or t.get('buy_qty') or '?'
-        bp     = t.get('buy_price', 0)
-        sp     = t.get('sell_price', 0)
-        exit_d = (t.get('exit_date') or '')[:10]
         pnl    = _net_pnl(t)
-        pnl_s  = f"{arrow(pnl)} Rs {fmt_inr(abs(pnl))}"
-        lines.append(f"{i}. {script} — Qty {qty} | Buy {bp} → Sell {sp} | {exit_d} | {pnl_s}")
-    if len(closed) > 30:
-        lines.append(f"... and {len(closed)-30} more")
-    lines.append("")
-    lines.append(f"Realized P&L: {arrow(total_pnl)} Rs {fmt_inr(abs(total_pnl))}")
-    return '
-'.join(lines)
+        exit_d = (t.get('exit_date') or '')[5:10]  # MM-DD
+        rows.append((script, str(qty), exit_d, pnl))
+
+    w0 = max(len(r[0]) for r in rows)
+    w1 = max(len(r[1]) for r in rows)
+    w2 = 5  # MM-DD
+    w3 = max(len(fmt_inr(abs(r[3]))) + 2 for r in rows)
+    sep = '─' * (w0 + w1 + w2 + w3 + 6)
+
+    lines = [
+        f"*{name}* ({client}) — {len(closed)} closed trade(s)",
+        f"`{sep}`",
+        f"`{'Script':<{w0}}  {'Qty':>{w1}}  {'Date':<{w2}}  {'P&L':>{w3}}`",
+        f"`{sep}`",
+    ]
+    for script, qty, exit_d, pnl in rows:
+        pnl_s = f"{arrow(pnl)} {fmt_inr(abs(pnl))}"
+        lines.append(f"`{script:<{w0}}  {qty:>{w1}}  {exit_d:<{w2}}  {pnl_s:>{w3}}`")
+    lines.append(f"`{sep}`")
+    lines.append(f"`{'TOTAL':<{w0+w1+w2+4}}  {arrow(total_pnl)} {fmt_inr(abs(total_pnl)):>{w3-2}}`")
+    return '\n'.join(lines)
 
 
 def today_trades_for(client: str, trades: list, names: dict, overrides: dict) -> str:
