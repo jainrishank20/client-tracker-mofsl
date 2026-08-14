@@ -15,6 +15,11 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      csv_count:
+        description: 'Number of CSVs downloaded by VM (passed when skip_download=true)'
+        required: false
+        default: ''
+        type: string
 
   schedule:
     - cron: '0 14 * * 1-6'   # Mon-Sat 7:30 PM IST (14:00 UTC) — incremental
@@ -257,7 +262,7 @@ jobs:
           python tests/send_health_alert.py \
             --status "${{ job.status }}" \
             --full "$IS_FULL" \
-            --csv-count "${{ steps.verify-csvs.outputs.csv_count || '0' }}" \
+            --csv-count "${{ github.event.inputs.csv_count || steps.verify-csvs.outputs.csv_count || '0' }}" \
             --sync-gsheet-outcome "${SYNC_GSHEET_OUTCOME:-skipped}" \
             --fetch-pnl-outcome "${FETCH_PNL_OUTCOME:-skipped}" \
             --sync-vm-outcome "${SYNC_VM_OUTCOME:-skipped}" \
