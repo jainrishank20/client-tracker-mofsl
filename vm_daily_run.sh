@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # Daily trade pipeline — download + import run on VM (Indian IP can reach CBOS).
 # GHA runners cannot reach backoffice.motilaloswal.com or be SSH'd into from outside.
 # So: VM downloads CSVs, imports to trades.json, pushes to git, then triggers
@@ -555,8 +555,8 @@ CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
-# Always delete current-FY CSVs before downloading — cron runs at 9:30 PM IST,
-# CBOS is always updated by then. Historical FY CSVs are never deleted.
+# Delete only current-FY CSVs downloaded before 7 PM IST today — CBOS refreshes at 7 PM
+# Historical FY CSVs (e.g. 2025_2026) are never deleted — that data never changes
 for f in /home/opc/app/mo_csvs/TradeDetailsAndSummary_*_2026_2027.csv; do
   [ -f "$f" ] || continue
   rm -f "$f"
@@ -631,12 +631,15 @@ for fname in FILES:
 print(f'Done — pushed {pushed}/{len(FILES)} files to repo.')
 PYEOF
 
+CSV_COUNT=$(ls /home/opc/app/mo_csvs/TradeDetailsAndSummary_*_2026_2027.csv 2>/dev/null | wc -l)
+echo "CSVs in mo_csvs after download: ${CSV_COUNT}"
+
 # ── Step 4: Trigger GHA with skip_download=true ─────────────────────────────
 # GHA handles: GSheet sync (needs gsheet_key secret) + Telegram notification
 HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
   -H "Authorization: token ${GITHUB_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"ref\":\"main\",\"inputs\":{\"skip_download\":\"true\",\"full_history\":\"${IS_FULL}\"}}" \
+  -d "{\"ref\":\"main\",\"inputs\":{\"skip_download\":\"true\",\"full_history\":\"${IS_FULL}\",\"csv_count\":\"${CSV_COUNT}\"}}" \
   "https://api.github.com/repos/${REPO}/actions/workflows/daily_run.yml/dispatches")
 echo "Triggered GHA (skip_download=true) — HTTP $HTTP"
 if [ "$HTTP" != "204" ]; then
