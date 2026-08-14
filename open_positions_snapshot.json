@@ -5,6 +5,7 @@
       "CARBORUNDUM UNIVERSAL"
     ],
     "RIMK1209": [
+      "ADITYA INFOTECH",
       "AEGIS LOGISTICS",
       "AEGIS VOPAK TERMINALS",
       "ALEMBIC PHARMA",
@@ -29,10 +30,10 @@
       "DIXON TECHNOLOGIES",
       "DR. REDDY S LABORATORIES",
       "EDELWEISS FIN SERV",
-      "EIMCO ELECON (INDIA)",
       "EMMVEE PHOTOVOLTAIC",
       "FORCE MOTORS",
       "FRACTAL ANALYTICS",
+      "GRANULES INDIA",
       "GUJARAT FLUOROCHEM",
       "HDFC LIFE INS",
       "HFCL",
@@ -40,6 +41,7 @@
       "IFCI",
       "INDIAN BANK",
       "INDIAN OVERSEAS BANK",
+      "INDO-MIM",
       "INDOCO REMEDIES",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
@@ -130,6 +132,8 @@
     ],
     "RIMK1248": [
       "AEGIS VOPAK TERMINALS",
+      "BHARAT ELECTRONICS",
+      "BHEL",
       "BIOCON",
       "BSE",
       "CONTAINER CORP OF IND",
@@ -149,7 +153,6 @@
       "NHPC",
       "NUVAMA WEALTH MANAGE",
       "NUVOCO VISTAS CORP",
-      "PARAS DEF AND SPCE TECH L",
       "SBI FUNDS MANAGEMENT",
       "SHIPPING CORP OF INDIA LT",
       "SUN PHARMACEUTICAL IND L",
@@ -163,17 +166,6 @@
       "INTELLECT DESIGN ARENA",
       "SBI FUNDS MANAGEMENT",
       "SHIPPING CORP OF INDIA LT"
-    ],
-    "RIMK1256": [
-      "DR. LAL PATH LABS"
-    ],
-    "RIMK1258": [
-      "NATCO PHARMA"
-    ],
-    "SHU9BH": [
-      "BHEL",
-      "CAMS",
-      "EPACK PREFAB TECHN"
     ]
   }
 }
