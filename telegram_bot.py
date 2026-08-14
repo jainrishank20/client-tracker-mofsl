@@ -349,6 +349,31 @@ def trades_summary_for(client: str, trades: list, names: dict, overrides: dict) 
     return '\n'.join(lines)
 
 
+def closed_trades_for(client: str, trades: list, names: dict) -> str:
+    closed = [t for t in trades if t.get('client') == client and t.get('exit_date')]
+    name = names.get(client, client)
+    if not closed:
+        return f"No closed trades for {name} ({client})."
+    closed.sort(key=lambda t: t.get('exit_date') or '', reverse=True)
+    total_pnl = sum(_net_pnl(t) for t in closed)
+    lines = [f"*{name}* ({client}) — Closed trades ({len(closed)})", ""]
+    for i, t in enumerate(closed[:30], 1):
+        script = t.get('script', '?')
+        qty    = t.get('sell_qty') or t.get('buy_qty') or '?'
+        bp     = t.get('buy_price', 0)
+        sp     = t.get('sell_price', 0)
+        exit_d = (t.get('exit_date') or '')[:10]
+        pnl    = _net_pnl(t)
+        pnl_s  = f"{arrow(pnl)} Rs {fmt_inr(abs(pnl))}"
+        lines.append(f"{i}. {script} — Qty {qty} | Buy {bp} → Sell {sp} | {exit_d} | {pnl_s}")
+    if len(closed) > 30:
+        lines.append(f"... and {len(closed)-30} more")
+    lines.append("")
+    lines.append(f"Realized P&L: {arrow(total_pnl)} Rs {fmt_inr(abs(total_pnl))}")
+    return '
+'.join(lines)
+
+
 def today_trades_for(client: str, trades: list, names: dict, overrides: dict) -> str:
     today_str  = datetime.date.today().isoformat()
     today_disp = datetime.date.today().strftime('%d %b %Y')
@@ -1229,6 +1254,8 @@ def handle(text: str, chat_id: str) -> Optional[str]:
     if client:
         if 'today' in tl and any(w in tl for w in ('trade', 'bought', 'sold', 'taken')):
             return today_trades_for(client, trades, names, overrides)
+        if any(w in tl for w in ('closed', 'exit', 'booked', 'squared', 'exited')):
+            return closed_trades_for(client, trades, names)
         if any(w in tl for w in ('open', 'position', 'trade', 'holding')):
             return trades_summary_for(client, trades, names, overrides)
         if any(w in tl for w in ('ledger', 'balance', 'debit', 'credit', 'mtf')):
