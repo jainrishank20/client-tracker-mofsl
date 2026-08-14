@@ -798,13 +798,16 @@ def brokerage_summary_for(client: str, trades: list, names: dict, tl: str) -> st
 
 
 def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
-    """Find all clients with open positions matching keywords in the query."""
+    """Find all clients with open/closed positions matching keywords in the query."""
+    tl = query.lower()
+    detailed = any(w in tl for w in ('detail', 'detailed', 'breakdown', 'full', 'each'))
+
     stop = {'which', 'all', 'clients', 'client', 'have', 'has', 'who', 'the',
             'a', 'an', 'in', 'on', 'for', 'and', 'any', 'open', 'stock', 'share',
             'are', 'holding', 'hold', 'also', 'currently', 'how', 'many', 'tell',
             'me', 'about', 'position', 'positions', 'buy', 'bought', 'today',
-            'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see', 'with'}
-    # Known short tickers (3 chars or less) that are real NSE symbols
+            'now', 'give', 'show', 'list', 'get', 'find', 'check', 'see', 'with',
+            'detail', 'detailed', 'breakdown', 'full', 'each', 'trade', 'trades'}
     known_short = {t['script'].upper() for t in trades} | {
         'ITC', 'BSE', 'LIC', 'PNB', 'NCC', 'REC', 'BEL', 'IEX', 'SCI',
         'TCS', 'M&M', 'PFC', 'BEML', 'MRPL', 'IFCI', 'IDBI', 'NMDC', 'NTPC',
@@ -813,51 +816,67 @@ def search_by_script(query: str, trades: list, names: dict) -> Optional[str]:
     terms = [w for w in words if w and w.lower() not in stop and (len(w) >= 4 or w in known_short)]
     if not terms:
         return None
-    open_trades = [t for t in trades if not t.get('exit_date')]
+
     _ov = load_overrides()
     def _matches(t):
         script = (t.get('script') or '').upper()
         ticker = sym(t.get('script', ''), _ov).upper()
         def _term_matches(term, s):
-            # Exact match OR term starts the token (e.g. "REC" matches "REC" but not "RECTI")
             tokens = re.split(r'[\s&,.-]+', s)
             return term == s or any(tok == term or tok.startswith(term) and len(term) >= 4 for tok in tokens)
         return any(_term_matches(term, script) or _term_matches(term, ticker) for term in terms)
-    matches: dict[str, set] = {}
-    for t in open_trades:
-        if _matches(t):
-            script = (t.get('script') or '').upper()
-            matches.setdefault(t.get('client', ''), set()).add(script)
-    if not matches:
-        return f"No open positions found matching '{' '.join(terms)}'."
-    # Build qty + weighted avg buy price per client per script
-    qty_map:   dict[str, dict[str, float]] = {}
-    cost_map:  dict[str, dict[str, float]] = {}  # total cost (qty * price)
-    for t in open_trades:
-        script = (t.get('script') or '').upper()
-        if _matches(t):
-            c   = t.get('client', '')
-            qty = float(t.get('buy_qty') or 0)
-            bp  = float(t.get('buy_price') or 0)
-            qty_map.setdefault(c, {})
-            cost_map.setdefault(c, {})
-            qty_map[c][script]  = qty_map[c].get(script, 0)  + qty
-            cost_map[c][script] = cost_map[c].get(script, 0) + qty * bp
 
-    all_scripts = sorted(set(s for ss in matches.values() for s in ss))
-    single = len(all_scripts) == 1
-    lines = [f"*Open positions — {', '.join(all_scripts)}*"]
-    for code, scripts in sorted(matches.items()):
+    open_t   = [t for t in trades if not t.get('exit_date') and _matches(t)]
+    closed_t = [t for t in trades if     t.get('exit_date') and _matches(t)]
+
+    if not open_t and not closed_t:
+        return f"No trades found matching '{' '.join(terms)}'."
+
+    all_scripts = sorted(set((t.get('script') or '').upper() for t in open_t + closed_t))
+    script_label = ', '.join(all_scripts)
+
+    if detailed:
+        # Per-trade breakdown: client | qty | buy | sell | P&L
+        lines = [f"*{script_label} — Detailed trades*", ""]
+        all_matched = sorted(open_t + closed_t, key=lambda t: (t.get('client',''), t.get('entry_date') or ''))
+        # Group by client
+        from itertools import groupby
+        for code, group in groupby(all_matched, key=lambda t: t.get('client','')):
+            name = names.get(code, code)
+            group = list(group)
+            lines.append(f"*{name} ({code})*")
+            for t in group:
+                qty   = t.get('sell_qty') or t.get('buy_qty') or '?'
+                bp    = t.get('buy_price', 0)
+                sp    = t.get('sell_price', '')
+                pnl   = _net_pnl(t) if t.get('exit_date') else None
+                status = 'OPEN' if not t.get('exit_date') else 'CLOSED'
+                pnl_s  = f" | {arrow(pnl)} Rs {fmt_inr(abs(pnl))}" if pnl is not None else ''
+                sell_s = f" → Sell {sp}" if sp else ''
+                lines.append(f"  {status} | Qty {qty} | Buy {bp}{sell_s}{pnl_s}")
+            lines.append("")
+        return '\n'.join(lines).rstrip()
+
+    # Summary view: open + closed per client
+    lines = [f"*{script_label} — Open & Closed*", ""]
+
+    # Collect all clients who touched this script
+    all_clients = sorted(set(t.get('client','') for t in open_t + closed_t))
+    for code in all_clients:
         name = names.get(code, code)
+        o = [t for t in open_t   if t.get('client') == code]
+        c = [t for t in closed_t if t.get('client') == code]
         parts = []
-        for s in sorted(scripts):
-            qty  = qty_map.get(code, {}).get(s, 0)
-            cost = cost_map.get(code, {}).get(s, 0)
-            avg  = cost / qty if qty else 0
-            # Only prefix script name when multiple stocks in result
-            prefix = f"{s}: " if not single else ""
-            parts.append(f"{prefix}{int(qty)} qty @ Rs {avg:,.0f}")
-        lines.append(f"  {name} ({code}) — {', '.join(parts)}")
+        if o:
+            total_qty = sum(float(t.get('buy_qty') or 0) for t in o)
+            total_cost = sum(float(t.get('buy_qty') or 0) * float(t.get('buy_price') or 0) for t in o)
+            avg = total_cost / total_qty if total_qty else 0
+            parts.append(f"Open: {int(total_qty)} qty @ Rs {avg:,.0f}")
+        if c:
+            pnl = sum(_net_pnl(t) for t in c)
+            parts.append(f"Closed: {len(c)} trade(s) | {arrow(pnl)} Rs {fmt_inr(abs(pnl))}")
+        lines.append(f"  *{name}* ({code}) — {' | '.join(parts)}")
+
     return '\n'.join(lines)
 
 
