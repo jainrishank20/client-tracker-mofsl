@@ -555,13 +555,9 @@ CHROME_BIN=$(find /home/opc/.cache/ms-playwright -name "chrome-headless-shell" -
 [ -z "$CHROME_BIN" ] && echo "WARN: chromium binary not found after setup"
 
 # ── Step 1: Download CSVs from CBOS ─────────────────────────────────────────
-# Delete only current-FY CSVs downloaded before 7 PM IST today — CBOS refreshes at 7 PM
-# Historical FY CSVs (e.g. 2025_2026) are never deleted — that data never changes
-for f in /home/opc/app/mo_csvs/TradeDetailsAndSummary_*_2026_2027.csv; do
-  [ -f "$f" ] || continue
-  rm -f "$f"
-  echo "Cleared current-FY CSV: $(basename $f)"
-done
+# NOTE: Old CSVs are kept until AFTER download succeeds.
+# mo_downloader.py overwrites each CSV in place when it downloads a new one.
+# Deleting first = losing yesterday's data if today's download fails for that client.
 # VM has Indian IP — can reach backoffice.motilaloswal.com
 if [ "$IS_FULL" = "true" ]; then
   echo "Running FULL history download..."
