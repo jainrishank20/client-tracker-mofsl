@@ -1408,8 +1408,9 @@ def main():
                 _dispatch_pool.submit(_dispatch)
         except urllib.error.HTTPError as e:
             if e.code == 409:
-                print("FATAL: 409 Conflict — another bot instance is running. Exiting.")
-                sys.exit(1)
+                print("409 Conflict — waiting 15s for previous connection to clear...")
+                time.sleep(15)
+                continue
             print(f"HTTP {e.code}: {e} — retrying in 10s")
             time.sleep(10)
         except urllib.error.URLError as e:
