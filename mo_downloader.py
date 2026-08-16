@@ -1267,18 +1267,36 @@ async def main():
                         await _ensure_session(page)
                     await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
                 except Exception as e:
-                    _skip_next_session_check = False  # reset even on failure
+                    _skip_next_session_check = False
                     print(f"  ERROR for {client} [{fy}]: {e}")
                     await close_download_modal(page)
-                    print(f"  Retrying {client} [{fy}] in 10s...")
-                    await asyncio.sleep(10)
+
+                    # Retry 1: wait 60s (CBOS 500s are often transient rate-limits)
+                    print(f"  Retrying {client} [{fy}] in 60s...")
+                    await asyncio.sleep(60)
                     try:
                         await _ensure_session(page)
                         await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
-                        print(f"  Retry succeeded for {client} [{fy}]")
+                        print(f"  Retry 1 succeeded for {client} [{fy}]")
                     except Exception as e2:
-                        print(f"  Retry also failed for {client} [{fy}]: {e2}")
+                        print(f"  Retry 1 failed for {client} [{fy}]: {e2}")
                         await close_download_modal(page)
+
+                        # Retry 2: wait 3 minutes + fresh login
+                        print(f"  Retrying {client} [{fy}] in 3 min with fresh login...")
+                        await asyncio.sleep(180)
+                        try:
+                            await login(page)
+                            await download_client(page, client, DOWNLOAD_DIR, fy=fy, first=True, used_filenames=_used_filenames)
+                            print(f"  Retry 2 (fresh login) succeeded for {client} [{fy}]")
+                        except Exception as e3:
+                            print(f"  Retry 2 also failed for {client} [{fy}]: {e3}")
+                            await close_download_modal(page)
+                            _tg_send(
+                                f"⚠️ CBOS download FAILED for {client} [{fy}] after 3 attempts.\n"
+                                f"Error: {str(e3)[:100]}\n"
+                                "Yesterday's data will be used for this client."
+                            )
 
         await browser.close()
 
