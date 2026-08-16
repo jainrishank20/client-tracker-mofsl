@@ -142,6 +142,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
     deadline = time.time() + max_wait
     imap_failed = False
     tg_prompted = False
+    tg_prompt_after = time.time() + 60  # send Telegram prompt after 60s if no fresh email found
 
     while time.time() < deadline:
         # 1. Check Telegram OTP file first (user may have already sent /otp)
@@ -205,15 +206,18 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
                 except Exception:
                     pass
 
-        # 3. If IMAP not working, prompt via Telegram once
-        if imap_failed and not tg_prompted:
+        # 3. Prompt via Telegram if: IMAP failed OR 60s passed with no fresh email
+        should_prompt = (imap_failed or time.time() > tg_prompt_after) and not tg_prompted
+        if should_prompt:
             _tg_send(
-                "⚠️ CBOS login needs OTP — Gmail IMAP unavailable from VM.\n"
+                "⚠️ CBOS login needs OTP.\n"
                 "Check your email for a 6-digit OTP from CBOS and reply:\n"
-                "/otp 123456"
+                "/otp 123456\n\n"
+                "(Pipeline waits up to 3 min for your reply)"
             )
             tg_prompted = True
-            print("  Gmail IMAP unavailable — sent Telegram prompt for manual OTP.")
+            reason = "IMAP unavailable" if imap_failed else "no fresh OTP after 60s"
+            print(f"  Telegram prompt sent ({reason}) — waiting for /otp reply.")
 
         time.sleep(5)
 
