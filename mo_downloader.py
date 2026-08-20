@@ -175,7 +175,7 @@ def get_otp_from_gmail(sent_after: float, max_wait=180) -> str:
                         email_ts = 0
 
                     print(f"  Email ts={email_ts:.0f} sent_after={sent_after:.0f} diff={(email_ts-sent_after):.0f}s")
-                    if email_ts < sent_after - 30:
+                    if email_ts < sent_after - 90:
                         continue
 
                     body = ""
@@ -1045,17 +1045,27 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                     if (balIdx < 0) continue;
                     const rows = Array.from(tbl.querySelectorAll('tr'));
                     // Find the row with the most recent date (handles both asc and desc sort)
-                    let bestDate = null, bestVal = null;
+                    const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+                    function parseDate(s) {
+                        s = s.trim();
+                        // DD Mon YYYY  e.g. "19 Aug 2026"
+                        const m1 = s.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+                        if (m1) return parseInt(m1[3])*10000 + (MON[m1[2].toLowerCase()]||0)*100 + parseInt(m1[1]);
+                        // DD-MM-YYYY or DD/MM/YYYY
+                        const m2 = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+                        if (m2) return parseInt(m2[3])*10000 + parseInt(m2[2])*100 + parseInt(m2[1]);
+                        return 0;
+                    }
+                    let bestScore = -1, bestVal = null;
                     for (let i = 1; i < rows.length; i++) {
                         const cells = rows[i].querySelectorAll('td');
                         if (cells.length <= balIdx) continue;
                         const bal = cells[balIdx].textContent.trim();
                         if (!bal) continue;
                         if (dateIdx >= 0 && cells.length > dateIdx) {
-                            const d = cells[dateIdx].textContent.trim();
-                            if (!bestDate || d > bestDate) { bestDate = d; bestVal = bal; }
+                            const score = parseDate(cells[dateIdx].textContent);
+                            if (score > bestScore) { bestScore = score; bestVal = bal; }
                         } else {
-                            // No date column — just take last non-empty balance
                             bestVal = bal;
                         }
                     }
