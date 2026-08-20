@@ -1251,8 +1251,7 @@ async def main():
 
         await login(page)
         # Scrape ledger first — session is freshest right after login
-        if not DOWNLOADS_ONLY:
-            await scrape_ledger_balances(page, HOME_URL)
+        await scrape_ledger_balances(page, HOME_URL)
 
         # Client-outer loop: finish all FYs for one client before moving to next.
         # Always navigate to the clean HOME_URL constant (never page.url which may
