@@ -1026,11 +1026,12 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                 for (const tbl of document.querySelectorAll('table')) {
                     const s = window.getComputedStyle(tbl);
                     if (s.display === 'none' || s.visibility === 'hidden') continue;
-                    let balIdx = -1;
+                    let balIdx = -1, dateIdx = -1;
                     const ths = tbl.querySelectorAll('th');
                     if (ths.length) {
                         const hdrs = Array.from(ths).map(h => h.textContent.trim().toUpperCase());
                         balIdx = hdrs.indexOf('BALANCE');
+                        dateIdx = hdrs.findIndex(h => h.includes('VOUCHER') && h.includes('DATE') || h === 'DATE');
                     }
                     if (balIdx < 0) {
                         const firstTr = tbl.querySelector('tr');
@@ -1038,17 +1039,27 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                             const cells = Array.from(firstTr.querySelectorAll('th,td'))
                                                .map(c => c.textContent.trim().toUpperCase());
                             balIdx = cells.indexOf('BALANCE');
+                            dateIdx = cells.findIndex(h => h.includes('VOUCHER') && h.includes('DATE') || h === 'DATE');
                         }
                     }
                     if (balIdx < 0) continue;
                     const rows = Array.from(tbl.querySelectorAll('tr'));
-                    let lastVal = null;
+                    // Find the row with the most recent date (handles both asc and desc sort)
+                    let bestDate = null, bestVal = null;
                     for (let i = 1; i < rows.length; i++) {
                         const cells = rows[i].querySelectorAll('td');
-                        if (cells.length > balIdx && cells[balIdx].textContent.trim())
-                            lastVal = cells[balIdx].textContent.trim();
+                        if (cells.length <= balIdx) continue;
+                        const bal = cells[balIdx].textContent.trim();
+                        if (!bal) continue;
+                        if (dateIdx >= 0 && cells.length > dateIdx) {
+                            const d = cells[dateIdx].textContent.trim();
+                            if (!bestDate || d > bestDate) { bestDate = d; bestVal = bal; }
+                        } else {
+                            // No date column — just take last non-empty balance
+                            bestVal = bal;
+                        }
                     }
-                    if (lastVal !== null) return lastVal;
+                    if (bestVal !== null) return bestVal;
                 }
                 return null;
             }
