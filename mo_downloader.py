@@ -1042,11 +1042,13 @@ async def scrape_ledger_balances(page, home_url: str) -> dict:
                     }
                     if (balIdx < 0) continue;
                     const rows = Array.from(tbl.querySelectorAll('tr'));
+                    let lastVal = null;
                     for (let i = 1; i < rows.length; i++) {
                         const cells = rows[i].querySelectorAll('td');
                         if (cells.length > balIdx && cells[balIdx].textContent.trim())
-                            return cells[balIdx].textContent.trim();
+                            lastVal = cells[balIdx].textContent.trim();
                     }
+                    if (lastVal !== null) return lastVal;
                 }
                 return null;
             }
