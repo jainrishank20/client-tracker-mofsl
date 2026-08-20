@@ -185,3 +185,13 @@ def resolve(script: str, overrides: dict) -> str:
         return SYMBOL_MAP[stripped]
     # 4. Fallback: strip all non-alphanumeric (keep &)
     return _re.sub(r'[^A-Z0-9&]', '', su)
+
+# Manual additions
+SYMBOL_OVERRIDES = {
+    **globals().get('SYMBOL_OVERRIDES', {}),
+    'MULTICOMMODITYEXCHANGE': 'MCX',
+    'MULTI COMMODITY EXCHANGE': 'MCX',
+    'MCX': 'MCX',
+    'SBIMF': 'SBIMF',
+    'SBI FUNDS MANAGEMENT': 'SBIMF',
+}
