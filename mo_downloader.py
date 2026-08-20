@@ -1258,8 +1258,15 @@ async def main():
                 fy_safe = fy.replace('-', '_')
                 local_path = os.path.join(DOWNLOAD_DIR, f"TradeDetailsAndSummary_{client}_{fy_safe}.csv")
                 if os.path.exists(local_path) and os.path.getsize(local_path) > 500:
-                    print(f"  Already downloaded {client} [{fy}] ({os.path.getsize(local_path)} bytes) — skipping")
-                    continue
+                    import datetime as _dt
+                    mtime = os.path.getmtime(local_path)
+                    mdate = _dt.date.fromtimestamp(mtime)
+                    today = _dt.date.today()
+                    if mdate == today:
+                        print(f"  Already downloaded {client} [{fy}] today ({os.path.getsize(local_path)} bytes) — skipping")
+                        continue
+                    else:
+                        print(f"  CSV for {client} [{fy}] is from {mdate} (stale) — re-downloading")
                 try:
                     if _skip_next_session_check:
                         _skip_next_session_check = False
