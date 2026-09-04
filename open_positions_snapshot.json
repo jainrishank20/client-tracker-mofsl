@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-03",
+  "date": "2026-09-04",
   "open": {
     "RIMK1205": [
       "CARBORUNDUM UNIVERSAL"
@@ -9,6 +9,7 @@
       "AEGIS LOGISTICS",
       "AEGIS VOPAK TERMINALS",
       "ALEMBIC PHARMA",
+      "ANGEL ONE",
       "AWL AGRI BUSINESS",
       "BAJAJ HOUSING FINANCE",
       "BALRAMPUR CHINI MILLS",
@@ -33,6 +34,7 @@
       "DR. REDDY S LABORATORIES",
       "EDELWEISS FIN SERV",
       "EMMVEE PHOTOVOLTAIC",
+      "ESDS SOFTWARE SOLUTION L",
       "EXIDE INDUSTRIES",
       "FORCE MOTORS",
       "GAJA ALT ASSET MGT",
@@ -77,6 +79,7 @@
       "NUVOCO VISTAS CORP",
       "OLECTRA GREENTECH",
       "PCBL CHEMICAL",
+      "R R KABEL",
       "RAILTEL CORP OF IND",
       "RATNAMANI MET & TUB",
       "REC",
@@ -93,11 +96,11 @@
       "SUZLON ENERGY",
       "SWAN CORP",
       "THE GE SHPG.LTD",
-      "THE NEW INDIA ASSU",
       "TRANS & RECTI.",
       "UCO BANK",
       "VIKRAM SOLAR",
       "VIYASH SCIENTIFIC",
+      "WAAREE ENERGIES",
       "WATERWAYS LEISURE TOUR L",
       "WHIRLPOOL INDIA",
       "WIPRO",
@@ -156,7 +159,8 @@
       "SBI FUNDS MANAGEMENT",
       "SHIPPING CORP OF INDIA LT",
       "SUN PHARMACEUTICAL IND L",
-      "THE GE SHPG.LTD"
+      "THE GE SHPG.LTD",
+      "WOCKHARDT"
     ],
     "RIMK1249": [
       "BSE",
