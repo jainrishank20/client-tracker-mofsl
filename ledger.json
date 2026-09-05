@@ -4,7 +4,7 @@
     "mtf": -25962.12
   },
   "RIMK1209": {
-    "combined": 14430.51,
+    "combined": 14165.01,
     "mtf": -8705538.28
   },
   "RIMK1215": {
@@ -16,31 +16,31 @@
     "mtf": 0.0
   },
   "RIMK1238": {
-    "combined": 13848.17,
+    "combined": 0.0,
     "mtf": 0.0
   },
   "RIMK1247": {
-    "combined": 226039.62,
-    "mtf": -730679.24
+    "combined": 0.0,
+    "mtf": 0.0
   },
   "RIMK1248": {
-    "combined": 87995.96,
+    "combined": 0.0,
     "mtf": 0.0
   },
   "RIMK1249": {
-    "combined": 23520.93,
-    "mtf": -167391.72
+    "combined": 0.0,
+    "mtf": 0.0
   },
   "RIMK1252": {
-    "combined": 2242.25,
+    "combined": 0.0,
     "mtf": 0.0
   },
   "RIMK1256": {
-    "combined": 8060.11,
+    "combined": 8030.61,
     "mtf": -115160.79
   },
   "RIMK1258": {
-    "combined": 1372.57,
+    "combined": 0.0,
     "mtf": 0.0
   },
   "SHU9BH": {
