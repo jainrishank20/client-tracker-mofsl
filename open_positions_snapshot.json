@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-28",
+  "date": "2026-09-29",
   "open": {
     "RIMK1209": [
       "ADANI TOTAL GAS",
@@ -34,6 +34,7 @@
       "FORCE MOTORS",
       "GABRIEL INDIA",
       "GAJA ALT ASSET MGT",
+      "GALAXY SURFACTANTS",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
       "GRANULES INDIA",
@@ -44,7 +45,6 @@
       "HINDUSTAN AERONAUTICS",
       "ICICI PRUDENTIAL AMC",
       "INDIAN OVERSEAS BANK",
-      "INDOCO REMEDIES",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITC",
@@ -79,6 +79,8 @@
       "NUVOCO VISTAS CORP",
       "OLECTRA GREENTECH",
       "ORIENT PAPER AND INDS",
+      "PIDILITE INDUSTRIES",
+      "PIRAMAL PHARMA",
       "PROSTARM INFO SYSTEMS",
       "R R KABEL",
       "RAILTEL CORP OF IND",
@@ -97,7 +99,7 @@
       "STATE BANK OF INDIA",
       "SUZLON ENERGY",
       "SWAN CORP",
-      "THE GE SHPG.LTD",
+      "TEGA INDUSTRIES",
       "THE NEW INDIA ASSU",
       "TRANS & RECTI.",
       "UCO BANK",
@@ -140,6 +142,7 @@
       "WIPRO"
     ],
     "RIMK1248": [
+      "AZAD ENGINEERING",
       "BIOCON",
       "BSE",
       "CONTAINER CORP OF IND",
@@ -159,7 +162,9 @@
       "SBI FUNDS MANAGEMENT",
       "SONA BLW PRECISION FRGS L",
       "SUN PHARMACEUTICAL IND L",
-      "TEJAS NETWORKS"
+      "TEGA INDUSTRIES",
+      "TEJAS NETWORKS",
+      "UNIMECH AEROSPACE N MFG L"
     ],
     "RIMK1249": [
       "NUVOCO VISTAS CORP",
