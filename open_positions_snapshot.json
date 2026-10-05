@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-02",
+  "date": "2026-10-05",
   "open": {
     "RIMK1209": [
       "ADANI TOTAL GAS",
@@ -24,7 +24,6 @@
       "CITY UNION BANK",
       "COFORGE",
       "COHANCE LIFESCIENCES",
-      "CYIENT",
       "DATA PATTERNS INDIA",
       "DEEPAK NITRITE",
       "DIXON TECHNOLOGIES",
@@ -37,7 +36,6 @@
       "GAJA ALT ASSET MGT",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
-      "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
       "HDFC LIFE INS",
@@ -80,10 +78,8 @@
       "NUVOCO VISTAS CORP",
       "OLECTRA GREENTECH",
       "ORIENT PAPER AND INDS",
-      "PIDILITE INDUSTRIES",
       "PIRAMAL PHARMA",
       "PROSTARM INFO SYSTEMS",
-      "R R KABEL",
       "RAILTEL CORP OF IND",
       "RATNAMANI MET & TUB",
       "REC",
@@ -96,7 +92,6 @@
       "SHIPPING CORP OF INDIA LT",
       "SHIPROCKET",
       "SNOWMAN LOGISTICS",
-      "STATE BANK OF INDIA",
       "SUZLON ENERGY",
       "SWAN CORP",
       "THE NEW INDIA ASSU",
@@ -109,7 +104,6 @@
       "WHIRLPOOL INDIA",
       "WIPRO",
       "ZAGGLE PREPA OCEAN SER L",
-      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
@@ -145,6 +139,7 @@
       "BIOCON",
       "BSE",
       "CONTAINER CORP OF IND",
+      "CYIENT",
       "EMMVEE PHOTOVOLTAIC",
       "GABRIEL INDIA",
       "GENUS POWER INFRASTRU",
@@ -152,10 +147,12 @@
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITC",
+      "MAHINDRA & MAHINDRA FINANCIAL",
       "MULTI COMMODITY EXCHANGE",
       "NATCO PHARMA",
       "NEWGEN SOFTWARE",
       "NHPC",
+      "ORIENT CABLES (INDIA)",
       "POLY MEDICURE",
       "SAMVARDHANA MOTHERSON",
       "SAREGAMA INDIA",
@@ -163,8 +160,7 @@
       "SONA BLW PRECISION FRGS L",
       "SUN PHARMACEUTICAL IND L",
       "SUN TV NETWORK",
-      "TEJAS NETWORKS",
-      "UNIMECH AEROSPACE N MFG L"
+      "TEJAS NETWORKS"
     ],
     "RIMK1249": [
       "NUVOCO VISTAS CORP",
