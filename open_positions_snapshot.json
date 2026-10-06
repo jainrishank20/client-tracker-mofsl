@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-05",
+  "date": "2026-10-06",
   "open": {
     "RIMK1209": [
       "ADANI TOTAL GAS",
@@ -36,6 +36,7 @@
       "GAJA ALT ASSET MGT",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
+      "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
       "HDFC LIFE INS",
@@ -46,6 +47,7 @@
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITC",
+      "ITI",
       "JAIN RESOURCE RECYCLING L",
       "JAMNA AUTO IND",
       "JBM AUTO",
@@ -65,6 +67,7 @@
       "LUX INDUSTRIES",
       "MAHINDRA & MAHINDRA",
       "MARKSANS PHARMA",
+      "MEESHO",
       "MIC ELECTRONICS",
       "MISHRA DHATU NIGAM",
       "MMTC",
@@ -73,6 +76,7 @@
       "MRPL",
       "NACL INDUSTRIES",
       "NATCO PHARMA",
+      "NATIONAL SECURITIES DEPOSITORY",
       "NATIONAL STOCK EXCHANGE OF IND",
       "NCC",
       "NUVOCO VISTAS CORP",
@@ -97,13 +101,13 @@
       "THE NEW INDIA ASSU",
       "TRANS & RECTI.",
       "UCO BANK",
-      "UNIMECH AEROSPACE N MFG L",
       "VIKRAM SOLAR",
       "VIYASH SCIENTIFIC",
       "WAAREE ENERGIES",
       "WHIRLPOOL INDIA",
       "WIPRO",
       "ZAGGLE PREPA OCEAN SER L",
+      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
@@ -111,7 +115,6 @@
       "GABRIEL INDIA"
     ],
     "RIMK1220": [
-      "BHEL",
       "BIOCON",
       "COFORGE",
       "HDFC LIFE INS",
@@ -136,6 +139,7 @@
       "WIPRO"
     ],
     "RIMK1248": [
+      "BALRAMPUR CHINI MILLS",
       "BIOCON",
       "BSE",
       "CONTAINER CORP OF IND",
@@ -147,12 +151,15 @@
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITC",
+      "ITI",
+      "KALPATARU PROJECTS",
       "MAHINDRA & MAHINDRA FINANCIAL",
       "MULTI COMMODITY EXCHANGE",
       "NATCO PHARMA",
       "NEWGEN SOFTWARE",
       "NHPC",
       "ORIENT CABLES (INDIA)",
+      "PG ELECTROPLAST",
       "POLY MEDICURE",
       "SAMVARDHANA MOTHERSON",
       "SAREGAMA INDIA",
@@ -160,6 +167,7 @@
       "SONA BLW PRECISION FRGS L",
       "SUN PHARMACEUTICAL IND L",
       "SUN TV NETWORK",
+      "SUZLON ENERGY",
       "TEJAS NETWORKS"
     ],
     "RIMK1249": [
