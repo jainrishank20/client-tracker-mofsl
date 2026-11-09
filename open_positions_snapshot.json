@@ -1,9 +1,11 @@
 {
-  "date": "2026-11-07",
+  "date": "2026-11-09",
   "open": {
     "RIMK1209": [
+      "A-ONE STEELS INDIA",
       "ADANI TOTAL GAS",
       "AEGIS LOGISTICS",
+      "AFFLE 3I",
       "ALKYL AMINES",
       "AWL AGRI BUSINESS",
       "BAJAJ HOUSING FINANCE",
@@ -26,6 +28,7 @@
       "DIGITIDE SOLUTIONS",
       "DIXON TECHNOLOGIES",
       "DR. REDDY S LABORATORIES",
+      "EMCURE PHARMACEUTICALS L",
       "EMMVEE PHOTOVOLTAIC",
       "ENGINEERS INDIA",
       "EXIDE INDUSTRIES",
@@ -35,15 +38,14 @@
       "GALLANTT ISPAT",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
+      "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
-      "HDFC AMC",
       "HDFC LIFE INS",
       "ICICI PRUDENTIAL AMC",
       "INDIAN OVERSEAS BANK",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
-      "ITC",
       "ITI",
       "JAIN RESOURCE RECYCLING L",
       "JAMNA AUTO IND",
@@ -71,6 +73,7 @@
       "MMTC",
       "MONEYVIEW",
       "MOSCHIP TECHNOLOGIES",
+      "MOTILAL OSWAL FIN",
       "MRPL",
       "NACL INDUSTRIES",
       "NATCO PHARMA",
@@ -81,6 +84,7 @@
       "ONE MOBIKWIK SYSTEMS",
       "ORIENT PAPER AND INDS",
       "POONAWALLA FINCORP",
+      "R R KABEL",
       "RAILTEL CORP OF IND",
       "RATNAMANI MET & TUB",
       "REC",
@@ -142,6 +146,7 @@
       "WIPRO"
     ],
     "RIMK1248": [
+      "A-ONE STEELS INDIA",
       "AARTI INDUSTRIES",
       "ADITYA INFOTECH",
       "ANGEL ONE",
@@ -159,9 +164,9 @@
       "DIXON TECHNOLOGIES",
       "EMMVEE PHOTOVOLTAIC",
       "EXIDE INDUSTRIES",
+      "FINOLEX CABLES",
       "GE VERNOVA T&D INDIA",
       "GENUS POWER INFRASTRU",
-      "HDFC BANK",
       "HEG ADVANCED MATERIAL",
       "HFCL",
       "HINDUSTAN AERONAUTICS",
@@ -177,7 +182,6 @@
       "MRPL",
       "MULTI COMMODITY EXCHANGE",
       "NATCO PHARMA",
-      "NATIONAL STOCK EXCHANGE OF IND",
       "NETWEB TECHNOLOGIES",
       "NEWGEN SOFTWARE",
       "NTPC GREEN ENERGY",
@@ -187,6 +191,7 @@
       "PINE LABS",
       "POLYCAB INDIA",
       "POONAWALLA FINCORP",
+      "R R KABEL",
       "REDINGTON",
       "SAMVARDHANA MOTHERSON",
       "SAREGAMA INDIA",
@@ -210,9 +215,6 @@
       "INTELLECT DESIGN ARENA",
       "SBI FUNDS MANAGEMENT",
       "SHIPPING CORP OF INDIA LT"
-    ],
-    "RIMK1256": [
-      "DR. LAL PATH LABS"
     ],
     "RIMK1258": [
       "NATCO PHARMA"
