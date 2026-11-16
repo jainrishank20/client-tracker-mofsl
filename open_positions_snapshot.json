@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-14",
+  "date": "2026-11-16",
   "open": {
     "RIMK1209": [
       "ADANI TOTAL GAS",
@@ -38,6 +38,7 @@
       "GALLANTT ISPAT",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
+      "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
       "HDFC LIFE INS",
@@ -82,6 +83,7 @@
       "OLECTRA GREENTECH",
       "ONE MOBIKWIK SYSTEMS",
       "ORIENT PAPER AND INDS",
+      "PIDILITE INDUSTRIES",
       "POONAWALLA FINCORP",
       "R R KABEL",
       "RAILTEL CORP OF IND",
@@ -95,7 +97,6 @@
       "SHIPPING CORP OF INDIA LT",
       "SHIPROCKET",
       "SNOWMAN LOGISTICS",
-      "STATE BANK OF INDIA",
       "SUZLON ENERGY",
       "SWAN CORP",
       "TATA COMMUNICATIONS",
@@ -112,6 +113,7 @@
       "WHIRLPOOL INDIA",
       "WIPRO",
       "ZAGGLE PREPA OCEAN SER L",
+      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
@@ -144,7 +146,6 @@
       "WIPRO"
     ],
     "RIMK1248": [
-      "A-ONE STEELS INDIA",
       "AARTI INDUSTRIES",
       "ADITYA INFOTECH",
       "APL APOLLO TUBES",
