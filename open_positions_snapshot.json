@@ -1,9 +1,6 @@
 {
   "date": "2026-11-16",
   "open": {
-    "RIMK1205": [
-      "REDINGTON"
-    ],
     "RIMK1209": [
       "ADANI TOTAL GAS",
       "AEGIS LOGISTICS",
@@ -18,14 +15,12 @@
       "BHARAT COKING COAL",
       "BIKAJI FOODS INTERN",
       "BLUE CLOUD SOFTECH SOLUTIONS L",
-      "BOMBAY BURMAH TRADING",
       "BSE",
       "CANARA BANK",
-      "CANARA ROBECO ASSET MANAGEMENT",
+      "CANARA ROBECO AMC",
       "CAPILLARY TECHNO INDIA L",
       "CAPRI GLOBAL CAPITAL",
       "CG POWER AND IND SOL",
-      "CHOLAMANDALAM",
       "CITY UNION BANK",
       "COHANCE LIFESCIENCES",
       "DATA PATTERNS INDIA",
@@ -46,16 +41,13 @@
       "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
-      "HDFC BANK",
       "HDFC LIFE INS",
-      "HINDUSTAN COPPER",
       "ICICI PRUDENTIAL AMC",
       "INDIAN OVERSEAS BANK",
-      "INFOSYS",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITI",
-      "JAIN RESOURCE RECYCLING LIMITE",
+      "JAIN RESOURCE RECYCLING L",
       "JAMNA AUTO IND",
       "JBM AUTO",
       "JIO FIN SERVICES",
@@ -67,11 +59,9 @@
       "KIRLOSKAR OIL ENG",
       "KNR CONSTRU",
       "KPI GREEN ENERGY",
-      "KPIT TECHNOLOGIES",
       "KROSS",
       "L&T FINANCE",
       "LEELA PALACES HOTEL",
-      "LIC",
       "LUPIN",
       "LUX INDUSTRIES",
       "MAHINDRA & MAHINDRA",
@@ -79,7 +69,6 @@
       "MARKSANS PHARMA",
       "MEESHO",
       "MIC ELECTRONICS",
-      "MIRAEAMC MAGOLDETF",
       "MISHRA DHATU NIGAM",
       "MMTC",
       "MONEYVIEW",
@@ -89,14 +78,11 @@
       "NATCO PHARMA",
       "NATIONAL SECURITIES DEPOSITORY",
       "NCC",
-      "NIPPON ETF IT",
-      "NIPPON NETFSILVER",
       "NUVAMA WEALTH MANAGE",
       "NUVOCO VISTAS CORP",
       "OLECTRA GREENTECH",
       "ONE MOBIKWIK SYSTEMS",
       "ORIENT PAPER AND INDS",
-      "PG ELECTROPLAST",
       "PIDILITE INDUSTRIES",
       "POONAWALLA FINCORP",
       "R R KABEL",
@@ -104,10 +90,8 @@
       "RATNAMANI MET & TUB",
       "REC",
       "REDINGTON",
-      "RELIANCE INDUSTRIES",
       "RHI MAGNESITA INDIA",
       "RITES",
-      "SAGILITY",
       "SBI FUNDS MANAGEMENT",
       "SHAILY ENGINEERING",
       "SHIPPING CORP OF INDIA LT",
@@ -134,12 +118,7 @@
     ],
     "RIMK1215": [
       "EMMVEE PHOTOVOLTAIC",
-      "GABRIEL INDIA",
-      "INOX WIND",
-      "INTELLECT DESIGN ARENA",
-      "KFIN TECHNOLOGIES",
-      "KPIT TECHNOLOGIES",
-      "REC"
+      "GABRIEL INDIA"
     ],
     "RIMK1220": [
       "BIOCON",
@@ -174,7 +153,6 @@
       "ASSET RECONSTRUC CO (I) L",
       "AVANTI FEEDS",
       "AZAD ENGINEERING",
-      "BALRAMPUR CHINI MILLS",
       "BIOCON",
       "BSE",
       "CANARA BANK",
@@ -229,8 +207,7 @@
       "ZEN TECHNOLOGIES"
     ],
     "RIMK1249": [
-      "TITAN COMPANY",
-      "WOCKHARDT"
+      "TITAN COMPANY"
     ],
     "RIMK1252": [
       "INTELLECT DESIGN ARENA",
