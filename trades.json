@@ -67,7 +67,7 @@
     "entry_date": "2026-06-29",
     "buy_qty": 4.0,
     "buy_price": 1194.67,
-    "buy_net_rate": 1198.16,
+    "buy_net_rate": 1198.17,
     "exit_date": "2026-07-13",
     "sell_qty": 4.0,
     "sell_price": 1073.3,
@@ -97,7 +97,7 @@
     "entry_date": "2026-06-29",
     "buy_qty": 4.0,
     "buy_price": 1194.67,
-    "buy_net_rate": 1198.16,
+    "buy_net_rate": 1198.17,
     "exit_date": "2026-07-28",
     "sell_qty": 4.0,
     "sell_price": 1062.2,
@@ -127,7 +127,7 @@
     "entry_date": "2026-06-29",
     "buy_qty": 11.0,
     "buy_price": 1194.67,
-    "buy_net_rate": 1198.16,
+    "buy_net_rate": 1198.17,
     "exit_date": "2026-08-07",
     "sell_qty": 11.0,
     "sell_price": 1082.9,
@@ -157,7 +157,7 @@
     "entry_date": "2026-06-29",
     "buy_qty": 31.0,
     "buy_price": 1194.67,
-    "buy_net_rate": 1198.16,
+    "buy_net_rate": 1198.17,
     "exit_date": "2026-09-21",
     "sell_qty": 31.0,
     "sell_price": 1164.1,
@@ -1198,7 +1198,7 @@
     "type": "Long",
     "entry_date": "2026-07-17",
     "buy_qty": 20.0,
-    "buy_price": 3808.12,
+    "buy_price": 3808.11,
     "buy_net_rate": 3819.41,
     "exit_date": "2026-11-11",
     "sell_qty": 20.0,
@@ -1216,8 +1216,8 @@
     "sell_stamp": 0.0,
     "sell_txn": 3.19,
     "sell_other": 0.08,
-    "gross_pnl": 8879.6,
-    "net_pnl": 8414.94,
+    "gross_pnl": 8879.8,
+    "net_pnl": 8415.14,
     "product": "MTF",
     "notes": "imported"
   },
@@ -2037,15 +2037,15 @@
     "entry_date": "2026-07-24",
     "buy_qty": 70.0,
     "buy_price": 339.4,
-    "buy_net_rate": 340.38,
+    "buy_net_rate": 340.39,
     "exit_date": "2026-08-26",
     "sell_qty": 70.0,
     "sell_price": 356.83,
     "sell_net_rate": 355.83,
-    "buy_brokerage": 36.18,
-    "buy_stt": 22.98,
-    "buy_gst": 6.65,
-    "buy_stamp": 3.47,
+    "buy_brokerage": 35.95,
+    "buy_stt": 23.32,
+    "buy_gst": 6.61,
+    "buy_stamp": 3.51,
     "buy_txn": 0.73,
     "buy_other": 0.02,
     "sell_brokerage": 37.47,
@@ -2055,7 +2055,7 @@
     "sell_txn": 0.94,
     "sell_other": 0.03,
     "gross_pnl": 1220.1,
-    "net_pnl": 1079.88,
+    "net_pnl": 1079.77,
     "product": "MTF",
     "notes": "imported"
   },
@@ -2067,15 +2067,15 @@
     "entry_date": "2026-07-24",
     "buy_qty": 201.0,
     "buy_price": 339.4,
-    "buy_net_rate": 340.38,
+    "buy_net_rate": 340.39,
     "exit_date": "2026-10-16",
     "sell_qty": 201.0,
     "sell_price": 362.55,
     "sell_net_rate": 362.21,
-    "buy_brokerage": 121.01,
-    "buy_stt": 76.86,
-    "buy_gst": 22.23,
-    "buy_stamp": 11.61,
+    "buy_brokerage": 120.3,
+    "buy_stt": 78.03,
+    "buy_gst": 22.11,
+    "buy_stamp": 11.75,
     "buy_txn": 2.44,
     "buy_other": 0.08,
     "sell_brokerage": 36.44,
@@ -2085,7 +2085,7 @@
     "sell_txn": 2.24,
     "sell_other": 0.07,
     "gross_pnl": 4653.15,
-    "net_pnl": 4355.16,
+    "net_pnl": 4354.68,
     "product": "MTF",
     "notes": "imported"
   },
@@ -2097,16 +2097,16 @@
     "entry_date": "2026-07-24",
     "buy_qty": 150.0,
     "buy_price": 339.4,
-    "buy_net_rate": 340.38,
+    "buy_net_rate": 340.39,
     "exit_date": "2026-10-19",
     "sell_qty": 150.0,
     "sell_price": 371.74,
     "sell_net_rate": 370.72,
-    "buy_brokerage": 171.33,
-    "buy_stt": 108.82,
-    "buy_gst": 31.48,
-    "buy_stamp": 16.44,
-    "buy_txn": 3.46,
+    "buy_brokerage": 171.05,
+    "buy_stt": 110.95,
+    "buy_gst": 31.43,
+    "buy_stamp": 16.71,
+    "buy_txn": 3.47,
     "buy_other": 0.11,
     "sell_brokerage": 83.64,
     "sell_stt": 55.76,
@@ -2115,7 +2115,7 @@
     "sell_txn": 1.71,
     "sell_other": 0.06,
     "gross_pnl": 4851.0,
-    "net_pnl": 4362.82,
+    "net_pnl": 4360.74,
     "product": "MTF",
     "notes": "imported"
   },
@@ -2125,27 +2125,27 @@
     "script": "KARUR VYSYA BANK",
     "type": "Long",
     "entry_date": "2026-07-24",
-    "buy_qty": 74.0,
+    "buy_qty": 72.0,
     "buy_price": 339.4,
-    "buy_net_rate": 340.38,
+    "buy_net_rate": 340.39,
     "exit_date": "2026-10-21",
-    "sell_qty": 74.0,
+    "sell_qty": 72.0,
     "sell_price": 376.3,
     "sell_net_rate": 375.24,
-    "buy_brokerage": 255.86,
-    "buy_stt": 162.51,
-    "buy_gst": 47.01,
-    "buy_stamp": 24.55,
-    "buy_txn": 5.16,
+    "buy_brokerage": 253.16,
+    "buy_stt": 164.21,
+    "buy_gst": 46.52,
+    "buy_stamp": 24.73,
+    "buy_txn": 5.14,
     "buy_other": 0.17,
-    "sell_brokerage": 41.77,
-    "sell_stt": 27.85,
-    "sell_gst": 7.68,
+    "sell_brokerage": 40.64,
+    "sell_stt": 27.09,
+    "sell_gst": 7.47,
     "sell_stamp": 0.0,
-    "sell_txn": 0.86,
+    "sell_txn": 0.83,
     "sell_other": 0.03,
-    "gross_pnl": 2730.6,
-    "net_pnl": 2157.15,
+    "gross_pnl": 2656.8,
+    "net_pnl": 2086.81,
     "product": "MTF",
     "notes": "imported"
   },
@@ -2185,27 +2185,27 @@
     "script": "KARUR VYSYA BANK",
     "type": "Long",
     "entry_date": "2026-10-16",
-    "buy_qty": 79.0,
+    "buy_qty": 81.0,
     "buy_price": 354.95,
     "buy_net_rate": 355.18,
     "exit_date": "2026-10-21",
-    "sell_qty": 79.0,
+    "sell_qty": 81.0,
     "sell_price": 376.3,
     "sell_net_rate": 375.24,
-    "buy_brokerage": 14.02,
+    "buy_brokerage": 14.38,
     "buy_stt": 0.0,
-    "buy_gst": 2.69,
-    "buy_stamp": 0.84,
-    "buy_txn": 0.86,
+    "buy_gst": 2.75,
+    "buy_stamp": 0.86,
+    "buy_txn": 0.88,
     "buy_other": 0.03,
-    "sell_brokerage": 44.59,
-    "sell_stt": 29.73,
-    "sell_gst": 8.2,
+    "sell_brokerage": 45.72,
+    "sell_stt": 30.48,
+    "sell_gst": 8.41,
     "sell_stamp": 0.0,
-    "sell_txn": 0.91,
+    "sell_txn": 0.94,
     "sell_other": 0.03,
-    "gross_pnl": 1686.65,
-    "net_pnl": 1584.75,
+    "gross_pnl": 1729.35,
+    "net_pnl": 1624.87,
     "product": "VALUE PLUS",
     "notes": "imported"
   },
@@ -2215,7 +2215,7 @@
     "script": "KARUR VYSYA BANK",
     "type": "Long",
     "entry_date": "2026-10-16",
-    "buy_qty": 121.0,
+    "buy_qty": 119.0,
     "buy_price": 354.95,
     "buy_net_rate": 355.18,
     "exit_date": null,
@@ -4797,7 +4797,7 @@
     "sell_price": 3987.5,
     "sell_net_rate": 3976.24,
     "buy_brokerage": 88.75,
-    "buy_stt": 59.17,
+    "buy_stt": 59.16,
     "buy_gst": 16.31,
     "buy_stamp": 8.87,
     "buy_txn": 1.81,
@@ -4809,7 +4809,7 @@
     "sell_txn": 1.84,
     "sell_other": 0.06,
     "gross_pnl": 648.0,
-    "net_pnl": 304.16,
+    "net_pnl": 304.17,
     "product": "MTF",
     "notes": "imported"
   },
@@ -4827,7 +4827,7 @@
     "sell_price": 4078.0,
     "sell_net_rate": 4066.58,
     "buy_brokerage": 295.82,
-    "buy_stt": 197.22,
+    "buy_stt": 197.21,
     "buy_gst": 54.37,
     "buy_stamp": 29.58,
     "buy_txn": 6.05,
@@ -4839,7 +4839,7 @@
     "sell_txn": 4.38,
     "sell_other": 0.14,
     "gross_pnl": 4679.5,
-    "net_pnl": 3696.51,
+    "net_pnl": 3696.52,
     "product": "MTF",
     "notes": "imported"
   },
@@ -6520,7 +6520,7 @@
     "sell_qty": 250.0,
     "sell_price": 263.5,
     "sell_net_rate": 262.76,
-    "buy_brokerage": 93.54,
+    "buy_brokerage": 93.55,
     "buy_stt": 62.37,
     "buy_gst": 17.19,
     "buy_stamp": 9.36,
@@ -6533,7 +6533,7 @@
     "sell_txn": 2.02,
     "sell_other": 0.07,
     "gross_pnl": 3507.5,
-    "net_pnl": 3138.12,
+    "net_pnl": 3138.11,
     "product": "MTF",
     "notes": "imported"
   },
@@ -6784,7 +6784,7 @@
     "type": "Long",
     "entry_date": "2026-10-13",
     "buy_qty": 20.0,
-    "buy_price": 4947.68,
+    "buy_price": 4947.67,
     "buy_net_rate": 4950.99,
     "exit_date": "2026-10-13",
     "sell_qty": 20.0,
@@ -6802,8 +6802,8 @@
     "sell_stamp": 0.0,
     "sell_txn": 3.07,
     "sell_other": 0.1,
-    "gross_pnl": 986.4,
-    "net_pnl": 833.78,
+    "gross_pnl": 986.6,
+    "net_pnl": 833.98,
     "product": "MTF",
     "notes": "imported"
   },
@@ -7400,16 +7400,16 @@
     "type": "Long",
     "entry_date": "2026-08-03",
     "buy_qty": 30.0,
-    "buy_price": 3422.33,
-    "buy_net_rate": 3431.13,
+    "buy_price": 3422.26,
+    "buy_net_rate": 3429.82,
     "exit_date": "2026-08-03",
     "sell_qty": 30.0,
     "sell_price": 3401.4,
     "sell_net_rate": 3398.61,
-    "buy_brokerage": 135.49,
-    "buy_stt": 83.98,
-    "buy_gst": 24.97,
-    "buy_stamp": 13.18,
+    "buy_brokerage": 96.97,
+    "buy_stt": 45.54,
+    "buy_gst": 18.04,
+    "buy_stamp": 8.56,
     "buy_txn": 3.15,
     "buy_other": 0.1,
     "sell_brokerage": 51.02,
@@ -7418,8 +7418,8 @@
     "sell_stamp": 0.0,
     "sell_txn": 3.13,
     "sell_other": 0.1,
-    "gross_pnl": -627.9,
-    "net_pnl": -978.4,
+    "gross_pnl": -625.8,
+    "net_pnl": -887.79,
     "product": "MTF",
     "notes": "imported"
   },
@@ -7429,27 +7429,27 @@
     "script": "MAHINDRA & MAHINDRA",
     "type": "Long",
     "entry_date": "2026-08-03",
-    "buy_qty": 31.0,
-    "buy_price": 3422.33,
-    "buy_net_rate": 3431.13,
+    "buy_qty": 60.0,
+    "buy_price": 3422.26,
+    "buy_net_rate": 3429.82,
     "exit_date": "2026-11-20",
-    "sell_qty": 31.0,
+    "sell_qty": 60.0,
     "sell_price": 3547.55,
     "sell_net_rate": 3537.56,
-    "buy_brokerage": 275.5,
-    "buy_stt": 170.76,
-    "buy_gst": 50.78,
-    "buy_stamp": 26.8,
-    "buy_txn": 6.41,
-    "buy_other": 0.21,
-    "sell_brokerage": 164.96,
-    "sell_stt": 109.97,
-    "sell_gst": 30.46,
+    "buy_brokerage": 290.9,
+    "buy_stt": 136.61,
+    "buy_gst": 54.12,
+    "buy_stamp": 25.67,
+    "buy_txn": 9.46,
+    "buy_other": 0.31,
+    "sell_brokerage": 319.28,
+    "sell_stt": 212.85,
+    "sell_gst": 58.95,
     "sell_stamp": 0.0,
-    "sell_txn": 4.12,
-    "sell_other": 0.11,
-    "gross_pnl": 3881.82,
-    "net_pnl": 3041.74,
+    "sell_txn": 7.98,
+    "sell_other": 0.21,
+    "gross_pnl": 7517.4,
+    "net_pnl": 6401.06,
     "product": "MTF",
     "notes": "imported"
   },
@@ -8354,12 +8354,12 @@
     "buy_other": 0.29,
     "sell_brokerage": 215.48,
     "sell_stt": 143.67,
-    "sell_gst": 39.6,
+    "sell_gst": 39.61,
     "sell_stamp": 0.0,
     "sell_txn": 4.41,
     "sell_other": 0.14,
     "gross_pnl": -662.5,
-    "net_pnl": -1917.96,
+    "net_pnl": -1917.97,
     "product": "MTF",
     "notes": "imported"
   },
@@ -8942,14 +8942,14 @@
     "buy_stamp": 15.76,
     "buy_txn": 5.34,
     "buy_other": 0.17,
-    "sell_brokerage": 131.64,
+    "sell_brokerage": 131.63,
     "sell_stt": 87.76,
     "sell_gst": 24.2,
     "sell_stamp": 0.0,
     "sell_txn": 2.69,
     "sell_other": 0.09,
     "gross_pnl": 1681.19,
-    "net_pnl": 1116.75,
+    "net_pnl": 1116.76,
     "product": "MTF",
     "notes": "imported"
   },
@@ -9532,14 +9532,14 @@
     "buy_stamp": 17.22,
     "buy_txn": 3.52,
     "buy_other": 0.11,
-    "sell_brokerage": 168.77,
+    "sell_brokerage": 168.78,
     "sell_stt": 112.51,
     "sell_gst": 31.02,
     "sell_stamp": 0.0,
     "sell_txn": 3.45,
     "sell_other": 0.11,
     "gross_pnl": -2292.0,
-    "net_pnl": -2947.36,
+    "net_pnl": -2947.37,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10059,15 +10059,15 @@
     "entry_date": "2026-07-08",
     "buy_qty": 100.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-07-08",
     "sell_qty": 100.0,
     "sell_price": 1221.7,
     "sell_net_rate": 1220.63,
-    "buy_brokerage": 157.19,
-    "buy_stt": 96.32,
-    "buy_gst": 28.99,
-    "buy_stamp": 15.21,
+    "buy_brokerage": 161.38,
+    "buy_stt": 100.52,
+    "buy_gst": 29.74,
+    "buy_stamp": 15.71,
     "buy_txn": 3.74,
     "buy_other": 0.12,
     "sell_brokerage": 61.09,
@@ -10077,7 +10077,7 @@
     "sell_txn": 3.75,
     "sell_other": 0.12,
     "gross_pnl": 355.0,
-    "net_pnl": -53.69,
+    "net_pnl": -63.33,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10089,16 +10089,16 @@
     "entry_date": "2026-07-08",
     "buy_qty": 100.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-07-09",
     "sell_qty": 100.0,
     "sell_price": 1209.0,
     "sell_net_rate": 1205.6,
-    "buy_brokerage": 198.89,
-    "buy_stt": 121.88,
-    "buy_gst": 36.68,
-    "buy_stamp": 19.24,
-    "buy_txn": 4.73,
+    "buy_brokerage": 203.3,
+    "buy_stt": 126.62,
+    "buy_gst": 37.47,
+    "buy_stamp": 19.79,
+    "buy_txn": 4.71,
     "buy_other": 0.15,
     "sell_brokerage": 181.35,
     "sell_stt": 120.9,
@@ -10107,7 +10107,7 @@
     "sell_txn": 4.53,
     "sell_other": 0.12,
     "gross_pnl": -915.0,
-    "net_pnl": -1636.95,
+    "net_pnl": -1647.42,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10119,16 +10119,16 @@
     "entry_date": "2026-07-08",
     "buy_qty": 100.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-07-17",
     "sell_qty": 100.0,
     "sell_price": 1158.3,
     "sell_net_rate": 1155.03,
-    "buy_brokerage": 270.69,
-    "buy_stt": 165.87,
-    "buy_gst": 49.92,
-    "buy_stamp": 26.19,
-    "buy_txn": 6.44,
+    "buy_brokerage": 274.63,
+    "buy_stt": 171.05,
+    "buy_gst": 50.62,
+    "buy_stamp": 26.74,
+    "buy_txn": 6.36,
     "buy_other": 0.21,
     "sell_brokerage": 173.75,
     "sell_stt": 115.36,
@@ -10137,7 +10137,7 @@
     "sell_txn": 3.56,
     "sell_other": 0.12,
     "gross_pnl": -5985.0,
-    "net_pnl": -6829.05,
+    "net_pnl": -6839.34,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10149,17 +10149,17 @@
     "entry_date": "2026-07-08",
     "buy_qty": 100.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-07-17",
     "sell_qty": 100.0,
     "sell_price": 1148.82,
     "sell_net_rate": 1145.64,
-    "buy_brokerage": 423.62,
-    "buy_stt": 259.59,
-    "buy_gst": 78.12,
-    "buy_stamp": 40.98,
-    "buy_txn": 10.08,
-    "buy_other": 0.33,
+    "buy_brokerage": 423.08,
+    "buy_stt": 263.51,
+    "buy_gst": 77.98,
+    "buy_stamp": 41.19,
+    "buy_txn": 9.81,
+    "buy_other": 0.32,
     "sell_brokerage": 172.32,
     "sell_stt": 115.36,
     "sell_gst": 31.67,
@@ -10167,7 +10167,7 @@
     "sell_txn": 3.53,
     "sell_other": 0.11,
     "gross_pnl": -6933.0,
-    "net_pnl": -8068.71,
+    "net_pnl": -8071.88,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10179,17 +10179,17 @@
     "entry_date": "2026-07-08",
     "buy_qty": 20.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-07-31",
     "sell_qty": 20.0,
     "sell_price": 1260.8,
     "sell_net_rate": 1257.26,
-    "buy_brokerage": 194.75,
-    "buy_stt": 119.34,
-    "buy_gst": 35.92,
-    "buy_stamp": 18.84,
-    "buy_txn": 4.63,
-    "buy_other": 0.15,
+    "buy_brokerage": 184.16,
+    "buy_stt": 114.71,
+    "buy_gst": 33.94,
+    "buy_stamp": 17.93,
+    "buy_txn": 4.27,
+    "buy_other": 0.14,
     "sell_brokerage": 37.82,
     "sell_stt": 25.22,
     "sell_gst": 6.95,
@@ -10197,7 +10197,7 @@
     "sell_txn": 0.77,
     "sell_other": 0.03,
     "gross_pnl": 853.0,
-    "net_pnl": 408.58,
+    "net_pnl": 427.06,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10207,27 +10207,27 @@
     "script": "HAVELLS INDIA",
     "type": "Long",
     "entry_date": "2026-07-08",
-    "buy_qty": 57.0,
+    "buy_qty": 65.0,
     "buy_price": 1218.15,
-    "buy_net_rate": 1220.46,
+    "buy_net_rate": 1220.56,
     "exit_date": "2026-08-05",
-    "sell_qty": 57.0,
+    "sell_qty": 65.0,
     "sell_price": 1287.1,
     "sell_net_rate": 1283.49,
-    "buy_brokerage": 749.8,
-    "buy_stt": 459.47,
-    "buy_gst": 138.28,
-    "buy_stamp": 72.54,
-    "buy_txn": 17.84,
-    "buy_other": 0.58,
-    "sell_brokerage": 110.05,
-    "sell_stt": 73.37,
-    "sell_gst": 20.23,
+    "buy_brokerage": 782.69,
+    "buy_stt": 487.5,
+    "buy_gst": 144.26,
+    "buy_stamp": 76.2,
+    "buy_txn": 18.14,
+    "buy_other": 0.59,
+    "sell_brokerage": 125.5,
+    "sell_stt": 83.66,
+    "sell_gst": 23.07,
     "sell_stamp": 0.0,
-    "sell_txn": 2.25,
-    "sell_other": 0.07,
-    "gross_pnl": 3930.15,
-    "net_pnl": 2285.67,
+    "sell_txn": 2.57,
+    "sell_other": 0.08,
+    "gross_pnl": 4481.75,
+    "net_pnl": 2737.49,
     "product": "MTF",
     "notes": "imported"
   },
@@ -10417,15 +10417,15 @@
     "entry_date": "2026-09-21",
     "buy_qty": 100.0,
     "buy_price": 800.0,
-    "buy_net_rate": 800.53,
+    "buy_net_rate": 802.36,
     "exit_date": "2026-09-21",
     "sell_qty": 100.0,
     "sell_price": 796.3,
     "sell_net_rate": 795.6,
-    "buy_brokerage": 40.0,
-    "buy_stt": 0.0,
-    "buy_gst": 7.66,
-    "buy_stamp": 2.4,
+    "buy_brokerage": 120.0,
+    "buy_stt": 79.88,
+    "buy_gst": 22.06,
+    "buy_stamp": 12.0,
     "buy_txn": 2.46,
     "buy_other": 0.08,
     "sell_brokerage": 39.82,
@@ -10435,7 +10435,7 @@
     "sell_txn": 2.44,
     "sell_other": 0.08,
     "gross_pnl": -370.0,
-    "net_pnl": -492.53,
+    "net_pnl": -676.41,
     "product": "MTF",
     "notes": "imported"
   },
@@ -11020,14 +11020,14 @@
     "buy_stamp": 7.87,
     "buy_txn": 1.61,
     "buy_other": 0.05,
-    "sell_brokerage": 27.47,
+    "sell_brokerage": 27.46,
     "sell_stt": 13.62,
     "sell_gst": 5.26,
     "sell_stamp": 0.0,
     "sell_txn": 1.69,
     "sell_other": 0.05,
     "gross_pnl": 2458.5,
-    "net_pnl": 2255.27,
+    "net_pnl": 2255.28,
     "product": "MTF",
     "notes": "imported"
   },
@@ -12738,14 +12738,14 @@
     "buy_stamp": 30.71,
     "buy_txn": 6.28,
     "buy_other": 0.21,
-    "sell_brokerage": 160.52,
+    "sell_brokerage": 160.51,
     "sell_stt": 106.74,
     "sell_gst": 29.63,
     "sell_stamp": 0.0,
     "sell_txn": 4.01,
     "sell_other": 0.11,
     "gross_pnl": 4654.5,
-    "net_pnl": 3748.07,
+    "net_pnl": 3748.08,
     "product": "MTF",
     "notes": "imported"
   },
@@ -13115,7 +13115,7 @@
     "entry_date": "2026-06-02",
     "buy_qty": 200.0,
     "buy_price": 657.52,
-    "buy_net_rate": 659.32,
+    "buy_net_rate": 659.31,
     "exit_date": "2026-06-08",
     "sell_qty": 200.0,
     "sell_price": 657.2,
@@ -13259,7 +13259,7 @@
     "entry_date": "2026-06-30",
     "buy_qty": 300.0,
     "buy_price": 211.84,
-    "buy_net_rate": 211.96,
+    "buy_net_rate": 211.97,
     "exit_date": "2026-06-30",
     "sell_qty": 300.0,
     "sell_price": 219.7,
@@ -13997,15 +13997,15 @@
     "entry_date": "2026-05-07",
     "buy_qty": 250.0,
     "buy_price": 788.99,
-    "buy_net_rate": 789.88,
+    "buy_net_rate": 790.24,
     "exit_date": "2026-05-07",
     "sell_qty": 250.0,
     "sell_price": 795.4,
     "sell_net_rate": 794.7,
-    "buy_brokerage": 190.73,
-    "buy_stt": 92.36,
-    "buy_gst": 35.7,
-    "buy_stamp": 16.97,
+    "buy_brokerage": 245.39,
+    "buy_stt": 147.16,
+    "buy_gst": 45.54,
+    "buy_stamp": 23.53,
     "buy_txn": 7.4,
     "buy_other": 0.2,
     "sell_brokerage": 99.42,
@@ -14015,7 +14015,7 @@
     "sell_txn": 7.46,
     "sell_other": 0.2,
     "gross_pnl": 1602.5,
-    "net_pnl": 1083.34,
+    "net_pnl": 957.48,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14025,27 +14025,27 @@
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-05-07",
-    "buy_qty": 100.0,
+    "buy_qty": 86.0,
     "buy_price": 788.99,
-    "buy_net_rate": 789.88,
+    "buy_net_rate": 790.24,
     "exit_date": "2026-07-03",
-    "sell_qty": 100.0,
+    "sell_qty": 86.0,
     "sell_price": 790.4,
     "sell_net_rate": 789.71,
-    "buy_brokerage": 163.38,
-    "buy_stt": 79.11,
-    "buy_gst": 30.58,
-    "buy_stamp": 14.54,
-    "buy_txn": 6.34,
-    "buy_other": 0.17,
-    "sell_brokerage": 39.52,
-    "sell_stt": 19.72,
-    "sell_gst": 7.56,
+    "buy_brokerage": 329.8,
+    "buy_stt": 197.78,
+    "buy_gst": 61.2,
+    "buy_stamp": 31.62,
+    "buy_txn": 9.94,
+    "buy_other": 0.27,
+    "sell_brokerage": 33.99,
+    "sell_stt": 16.96,
+    "sell_gst": 6.5,
     "sell_stamp": 0.0,
-    "sell_txn": 2.43,
-    "sell_other": 0.08,
-    "gross_pnl": 141.0,
-    "net_pnl": -222.43,
+    "sell_txn": 2.09,
+    "sell_other": 0.07,
+    "gross_pnl": 121.26,
+    "net_pnl": -568.96,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14054,28 +14054,28 @@
     "client": "RIMK1209",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
-    "entry_date": "2026-05-07",
-    "buy_qty": 119.0,
-    "buy_price": 788.99,
-    "buy_net_rate": 789.88,
+    "entry_date": "2026-06-10",
+    "buy_qty": 14.0,
+    "buy_price": 769.2,
+    "buy_net_rate": 771.47,
     "exit_date": "2026-07-03",
-    "sell_qty": 119.0,
-    "sell_price": 797.0,
-    "sell_net_rate": 796.3,
-    "buy_brokerage": 357.81,
-    "buy_stt": 173.26,
-    "buy_gst": 66.97,
-    "buy_stamp": 31.84,
-    "buy_txn": 13.88,
-    "buy_other": 0.37,
-    "sell_brokerage": 47.42,
-    "sell_stt": 23.47,
-    "sell_gst": 9.08,
+    "sell_qty": 14.0,
+    "sell_price": 790.4,
+    "sell_net_rate": 789.71,
+    "buy_brokerage": 16.15,
+    "buy_stt": 10.77,
+    "buy_gst": 2.97,
+    "buy_stamp": 1.62,
+    "buy_txn": 0.33,
+    "buy_other": 0.01,
+    "sell_brokerage": 5.53,
+    "sell_stt": 2.76,
+    "sell_gst": 1.06,
     "sell_stamp": 0.0,
-    "sell_txn": 2.91,
-    "sell_other": 0.1,
-    "gross_pnl": 953.19,
-    "net_pnl": 226.08,
+    "sell_txn": 0.34,
+    "sell_other": 0.01,
+    "gross_pnl": 296.8,
+    "net_pnl": 255.25,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14085,27 +14085,27 @@
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-06-10",
-    "buy_qty": 81.0,
+    "buy_qty": 186.0,
     "buy_price": 769.2,
     "buy_net_rate": 771.47,
     "exit_date": "2026-07-03",
-    "sell_qty": 81.0,
+    "sell_qty": 186.0,
     "sell_price": 797.0,
     "sell_net_rate": 796.3,
-    "buy_brokerage": 93.46,
-    "buy_stt": 62.31,
-    "buy_gst": 17.18,
-    "buy_stamp": 9.35,
-    "buy_txn": 1.91,
-    "buy_other": 0.06,
-    "sell_brokerage": 32.28,
-    "sell_stt": 15.98,
-    "sell_gst": 6.18,
+    "buy_brokerage": 230.76,
+    "buy_stt": 153.84,
+    "buy_gst": 42.41,
+    "buy_stamp": 23.08,
+    "buy_txn": 4.72,
+    "buy_other": 0.15,
+    "sell_brokerage": 74.12,
+    "sell_stt": 36.69,
+    "sell_gst": 14.19,
     "sell_stamp": 0.0,
-    "sell_txn": 1.98,
-    "sell_other": 0.06,
-    "gross_pnl": 2251.8,
-    "net_pnl": 2011.05,
+    "sell_txn": 4.55,
+    "sell_other": 0.15,
+    "gross_pnl": 5170.8,
+    "net_pnl": 4586.14,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14114,26 +14114,28 @@
     "client": "RIMK1209",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
-    "entry_date": "2026-06-10",
-    "buy_qty": 119.0,
-    "buy_price": 769.2,
-    "buy_net_rate": 771.47,
-    "exit_date": null,
-    "sell_qty": 0,
-    "sell_price": 0,
-    "sell_net_rate": 0,
-    "buy_brokerage": 230.76,
-    "buy_stt": 153.84,
-    "buy_gst": 42.41,
-    "buy_stamp": 23.08,
-    "buy_txn": 4.72,
-    "buy_other": 0.15,
-    "sell_brokerage": 0,
-    "sell_stt": 0,
-    "sell_gst": 0,
-    "sell_stamp": 0,
-    "sell_txn": 0,
-    "sell_other": 0,
+    "entry_date": "2026-07-03",
+    "buy_qty": 3.0,
+    "buy_price": 781.3,
+    "buy_net_rate": 786.07,
+    "exit_date": "2026-07-03",
+    "sell_qty": 3.0,
+    "sell_price": 797.0,
+    "sell_net_rate": 796.3,
+    "buy_brokerage": 12.0,
+    "buy_stt": 0.0,
+    "buy_gst": 2.17,
+    "buy_stamp": 0.07,
+    "buy_txn": 0.07,
+    "buy_other": 0.0,
+    "sell_brokerage": 1.2,
+    "sell_stt": 0.59,
+    "sell_gst": 0.23,
+    "sell_stamp": 0.0,
+    "sell_txn": 0.07,
+    "sell_other": 0.0,
+    "gross_pnl": 47.1,
+    "net_pnl": 30.7,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14143,25 +14145,27 @@
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-07-03",
-    "buy_qty": 3.0,
-    "buy_price": 781.3,
-    "buy_net_rate": 786.07,
-    "exit_date": null,
-    "sell_qty": 0,
-    "sell_price": 0,
-    "sell_net_rate": 0,
-    "buy_brokerage": 12.0,
+    "buy_qty": 11.0,
+    "buy_price": 783.0,
+    "buy_net_rate": 783.51,
+    "exit_date": "2026-07-03",
+    "sell_qty": 11.0,
+    "sell_price": 797.0,
+    "sell_net_rate": 796.3,
+    "buy_brokerage": 4.31,
     "buy_stt": 0.0,
-    "buy_gst": 2.17,
-    "buy_stamp": 0.07,
-    "buy_txn": 0.07,
-    "buy_other": 0.0,
-    "sell_brokerage": 0,
-    "sell_stt": 0,
-    "sell_gst": 0,
-    "sell_stamp": 0,
-    "sell_txn": 0,
-    "sell_other": 0,
+    "buy_gst": 0.82,
+    "buy_stamp": 0.26,
+    "buy_txn": 0.26,
+    "buy_other": 0.01,
+    "sell_brokerage": 4.38,
+    "sell_stt": 2.17,
+    "sell_gst": 0.84,
+    "sell_stamp": 0.0,
+    "sell_txn": 0.27,
+    "sell_other": 0.01,
+    "gross_pnl": 154.0,
+    "net_pnl": 140.67,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14171,7 +14175,7 @@
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-07-03",
-    "buy_qty": 97.0,
+    "buy_qty": 86.0,
     "buy_price": 783.0,
     "buy_net_rate": 783.51,
     "exit_date": null,
@@ -14588,7 +14592,7 @@
     "sell_qty": 100.0,
     "sell_price": 817.21,
     "sell_net_rate": 816.5,
-    "buy_brokerage": 115.74,
+    "buy_brokerage": 115.75,
     "buy_stt": 77.16,
     "buy_gst": 21.27,
     "buy_stamp": 11.57,
@@ -14601,7 +14605,7 @@
     "sell_txn": 2.51,
     "sell_other": 0.08,
     "gross_pnl": 4561.0,
-    "net_pnl": 4261.4,
+    "net_pnl": 4261.39,
     "product": "MTF",
     "notes": "imported"
   },
@@ -14618,7 +14622,7 @@
     "sell_qty": 100.0,
     "sell_price": 772.5,
     "sell_net_rate": 770.33,
-    "buy_brokerage": 231.48,
+    "buy_brokerage": 231.49,
     "buy_stt": 154.32,
     "buy_gst": 42.55,
     "buy_stamp": 23.15,
@@ -14631,7 +14635,7 @@
     "sell_txn": 2.37,
     "sell_other": 0.07,
     "gross_pnl": 90.0,
-    "net_pnl": -583.26,
+    "net_pnl": -583.27,
     "product": "MTF",
     "notes": "imported"
   },
@@ -15228,7 +15232,7 @@
     "type": "Long",
     "entry_date": "2026-11-06",
     "buy_qty": 100.0,
-    "buy_price": 572.78,
+    "buy_price": 572.77,
     "buy_net_rate": 574.41,
     "exit_date": "2026-11-11",
     "sell_qty": 100.0,
@@ -15246,8 +15250,8 @@
     "sell_stamp": 0.0,
     "sell_txn": 2.27,
     "sell_other": 0.06,
-    "gross_pnl": 3202.0,
-    "net_pnl": 2862.32,
+    "gross_pnl": 3203.0,
+    "net_pnl": 2863.32,
     "product": "MTF",
     "notes": "imported"
   },
@@ -17697,7 +17701,7 @@
     "sell_price": 270.85,
     "sell_net_rate": 270.09,
     "buy_brokerage": 195.75,
-    "buy_stt": 130.49,
+    "buy_stt": 130.5,
     "buy_gst": 35.98,
     "buy_stamp": 19.57,
     "buy_txn": 4.01,
@@ -17709,7 +17713,7 @@
     "sell_txn": 2.54,
     "sell_other": 0.07,
     "gross_pnl": 2465.0,
-    "net_pnl": 1888.42,
+    "net_pnl": 1888.41,
     "product": "MTF",
     "notes": "imported"
   },
@@ -18983,15 +18987,15 @@
     "entry_date": "2026-09-24",
     "buy_qty": 20.0,
     "buy_price": 1813.94,
-    "buy_net_rate": 1817.22,
+    "buy_net_rate": 1819.32,
     "exit_date": "2026-09-24",
     "sell_qty": 20.0,
     "sell_price": 1865.5,
     "sell_net_rate": 1863.86,
-    "buy_brokerage": 45.57,
-    "buy_stt": 27.56,
-    "buy_gst": 8.45,
-    "buy_stamp": 4.38,
+    "buy_brokerage": 54.42,
+    "buy_stt": 36.45,
+    "buy_gst": 10.05,
+    "buy_stamp": 5.44,
     "buy_txn": 1.36,
     "buy_other": 0.04,
     "sell_brokerage": 18.66,
@@ -19001,7 +19005,7 @@
     "sell_txn": 1.4,
     "sell_other": 0.04,
     "gross_pnl": 1031.2,
-    "net_pnl": 911.01,
+    "net_pnl": 890.61,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19013,16 +19017,16 @@
     "entry_date": "2026-09-24",
     "buy_qty": 50.0,
     "buy_price": 1813.94,
-    "buy_net_rate": 1817.22,
+    "buy_net_rate": 1819.32,
     "exit_date": "2026-10-13",
     "sell_qty": 50.0,
     "sell_price": 1751.8,
     "sell_net_rate": 1750.25,
-    "buy_brokerage": 150.68,
-    "buy_stt": 91.13,
-    "buy_gst": 27.95,
-    "buy_stamp": 14.48,
-    "buy_txn": 4.5,
+    "buy_brokerage": 181.39,
+    "buy_stt": 121.5,
+    "buy_gst": 33.49,
+    "buy_stamp": 18.14,
+    "buy_txn": 4.53,
     "buy_other": 0.12,
     "sell_brokerage": 43.8,
     "sell_stt": 21.95,
@@ -19031,7 +19035,7 @@
     "sell_txn": 3.28,
     "sell_other": 0.09,
     "gross_pnl": -3107.0,
-    "net_pnl": -3473.47,
+    "net_pnl": -3543.78,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19041,27 +19045,27 @@
     "script": "NATIONAL STOCK EXCHANGE OF IND",
     "type": "Long",
     "entry_date": "2026-09-24",
-    "buy_qty": 12.0,
+    "buy_qty": 10.0,
     "buy_price": 1813.94,
-    "buy_net_rate": 1817.22,
+    "buy_net_rate": 1819.32,
     "exit_date": "2026-11-06",
-    "sell_qty": 12.0,
+    "sell_qty": 10.0,
     "sell_price": 1944.1,
     "sell_net_rate": 1938.63,
-    "buy_brokerage": 186.84,
-    "buy_stt": 113.0,
-    "buy_gst": 34.66,
-    "buy_stamp": 17.96,
-    "buy_txn": 5.58,
+    "buy_brokerage": 217.67,
+    "buy_stt": 145.8,
+    "buy_gst": 40.19,
+    "buy_stamp": 21.77,
+    "buy_txn": 5.44,
     "buy_other": 0.15,
-    "sell_brokerage": 34.99,
-    "sell_stt": 23.33,
-    "sell_gst": 6.46,
+    "sell_brokerage": 29.16,
+    "sell_stt": 19.44,
+    "sell_gst": 5.38,
     "sell_stamp": 0.0,
-    "sell_txn": 0.87,
+    "sell_txn": 0.73,
     "sell_other": 0.02,
-    "gross_pnl": 1561.92,
-    "net_pnl": 1138.06,
+    "gross_pnl": 1301.6,
+    "net_pnl": 815.85,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19339,15 +19343,15 @@
     "entry_date": "2026-09-23",
     "buy_qty": 100.0,
     "buy_price": 338.15,
-    "buy_net_rate": 338.6,
+    "buy_net_rate": 338.69,
     "exit_date": "2026-09-23",
     "sell_qty": 100.0,
     "sell_price": 343.25,
     "sell_net_rate": 342.95,
-    "buy_brokerage": 26.42,
-    "buy_stt": 9.6,
-    "buy_gst": 4.95,
-    "buy_stamp": 2.16,
+    "buy_brokerage": 27.26,
+    "buy_stt": 10.44,
+    "buy_gst": 5.1,
+    "buy_stamp": 2.26,
     "buy_txn": 1.04,
     "buy_other": 0.03,
     "sell_brokerage": 17.16,
@@ -19357,7 +19361,7 @@
     "sell_txn": 1.05,
     "sell_other": 0.03,
     "gross_pnl": 510.0,
-    "net_pnl": 435.75,
+    "net_pnl": 433.82,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19369,15 +19373,15 @@
     "entry_date": "2026-09-23",
     "buy_qty": 100.0,
     "buy_price": 338.15,
-    "buy_net_rate": 338.6,
+    "buy_net_rate": 338.69,
     "exit_date": "2026-09-23",
     "sell_qty": 100.0,
     "sell_price": 345.61,
     "sell_net_rate": 345.33,
-    "buy_brokerage": 33.25,
-    "buy_stt": 12.08,
-    "buy_gst": 6.23,
-    "buy_stamp": 2.71,
+    "buy_brokerage": 34.25,
+    "buy_stt": 13.12,
+    "buy_gst": 6.41,
+    "buy_stamp": 2.84,
     "buy_txn": 1.31,
     "buy_other": 0.04,
     "sell_brokerage": 17.28,
@@ -19387,7 +19391,7 @@
     "sell_txn": 1.06,
     "sell_other": 0.03,
     "gross_pnl": 746.0,
-    "net_pnl": 660.17,
+    "net_pnl": 657.82,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19399,17 +19403,17 @@
     "entry_date": "2026-09-23",
     "buy_qty": 150.0,
     "buy_price": 338.15,
-    "buy_net_rate": 338.6,
+    "buy_net_rate": 338.69,
     "exit_date": "2026-09-23",
     "sell_qty": 150.0,
     "sell_price": 346.9,
     "sell_net_rate": 346.6,
-    "buy_brokerage": 67.25,
-    "buy_stt": 24.43,
-    "buy_gst": 12.6,
-    "buy_stamp": 5.49,
-    "buy_txn": 2.64,
-    "buy_other": 0.08,
+    "buy_brokerage": 69.09,
+    "buy_stt": 26.47,
+    "buy_gst": 12.93,
+    "buy_stamp": 5.72,
+    "buy_txn": 2.63,
+    "buy_other": 0.09,
     "sell_brokerage": 26.02,
     "sell_stt": 12.79,
     "sell_gst": 4.98,
@@ -19417,7 +19421,7 @@
     "sell_txn": 1.6,
     "sell_other": 0.05,
     "gross_pnl": 1312.5,
-    "net_pnl": 1154.57,
+    "net_pnl": 1150.13,
     "product": "MTF",
     "notes": "imported"
   },
@@ -19427,19 +19431,19 @@
     "script": "MARKSANS PHARMA",
     "type": "Long",
     "entry_date": "2026-09-23",
-    "buy_qty": 137.0,
+    "buy_qty": 140.0,
     "buy_price": 338.15,
-    "buy_net_rate": 338.6,
+    "buy_net_rate": 338.69,
     "exit_date": null,
     "sell_qty": 0,
     "sell_price": 0,
     "sell_net_rate": 0,
-    "buy_brokerage": 128.68,
-    "buy_stt": 46.74,
-    "buy_gst": 24.1,
-    "buy_stamp": 10.5,
-    "buy_txn": 5.06,
-    "buy_other": 0.16,
+    "buy_brokerage": 133.58,
+    "buy_stt": 51.18,
+    "buy_gst": 24.99,
+    "buy_stamp": 11.06,
+    "buy_txn": 5.09,
+    "buy_other": 0.17,
     "sell_brokerage": 0,
     "sell_stt": 0,
     "sell_gst": 0,
@@ -20849,27 +20853,27 @@
     "script": "REDINGTON",
     "type": "Long",
     "entry_date": "2026-07-02",
-    "buy_qty": 95.0,
+    "buy_qty": 189.0,
     "buy_price": 279.5,
     "buy_net_rate": 280.33,
     "exit_date": "2026-07-13",
-    "sell_qty": 95.0,
+    "sell_qty": 189.0,
     "sell_price": 281.7,
-    "sell_net_rate": 281.45,
-    "buy_brokerage": 39.83,
-    "buy_stt": 26.55,
-    "buy_gst": 7.32,
-    "buy_stamp": 3.98,
-    "buy_txn": 0.82,
-    "buy_other": 0.03,
-    "sell_brokerage": 13.39,
-    "sell_stt": 6.72,
-    "sell_gst": 2.56,
+    "sell_net_rate": 281.32,
+    "buy_brokerage": 79.25,
+    "buy_stt": 52.83,
+    "buy_gst": 14.57,
+    "buy_stamp": 7.92,
+    "buy_txn": 1.62,
+    "buy_other": 0.05,
+    "sell_brokerage": 56.21,
+    "sell_stt": 35.63,
+    "sell_gst": 10.42,
     "sell_stamp": 0.0,
-    "sell_txn": 0.82,
-    "sell_other": 0.03,
-    "gross_pnl": 209.0,
-    "net_pnl": 106.95,
+    "sell_txn": 1.63,
+    "sell_other": 0.05,
+    "gross_pnl": 415.8,
+    "net_pnl": 155.62,
     "product": "MTF",
     "notes": "imported"
   },
@@ -20886,12 +20890,12 @@
     "sell_qty": 200.0,
     "sell_price": 279.5,
     "sell_net_rate": 278.72,
-    "buy_brokerage": 92.66,
-    "buy_stt": 61.77,
-    "buy_gst": 17.03,
-    "buy_stamp": 9.27,
-    "buy_txn": 1.9,
-    "buy_other": 0.06,
+    "buy_brokerage": 103.4,
+    "buy_stt": 68.93,
+    "buy_gst": 19.01,
+    "buy_stamp": 10.34,
+    "buy_txn": 2.12,
+    "buy_other": 0.07,
     "sell_brokerage": 83.86,
     "sell_stt": 55.9,
     "sell_gst": 15.41,
@@ -20899,7 +20903,7 @@
     "sell_txn": 1.72,
     "sell_other": 0.06,
     "gross_pnl": 0.0,
-    "net_pnl": -339.64,
+    "net_pnl": -360.82,
     "product": "MTF",
     "notes": "imported"
   },
@@ -20916,12 +20920,12 @@
     "sell_qty": 150.0,
     "sell_price": 318.97,
     "sell_net_rate": 318.7,
-    "buy_brokerage": 89.21,
-    "buy_stt": 59.47,
-    "buy_gst": 16.4,
-    "buy_stamp": 8.92,
-    "buy_txn": 1.83,
-    "buy_other": 0.06,
+    "buy_brokerage": 102.94,
+    "buy_stt": 68.62,
+    "buy_gst": 18.92,
+    "buy_stamp": 10.29,
+    "buy_txn": 2.11,
+    "buy_other": 0.07,
     "sell_brokerage": 23.93,
     "sell_stt": 12.05,
     "sell_gst": 4.64,
@@ -20929,7 +20933,7 @@
     "sell_txn": 1.79,
     "sell_other": 0.05,
     "gross_pnl": 5920.5,
-    "net_pnl": 5702.15,
+    "net_pnl": 5675.09,
     "product": "MTF",
     "notes": "imported"
   },
@@ -20946,12 +20950,12 @@
     "sell_qty": 400.0,
     "sell_price": 320.94,
     "sell_net_rate": 320.02,
-    "buy_brokerage": 302.2,
-    "buy_stt": 201.44,
-    "buy_gst": 55.55,
-    "buy_stamp": 30.22,
-    "buy_txn": 6.18,
-    "buy_other": 0.2,
+    "buy_brokerage": 363.82,
+    "buy_stt": 242.52,
+    "buy_gst": 66.87,
+    "buy_stamp": 36.38,
+    "buy_txn": 7.44,
+    "buy_other": 0.24,
     "sell_brokerage": 192.56,
     "sell_stt": 128.56,
     "sell_gst": 35.55,
@@ -20959,7 +20963,7 @@
     "sell_txn": 4.81,
     "sell_other": 0.13,
     "gross_pnl": 16576.0,
-    "net_pnl": 15618.6,
+    "net_pnl": 15497.12,
     "product": "MTF",
     "notes": "imported"
   },
@@ -20969,27 +20973,27 @@
     "script": "REDINGTON",
     "type": "Long",
     "entry_date": "2026-07-02",
-    "buy_qty": 150.0,
+    "buy_qty": 61.0,
     "buy_price": 279.5,
     "buy_net_rate": 280.33,
     "exit_date": "2026-07-31",
-    "sell_qty": 150.0,
+    "sell_qty": 61.0,
     "sell_price": 321.75,
     "sell_net_rate": 320.85,
-    "buy_brokerage": 405.77,
-    "buy_stt": 270.48,
-    "buy_gst": 74.58,
-    "buy_stamp": 40.58,
-    "buy_txn": 8.3,
-    "buy_other": 0.27,
-    "sell_brokerage": 72.39,
-    "sell_stt": 48.26,
-    "sell_gst": 13.31,
+    "buy_brokerage": 419.3,
+    "buy_stt": 279.5,
+    "buy_gst": 77.07,
+    "buy_stamp": 41.93,
+    "buy_txn": 8.58,
+    "buy_other": 0.28,
+    "sell_brokerage": 29.44,
+    "sell_stt": 19.63,
+    "sell_gst": 5.41,
     "sell_stamp": 0.0,
-    "sell_txn": 1.48,
-    "sell_other": 0.05,
-    "gross_pnl": 6337.5,
-    "net_pnl": 5402.03,
+    "sell_txn": 0.6,
+    "sell_other": 0.02,
+    "gross_pnl": 2577.25,
+    "net_pnl": 1695.49,
     "product": "MTF",
     "notes": "imported"
   },
@@ -20998,28 +21002,28 @@
     "client": "RIMK1209",
     "script": "REDINGTON",
     "type": "Long",
-    "entry_date": "2026-07-02",
-    "buy_qty": 5.0,
-    "buy_price": 279.5,
-    "buy_net_rate": 280.33,
-    "exit_date": "2026-08-03",
-    "sell_qty": 5.0,
-    "sell_price": 345.0,
-    "sell_net_rate": 344.7,
-    "buy_brokerage": 419.3,
-    "buy_stt": 279.5,
-    "buy_gst": 77.07,
-    "buy_stamp": 41.93,
-    "buy_txn": 8.58,
-    "buy_other": 0.28,
-    "sell_brokerage": 0.86,
-    "sell_stt": 0.43,
-    "sell_gst": 0.17,
+    "entry_date": "2026-07-30",
+    "buy_qty": 89.0,
+    "buy_price": 323.65,
+    "buy_net_rate": 323.86,
+    "exit_date": "2026-07-31",
+    "sell_qty": 89.0,
+    "sell_price": 321.75,
+    "sell_net_rate": 320.85,
+    "buy_brokerage": 14.4,
+    "buy_stt": 0.0,
+    "buy_gst": 2.76,
+    "buy_stamp": 0.87,
+    "buy_txn": 0.88,
+    "buy_other": 0.03,
+    "sell_brokerage": 42.95,
+    "sell_stt": 28.63,
+    "sell_gst": 7.9,
     "sell_stamp": 0.0,
-    "sell_txn": 0.05,
-    "sell_other": 0.0,
-    "gross_pnl": 327.5,
-    "net_pnl": -500.67,
+    "sell_txn": 0.88,
+    "sell_other": 0.03,
+    "gross_pnl": -169.1,
+    "net_pnl": -268.43,
     "product": "MTF",
     "notes": "imported"
   },
@@ -21029,27 +21033,27 @@
     "script": "REDINGTON",
     "type": "Long",
     "entry_date": "2026-07-30",
-    "buy_qty": 95.0,
+    "buy_qty": 61.0,
     "buy_price": 323.65,
     "buy_net_rate": 323.86,
     "exit_date": "2026-08-03",
-    "sell_qty": 95.0,
+    "sell_qty": 61.0,
     "sell_price": 345.0,
     "sell_net_rate": 344.7,
-    "buy_brokerage": 15.37,
+    "buy_brokerage": 24.27,
     "buy_stt": 0.0,
-    "buy_gst": 2.95,
-    "buy_stamp": 0.92,
-    "buy_txn": 0.94,
-    "buy_other": 0.03,
-    "sell_brokerage": 16.39,
-    "sell_stt": 8.09,
-    "sell_gst": 3.13,
+    "buy_gst": 4.65,
+    "buy_stamp": 1.46,
+    "buy_txn": 1.49,
+    "buy_other": 0.05,
+    "sell_brokerage": 10.52,
+    "sell_stt": 5.2,
+    "sell_gst": 2.01,
     "sell_stamp": 0.0,
-    "sell_txn": 1.01,
-    "sell_other": 0.03,
-    "gross_pnl": 2028.25,
-    "net_pnl": 1979.39,
+    "sell_txn": 0.65,
+    "sell_other": 0.02,
+    "gross_pnl": 1302.35,
+    "net_pnl": 1252.03,
     "product": "MTF",
     "notes": "imported"
   },
@@ -21058,26 +21062,28 @@
     "client": "RIMK1209",
     "script": "REDINGTON",
     "type": "Long",
-    "entry_date": "2026-07-30",
-    "buy_qty": 55.0,
-    "buy_price": 323.65,
-    "buy_net_rate": 323.86,
-    "exit_date": null,
-    "sell_qty": 0,
-    "sell_price": 0,
-    "sell_net_rate": 0,
-    "buy_brokerage": 24.27,
+    "entry_date": "2026-08-03",
+    "buy_qty": 39.0,
+    "buy_price": 336.7,
+    "buy_net_rate": 336.95,
+    "exit_date": "2026-08-03",
+    "sell_qty": 39.0,
+    "sell_price": 345.0,
+    "sell_net_rate": 344.7,
+    "buy_brokerage": 6.57,
     "buy_stt": 0.0,
-    "buy_gst": 4.65,
-    "buy_stamp": 1.46,
-    "buy_txn": 1.49,
-    "buy_other": 0.05,
-    "sell_brokerage": 0,
-    "sell_stt": 0,
-    "sell_gst": 0,
-    "sell_stamp": 0,
-    "sell_txn": 0,
-    "sell_other": 0,
+    "buy_gst": 1.26,
+    "buy_stamp": 0.39,
+    "buy_txn": 0.4,
+    "buy_other": 0.01,
+    "sell_brokerage": 6.73,
+    "sell_stt": 3.32,
+    "sell_gst": 1.29,
+    "sell_stamp": 0.0,
+    "sell_txn": 0.41,
+    "sell_other": 0.01,
+    "gross_pnl": 323.7,
+    "net_pnl": 303.31,
     "product": "MTF",
     "notes": "imported"
   },
@@ -21087,7 +21093,7 @@
     "script": "REDINGTON",
     "type": "Long",
     "entry_date": "2026-08-03",
-    "buy_qty": 100.0,
+    "buy_qty": 61.0,
     "buy_price": 336.7,
     "buy_net_rate": 336.95,
     "exit_date": null,
@@ -21151,7 +21157,7 @@
     "exit_date": "2026-08-12",
     "sell_qty": 20.0,
     "sell_price": 845.65,
-    "sell_net_rate": 843.26,
+    "sell_net_rate": 843.25,
     "buy_brokerage": 61.96,
     "buy_stt": 41.31,
     "buy_gst": 11.39,
@@ -21181,7 +21187,7 @@
     "exit_date": "2026-08-12",
     "sell_qty": 20.0,
     "sell_price": 845.65,
-    "sell_net_rate": 843.26,
+    "sell_net_rate": 843.25,
     "buy_brokerage": 11.36,
     "buy_stt": 3.11,
     "buy_gst": 2.14,
@@ -22071,21 +22077,21 @@
     "exit_date": "2026-07-31",
     "sell_qty": 2.0,
     "sell_price": 14337.0,
-    "sell_net_rate": 14308.6,
+    "sell_net_rate": 14324.45,
     "buy_brokerage": 35.7,
     "buy_stt": 0.0,
     "buy_gst": 6.83,
     "buy_stamp": 2.14,
     "buy_txn": 2.19,
     "buy_other": 0.07,
-    "sell_brokerage": 32.17,
-    "sell_stt": 17.78,
-    "sell_gst": 5.95,
+    "sell_brokerage": 14.34,
+    "sell_stt": 7.11,
+    "sell_gst": 2.74,
     "sell_stamp": 0.0,
     "sell_txn": 0.88,
     "sell_other": 0.03,
     "gross_pnl": 112.0,
-    "net_pnl": 8.26,
+    "net_pnl": 39.97,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22135,7 +22141,7 @@
     "buy_brokerage": 150.04,
     "buy_stt": 100.02,
     "buy_gst": 27.58,
-    "buy_stamp": 15.01,
+    "buy_stamp": 15.0,
     "buy_txn": 3.07,
     "buy_other": 0.1,
     "sell_brokerage": 34.46,
@@ -22145,7 +22151,7 @@
     "sell_txn": 2.12,
     "sell_other": 0.07,
     "gross_pnl": -1091.5,
-    "net_pnl": -1448.35,
+    "net_pnl": -1448.34,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22165,7 +22171,7 @@
     "buy_brokerage": 210.05,
     "buy_stt": 140.03,
     "buy_gst": 38.61,
-    "buy_stamp": 21.01,
+    "buy_stamp": 21.0,
     "buy_txn": 4.3,
     "buy_other": 0.14,
     "sell_brokerage": 42.47,
@@ -22175,7 +22181,7 @@
     "sell_txn": 0.87,
     "sell_other": 0.03,
     "gross_pnl": 309.4,
-    "net_pnl": -184.23,
+    "net_pnl": -184.22,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22695,15 +22701,15 @@
     "entry_date": "2026-06-04",
     "buy_qty": 50.0,
     "buy_price": 933.21,
-    "buy_net_rate": 934.4,
+    "buy_net_rate": 934.32,
     "exit_date": "2026-06-04",
     "sell_qty": 50.0,
     "sell_price": 922.7,
     "sell_net_rate": 921.89,
-    "buy_brokerage": 56.39,
-    "buy_stt": 32.97,
-    "buy_gst": 10.42,
-    "buy_stamp": 5.37,
+    "buy_brokerage": 55.91,
+    "buy_stt": 32.49,
+    "buy_gst": 10.33,
+    "buy_stamp": 5.31,
     "buy_txn": 1.43,
     "buy_other": 0.05,
     "sell_brokerage": 23.07,
@@ -22713,7 +22719,7 @@
     "sell_txn": 1.42,
     "sell_other": 0.05,
     "gross_pnl": -525.5,
-    "net_pnl": -672.72,
+    "net_pnl": -671.61,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22725,15 +22731,15 @@
     "entry_date": "2026-06-04",
     "buy_qty": 100.0,
     "buy_price": 933.21,
-    "buy_net_rate": 934.4,
+    "buy_net_rate": 934.32,
     "exit_date": "2026-06-30",
     "sell_qty": 100.0,
     "sell_price": 924.28,
     "sell_net_rate": 921.81,
-    "buy_brokerage": 125.49,
-    "buy_stt": 73.37,
-    "buy_gst": 23.18,
-    "buy_stamp": 11.94,
+    "buy_brokerage": 124.33,
+    "buy_stt": 72.26,
+    "buy_gst": 22.97,
+    "buy_stamp": 11.81,
     "buy_txn": 3.19,
     "buy_other": 0.1,
     "sell_brokerage": 138.64,
@@ -22743,7 +22749,7 @@
     "sell_txn": 2.84,
     "sell_other": 0.09,
     "gross_pnl": -893.0,
-    "net_pnl": -1389.75,
+    "net_pnl": -1387.14,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22755,16 +22761,16 @@
     "entry_date": "2026-06-04",
     "buy_qty": 80.0,
     "buy_price": 933.21,
-    "buy_net_rate": 934.4,
+    "buy_net_rate": 934.32,
     "exit_date": "2026-07-07",
     "sell_qty": 80.0,
     "sell_price": 963.0,
     "sell_net_rate": 960.3,
-    "buy_brokerage": 129.57,
-    "buy_stt": 75.76,
-    "buy_gst": 23.93,
-    "buy_stamp": 12.33,
-    "buy_txn": 3.29,
+    "buy_brokerage": 128.13,
+    "buy_stt": 74.46,
+    "buy_gst": 23.67,
+    "buy_stamp": 12.17,
+    "buy_txn": 3.28,
     "buy_other": 0.11,
     "sell_brokerage": 115.56,
     "sell_stt": 77.04,
@@ -22773,7 +22779,7 @@
     "sell_txn": 2.37,
     "sell_other": 0.08,
     "gross_pnl": 2383.2,
-    "net_pnl": 1921.92,
+    "net_pnl": 1925.09,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22785,16 +22791,16 @@
     "entry_date": "2026-06-04",
     "buy_qty": 100.0,
     "buy_price": 933.21,
-    "buy_net_rate": 934.4,
+    "buy_net_rate": 934.32,
     "exit_date": "2026-07-14",
     "sell_qty": 100.0,
     "sell_price": 972.64,
     "sell_net_rate": 970.07,
-    "buy_brokerage": 211.05,
-    "buy_stt": 123.4,
-    "buy_gst": 38.98,
-    "buy_stamp": 20.09,
-    "buy_txn": 5.36,
+    "buy_brokerage": 208.15,
+    "buy_stt": 120.97,
+    "buy_gst": 38.46,
+    "buy_stamp": 19.76,
+    "buy_txn": 5.33,
     "buy_other": 0.17,
     "sell_brokerage": 145.9,
     "sell_stt": 97.26,
@@ -22803,7 +22809,7 @@
     "sell_txn": 2.99,
     "sell_other": 0.1,
     "gross_pnl": 3943.0,
-    "net_pnl": 3270.88,
+    "net_pnl": 3277.09,
     "product": "MTF",
     "notes": "imported"
   },
@@ -22813,27 +22819,27 @@
     "script": "NATCO PHARMA",
     "type": "Long",
     "entry_date": "2026-06-04",
-    "buy_qty": 164.0,
+    "buy_qty": 167.0,
     "buy_price": 933.21,
-    "buy_net_rate": 934.4,
+    "buy_net_rate": 934.32,
     "exit_date": "2026-07-16",
-    "sell_qty": 164.0,
+    "sell_qty": 167.0,
     "sell_price": 966.15,
     "sell_net_rate": 963.44,
-    "buy_brokerage": 557.16,
-    "buy_stt": 325.77,
-    "buy_gst": 102.92,
-    "buy_stamp": 53.03,
-    "buy_txn": 14.15,
+    "buy_brokerage": 555.76,
+    "buy_stt": 322.98,
+    "buy_gst": 102.68,
+    "buy_stamp": 52.77,
+    "buy_txn": 14.24,
     "buy_other": 0.46,
-    "sell_brokerage": 237.66,
-    "sell_stt": 158.45,
-    "sell_gst": 43.68,
+    "sell_brokerage": 242.01,
+    "sell_stt": 161.35,
+    "sell_gst": 44.48,
     "sell_stamp": 0.0,
-    "sell_txn": 4.86,
-    "sell_other": 0.15,
-    "gross_pnl": 5402.16,
-    "net_pnl": 3903.87,
+    "sell_txn": 4.95,
+    "sell_other": 0.16,
+    "gross_pnl": 5500.98,
+    "net_pnl": 3999.14,
     "product": "MTF",
     "notes": "imported"
   },
@@ -23879,27 +23885,27 @@
     "script": "THOMAS COOK (INDIA)",
     "type": "Long",
     "entry_date": "2026-06-09",
-    "buy_qty": 1500.0,
+    "buy_qty": 1000.0,
     "buy_price": 111.95,
-    "buy_net_rate": 112.02,
+    "buy_net_rate": 112.28,
     "exit_date": "2026-06-09",
-    "sell_qty": 1500.0,
+    "sell_qty": 1000.0,
     "sell_price": 114.44,
     "sell_net_rate": 114.34,
-    "buy_brokerage": 84.0,
-    "buy_stt": 0.0,
-    "buy_gst": 16.28,
-    "buy_stamp": 5.04,
-    "buy_txn": 6.3,
-    "buy_other": 0.17,
-    "sell_brokerage": 85.8,
-    "sell_stt": 42.33,
-    "sell_gst": 16.63,
+    "buy_brokerage": 167.9,
+    "buy_stt": 112.88,
+    "buy_gst": 31.0,
+    "buy_stamp": 16.79,
+    "buy_txn": 4.2,
+    "buy_other": 0.11,
+    "sell_brokerage": 57.2,
+    "sell_stt": 28.22,
+    "sell_gst": 11.09,
     "sell_stamp": 0.0,
-    "sell_txn": 6.44,
-    "sell_other": 0.17,
-    "gross_pnl": 3735.0,
-    "net_pnl": 3471.84,
+    "sell_txn": 4.29,
+    "sell_other": 0.11,
+    "gross_pnl": 2490.0,
+    "net_pnl": 2056.21,
     "product": "MTF",
     "notes": "imported"
   },
@@ -24540,7 +24546,7 @@
     "sell_qty": 45.0,
     "sell_price": 2005.8,
     "sell_net_rate": 2000.17,
-    "buy_brokerage": 126.77,
+    "buy_brokerage": 126.76,
     "buy_stt": 84.51,
     "buy_gst": 23.3,
     "buy_stamp": 12.68,
@@ -24553,7 +24559,7 @@
     "sell_txn": 2.77,
     "sell_other": 0.09,
     "gross_pnl": 5751.0,
-    "net_pnl": 5247.67,
+    "net_pnl": 5247.68,
     "product": "DELIVERY",
     "notes": "imported"
   },
@@ -24711,15 +24717,15 @@
     "entry_date": "2026-07-09",
     "buy_qty": 25.0,
     "buy_price": 1878.9,
-    "buy_net_rate": 1880.14,
+    "buy_net_rate": 1884.44,
     "exit_date": "2026-07-09",
     "sell_qty": 25.0,
     "sell_price": 1833.12,
     "sell_net_rate": 1831.53,
-    "buy_brokerage": 23.49,
-    "buy_stt": 0.0,
-    "buy_gst": 4.5,
-    "buy_stamp": 1.41,
+    "buy_brokerage": 70.46,
+    "buy_stt": 46.59,
+    "buy_gst": 12.95,
+    "buy_stamp": 7.05,
     "buy_txn": 1.44,
     "buy_other": 0.05,
     "sell_brokerage": 22.92,
@@ -24729,7 +24735,7 @@
     "sell_txn": 1.41,
     "sell_other": 0.05,
     "gross_pnl": -1144.5,
-    "net_pnl": -1215.81,
+    "net_pnl": -1323.46,
     "product": "DELIVERY",
     "notes": "imported"
   },
@@ -26485,13 +26491,13 @@
     "buy_txn": 2.99,
     "buy_other": 0.1,
     "sell_brokerage": 151.99,
-    "sell_stt": 101.32,
+    "sell_stt": 101.33,
     "sell_gst": 27.94,
     "sell_stamp": 0.0,
     "sell_txn": 3.11,
     "sell_other": 0.1,
     "gross_pnl": 4006.25,
-    "net_pnl": 3433.97,
+    "net_pnl": 3433.96,
     "product": "DELIVERY",
     "notes": "imported"
   },
@@ -27130,7 +27136,7 @@
     "type": "Long",
     "entry_date": "2026-11-03",
     "buy_qty": 20.0,
-    "buy_price": 1536.36,
+    "buy_price": 1536.37,
     "buy_net_rate": 1537.39,
     "exit_date": "2026-11-03",
     "sell_qty": 20.0,
@@ -27148,8 +27154,8 @@
     "sell_stamp": 0.0,
     "sell_txn": 0.96,
     "sell_other": 0.03,
-    "gross_pnl": 392.8,
-    "net_pnl": 345.35,
+    "gross_pnl": 392.6,
+    "net_pnl": 345.15,
     "product": "MTF",
     "notes": "imported"
   },
@@ -28003,13 +28009,13 @@
     "buy_txn": 1.36,
     "buy_other": 0.05,
     "sell_brokerage": 66.76,
-    "sell_stt": 44.5,
+    "sell_stt": 44.51,
     "sell_gst": 12.32,
     "sell_stamp": 0.0,
     "sell_txn": 1.67,
     "sell_other": 0.04,
     "gross_pnl": 285.2,
-    "net_pnl": 29.12,
+    "net_pnl": 29.11,
     "product": "DELIVERY",
     "notes": "imported"
   },
@@ -28523,27 +28529,27 @@
     "script": "EQUITAS SMALL FIN BANK",
     "type": "Long",
     "entry_date": "2026-10-29",
-    "buy_qty": 593.0,
+    "buy_qty": 500.0,
     "buy_price": 57.6,
-    "buy_net_rate": 57.66,
+    "buy_net_rate": 57.63,
     "exit_date": "2026-10-29",
-    "sell_qty": 593.0,
+    "sell_qty": 500.0,
     "sell_price": 59.41,
     "sell_net_rate": 59.36,
-    "buy_brokerage": 45.88,
-    "buy_stt": 28.98,
-    "buy_gst": 8.45,
-    "buy_stamp": 4.48,
-    "buy_txn": 1.05,
+    "buy_brokerage": 14.4,
+    "buy_stt": 0.0,
+    "buy_gst": 2.76,
+    "buy_stamp": 0.86,
+    "buy_txn": 0.88,
     "buy_other": 0.03,
-    "sell_brokerage": 17.61,
-    "sell_stt": 8.59,
-    "sell_gst": 3.37,
+    "sell_brokerage": 14.85,
+    "sell_stt": 7.25,
+    "sell_gst": 2.84,
     "sell_stamp": 0.0,
-    "sell_txn": 1.08,
-    "sell_other": 0.04,
-    "gross_pnl": 1073.33,
-    "net_pnl": 953.77,
+    "sell_txn": 0.91,
+    "sell_other": 0.03,
+    "gross_pnl": 905.0,
+    "net_pnl": 860.19,
     "product": "MTF",
     "notes": "imported"
   },
@@ -28583,27 +28589,27 @@
     "script": "EQUITAS SMALL FIN BANK",
     "type": "Long",
     "entry_date": "2026-10-29",
-    "buy_qty": 307.0,
+    "buy_qty": 400.0,
     "buy_price": 55.59,
     "buy_net_rate": 55.63,
     "exit_date": "2026-10-29",
-    "sell_qty": 307.0,
+    "sell_qty": 400.0,
     "sell_price": 59.41,
     "sell_net_rate": 59.36,
-    "buy_brokerage": 8.53,
+    "buy_brokerage": 11.12,
     "buy_stt": 0.0,
-    "buy_gst": 1.63,
-    "buy_stamp": 0.51,
-    "buy_txn": 0.52,
+    "buy_gst": 2.13,
+    "buy_stamp": 0.66,
+    "buy_txn": 0.68,
     "buy_other": 0.02,
-    "sell_brokerage": 9.12,
-    "sell_stt": 4.45,
-    "sell_gst": 1.74,
+    "sell_brokerage": 11.88,
+    "sell_stt": 5.8,
+    "sell_gst": 2.27,
     "sell_stamp": 0.0,
-    "sell_txn": 0.56,
+    "sell_txn": 0.73,
     "sell_other": 0.02,
-    "gross_pnl": 1172.74,
-    "net_pnl": 1145.64,
+    "gross_pnl": 1528.0,
+    "net_pnl": 1492.69,
     "product": "MTF",
     "notes": "imported"
   },
@@ -28613,11 +28619,11 @@
     "script": "EQUITAS SMALL FIN BANK",
     "type": "Long",
     "entry_date": "2026-10-29",
-    "buy_qty": 193.0,
+    "buy_qty": 100.0,
     "buy_price": 55.59,
     "buy_net_rate": 55.63,
     "exit_date": "2026-11-04",
-    "sell_qty": 193.0,
+    "sell_qty": 100.0,
     "sell_price": 56.3,
     "sell_net_rate": 56.14,
     "buy_brokerage": 13.9,
@@ -28626,14 +28632,14 @@
     "buy_stamp": 0.83,
     "buy_txn": 0.85,
     "buy_other": 0.03,
-    "sell_brokerage": 16.31,
-    "sell_stt": 10.87,
-    "sell_gst": 3.01,
+    "sell_brokerage": 8.45,
+    "sell_stt": 5.63,
+    "sell_gst": 1.56,
     "sell_stamp": 0.0,
-    "sell_txn": 0.41,
+    "sell_txn": 0.21,
     "sell_other": 0.01,
-    "gross_pnl": 137.03,
-    "net_pnl": 88.15,
+    "gross_pnl": 71.0,
+    "net_pnl": 36.87,
     "product": "MTF",
     "notes": "imported"
   },
@@ -28973,15 +28979,15 @@
     "entry_date": "2026-07-09",
     "buy_qty": 25.0,
     "buy_price": 1882.4,
-    "buy_net_rate": 1884.72,
+    "buy_net_rate": 1883.64,
     "exit_date": "2026-07-09",
     "sell_qty": 25.0,
     "sell_price": 1834.22,
     "sell_net_rate": 1832.63,
-    "buy_brokerage": 47.54,
-    "buy_stt": 23.81,
-    "buy_gst": 8.83,
-    "buy_stamp": 4.29,
+    "buy_brokerage": 23.53,
+    "buy_stt": 0.0,
+    "buy_gst": 4.5,
+    "buy_stamp": 1.41,
     "buy_txn": 1.44,
     "buy_other": 0.05,
     "sell_brokerage": 22.93,
@@ -28991,42 +28997,12 @@
     "sell_txn": 1.41,
     "sell_other": 0.05,
     "gross_pnl": -1204.5,
-    "net_pnl": -1330.9,
+    "net_pnl": -1275.87,
     "product": "DELIVERY",
     "notes": "imported"
   },
   {
     "id": 980,
-    "client": "RIMK1248",
-    "script": "OBEROI REALTY",
-    "type": "Long",
-    "entry_date": "2026-07-09",
-    "buy_qty": 24.0,
-    "buy_price": 1882.4,
-    "buy_net_rate": 1884.72,
-    "exit_date": "2026-07-14",
-    "sell_qty": 24.0,
-    "sell_price": 1942.75,
-    "sell_net_rate": 1937.28,
-    "buy_brokerage": 93.18,
-    "buy_stt": 46.66,
-    "buy_gst": 17.3,
-    "buy_stamp": 8.41,
-    "buy_txn": 2.83,
-    "buy_other": 0.09,
-    "sell_brokerage": 69.94,
-    "sell_stt": 46.63,
-    "sell_gst": 12.91,
-    "sell_stamp": 0.0,
-    "sell_txn": 1.75,
-    "sell_other": 0.05,
-    "gross_pnl": 1448.4,
-    "net_pnl": 1148.65,
-    "product": "DELIVERY",
-    "notes": "imported"
-  },
-  {
-    "id": 981,
     "client": "RIMK1248",
     "script": "MISHRA DHATU NIGAM",
     "type": "Long",
@@ -29056,7 +29032,7 @@
     "notes": "imported"
   },
   {
-    "id": 982,
+    "id": 981,
     "client": "RIMK1248",
     "script": "MISHRA DHATU NIGAM",
     "type": "Long",
@@ -29086,7 +29062,7 @@
     "notes": "imported"
   },
   {
-    "id": 983,
+    "id": 982,
     "client": "RIMK1248",
     "script": "MISHRA DHATU NIGAM",
     "type": "Long",
@@ -29116,7 +29092,7 @@
     "notes": "imported"
   },
   {
-    "id": 984,
+    "id": 983,
     "client": "RIMK1248",
     "script": "GUJARAT FLUOROCHEM",
     "type": "Long",
@@ -29146,7 +29122,7 @@
     "notes": "imported"
   },
   {
-    "id": 985,
+    "id": 984,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29176,7 +29152,7 @@
     "notes": "imported"
   },
   {
-    "id": 986,
+    "id": 985,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29206,7 +29182,7 @@
     "notes": "imported"
   },
   {
-    "id": 987,
+    "id": 986,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29236,7 +29212,7 @@
     "notes": "imported"
   },
   {
-    "id": 988,
+    "id": 987,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29266,7 +29242,7 @@
     "notes": "imported"
   },
   {
-    "id": 989,
+    "id": 988,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29296,7 +29272,7 @@
     "notes": "imported"
   },
   {
-    "id": 990,
+    "id": 989,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29326,7 +29302,7 @@
     "notes": "imported"
   },
   {
-    "id": 991,
+    "id": 990,
     "client": "RIMK1248",
     "script": "LEELA PALACES HOTEL",
     "type": "Long",
@@ -29356,7 +29332,7 @@
     "notes": "imported"
   },
   {
-    "id": 992,
+    "id": 991,
     "client": "RIMK1248",
     "script": "PIRAMAL PHARMA",
     "type": "Long",
@@ -29386,7 +29362,7 @@
     "notes": "imported"
   },
   {
-    "id": 993,
+    "id": 992,
     "client": "RIMK1248",
     "script": "SYRMA SGS TECHNOLOGY",
     "type": "Long",
@@ -29416,7 +29392,7 @@
     "notes": "imported"
   },
   {
-    "id": 994,
+    "id": 993,
     "client": "RIMK1248",
     "script": "SYRMA SGS TECHNOLOGY",
     "type": "Long",
@@ -29446,7 +29422,7 @@
     "notes": "imported"
   },
   {
-    "id": 995,
+    "id": 994,
     "client": "RIMK1248",
     "script": "SYRMA SGS TECHNOLOGY",
     "type": "Long",
@@ -29476,7 +29452,7 @@
     "notes": "imported"
   },
   {
-    "id": 996,
+    "id": 995,
     "client": "RIMK1248",
     "script": "SYRMA SGS TECHNOLOGY",
     "type": "Long",
@@ -29506,7 +29482,7 @@
     "notes": "imported"
   },
   {
-    "id": 997,
+    "id": 996,
     "client": "RIMK1248",
     "script": "SYRMA SGS TECHNOLOGY",
     "type": "Long",
@@ -29524,19 +29500,19 @@
     "buy_stamp": 10.75,
     "buy_txn": 2.2,
     "buy_other": 0.07,
-    "sell_brokerage": 112.98,
+    "sell_brokerage": 112.97,
     "sell_stt": 75.32,
     "sell_gst": 20.77,
     "sell_stamp": 0.0,
     "sell_txn": 2.31,
     "sell_other": 0.08,
     "gross_pnl": 3615.5,
-    "net_pnl": 3192.0,
+    "net_pnl": 3192.01,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 998,
+    "id": 997,
     "client": "RIMK1248",
     "script": "SHIPROCKET",
     "type": "Long",
@@ -29564,7 +29540,7 @@
     "notes": "imported"
   },
   {
-    "id": 999,
+    "id": 998,
     "client": "RIMK1248",
     "script": "ONE MOBIKWIK SYSTEMS",
     "type": "Long",
@@ -29594,7 +29570,7 @@
     "notes": "imported"
   },
   {
-    "id": 1000,
+    "id": 999,
     "client": "RIMK1248",
     "script": "ONE MOBIKWIK SYSTEMS",
     "type": "Long",
@@ -29624,7 +29600,7 @@
     "notes": "imported"
   },
   {
-    "id": 1001,
+    "id": 1000,
     "client": "RIMK1248",
     "script": "AEGIS VOPAK TERMINALS",
     "type": "Long",
@@ -29654,7 +29630,7 @@
     "notes": "imported"
   },
   {
-    "id": 1002,
+    "id": 1001,
     "client": "RIMK1248",
     "script": "AEGIS VOPAK TERMINALS",
     "type": "Long",
@@ -29684,7 +29660,7 @@
     "notes": "imported"
   },
   {
-    "id": 1003,
+    "id": 1002,
     "client": "RIMK1248",
     "script": "AEGIS VOPAK TERMINALS",
     "type": "Long",
@@ -29714,7 +29690,7 @@
     "notes": "imported"
   },
   {
-    "id": 1004,
+    "id": 1003,
     "client": "RIMK1248",
     "script": "DATA PATTERNS INDIA",
     "type": "Long",
@@ -29744,7 +29720,7 @@
     "notes": "imported"
   },
   {
-    "id": 1005,
+    "id": 1004,
     "client": "RIMK1248",
     "script": "DATA PATTERNS INDIA",
     "type": "Long",
@@ -29774,7 +29750,7 @@
     "notes": "imported"
   },
   {
-    "id": 1006,
+    "id": 1005,
     "client": "RIMK1248",
     "script": "DATA PATTERNS INDIA",
     "type": "Long",
@@ -29804,7 +29780,7 @@
     "notes": "imported"
   },
   {
-    "id": 1007,
+    "id": 1006,
     "client": "RIMK1248",
     "script": "DATA PATTERNS INDIA",
     "type": "Long",
@@ -29834,7 +29810,7 @@
     "notes": "imported"
   },
   {
-    "id": 1008,
+    "id": 1007,
     "client": "RIMK1248",
     "script": "DATA PATTERNS INDIA",
     "type": "Long",
@@ -29864,7 +29840,7 @@
     "notes": "imported"
   },
   {
-    "id": 1009,
+    "id": 1008,
     "client": "RIMK1248",
     "script": "ORIENT CABLES (INDIA)",
     "type": "Long",
@@ -29892,7 +29868,7 @@
     "notes": "imported"
   },
   {
-    "id": 1010,
+    "id": 1009,
     "client": "RIMK1248",
     "script": "HONASA CONSUMER",
     "type": "Long",
@@ -29922,7 +29898,7 @@
     "notes": "imported"
   },
   {
-    "id": 1011,
+    "id": 1010,
     "client": "RIMK1248",
     "script": "LALITHAA JEWELLERY MART L",
     "type": "Long",
@@ -29952,7 +29928,7 @@
     "notes": "imported"
   },
   {
-    "id": 1012,
+    "id": 1011,
     "client": "RIMK1248",
     "script": "LALITHAA JEWELLERY MART L",
     "type": "Long",
@@ -29982,7 +29958,7 @@
     "notes": "imported"
   },
   {
-    "id": 1013,
+    "id": 1012,
     "client": "RIMK1248",
     "script": "LALITHAA JEWELLERY MART L",
     "type": "Long",
@@ -30012,7 +29988,7 @@
     "notes": "imported"
   },
   {
-    "id": 1014,
+    "id": 1013,
     "client": "RIMK1248",
     "script": "PHYSICSWALLAH",
     "type": "Long",
@@ -30042,7 +30018,7 @@
     "notes": "imported"
   },
   {
-    "id": 1015,
+    "id": 1014,
     "client": "RIMK1248",
     "script": "PHYSICSWALLAH",
     "type": "Long",
@@ -30072,7 +30048,7 @@
     "notes": "imported"
   },
   {
-    "id": 1016,
+    "id": 1015,
     "client": "RIMK1248",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -30102,7 +30078,7 @@
     "notes": "imported"
   },
   {
-    "id": 1017,
+    "id": 1016,
     "client": "RIMK1248",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -30132,7 +30108,7 @@
     "notes": "imported"
   },
   {
-    "id": 1018,
+    "id": 1017,
     "client": "RIMK1248",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -30162,7 +30138,7 @@
     "notes": "imported"
   },
   {
-    "id": 1019,
+    "id": 1018,
     "client": "RIMK1248",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -30192,7 +30168,7 @@
     "notes": "imported"
   },
   {
-    "id": 1020,
+    "id": 1019,
     "client": "RIMK1248",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -30222,7 +30198,7 @@
     "notes": "imported"
   },
   {
-    "id": 1021,
+    "id": 1020,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30252,7 +30228,7 @@
     "notes": "imported"
   },
   {
-    "id": 1022,
+    "id": 1021,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30282,7 +30258,7 @@
     "notes": "imported"
   },
   {
-    "id": 1023,
+    "id": 1022,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30312,7 +30288,7 @@
     "notes": "imported"
   },
   {
-    "id": 1024,
+    "id": 1023,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30342,7 +30318,7 @@
     "notes": "imported"
   },
   {
-    "id": 1025,
+    "id": 1024,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30372,7 +30348,7 @@
     "notes": "imported"
   },
   {
-    "id": 1026,
+    "id": 1025,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30402,7 +30378,7 @@
     "notes": "imported"
   },
   {
-    "id": 1027,
+    "id": 1026,
     "client": "RIMK1248",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -30430,7 +30406,7 @@
     "notes": "imported"
   },
   {
-    "id": 1028,
+    "id": 1027,
     "client": "RIMK1248",
     "script": "KROSS",
     "type": "Long",
@@ -30460,7 +30436,7 @@
     "notes": "imported"
   },
   {
-    "id": 1029,
+    "id": 1028,
     "client": "RIMK1248",
     "script": "KROSS",
     "type": "Long",
@@ -30490,7 +30466,7 @@
     "notes": "imported"
   },
   {
-    "id": 1030,
+    "id": 1029,
     "client": "RIMK1248",
     "script": "KROSS",
     "type": "Long",
@@ -30520,7 +30496,7 @@
     "notes": "imported"
   },
   {
-    "id": 1031,
+    "id": 1030,
     "client": "RIMK1248",
     "script": "NTPC GREEN ENERGY",
     "type": "Long",
@@ -30548,7 +30524,7 @@
     "notes": "imported"
   },
   {
-    "id": 1032,
+    "id": 1031,
     "client": "RIMK1248",
     "script": "A-ONE STEELS INDIA",
     "type": "Long",
@@ -30578,7 +30554,7 @@
     "notes": "imported"
   },
   {
-    "id": 1033,
+    "id": 1032,
     "client": "RIMK1248",
     "script": "A-ONE STEELS INDIA",
     "type": "Long",
@@ -30608,7 +30584,7 @@
     "notes": "imported"
   },
   {
-    "id": 1034,
+    "id": 1033,
     "client": "RIMK1248",
     "script": "A-ONE STEELS INDIA",
     "type": "Long",
@@ -30638,7 +30614,7 @@
     "notes": "imported"
   },
   {
-    "id": 1035,
+    "id": 1034,
     "client": "RIMK1248",
     "script": "A-ONE STEELS INDIA",
     "type": "Long",
@@ -30668,7 +30644,7 @@
     "notes": "imported"
   },
   {
-    "id": 1036,
+    "id": 1035,
     "client": "RIMK1248",
     "script": "A-ONE STEELS INDIA",
     "type": "Long",
@@ -30696,7 +30672,7 @@
     "notes": "imported"
   },
   {
-    "id": 1037,
+    "id": 1036,
     "client": "RIMK1248",
     "script": "UNIMECH AEROSPACE N MFG L",
     "type": "Long",
@@ -30726,7 +30702,7 @@
     "notes": "imported"
   },
   {
-    "id": 1038,
+    "id": 1037,
     "client": "RIMK1248",
     "script": "UNIMECH AEROSPACE N MFG L",
     "type": "Long",
@@ -30756,7 +30732,7 @@
     "notes": "imported"
   },
   {
-    "id": 1039,
+    "id": 1038,
     "client": "RIMK1248",
     "script": "MEESHO",
     "type": "Long",
@@ -30786,7 +30762,7 @@
     "notes": "imported"
   },
   {
-    "id": 1040,
+    "id": 1039,
     "client": "RIMK1248",
     "script": "JAIN RESOURCE RECYCLING L",
     "type": "Long",
@@ -30816,7 +30792,7 @@
     "notes": "imported"
   },
   {
-    "id": 1041,
+    "id": 1040,
     "client": "RIMK1248",
     "script": "MAHINDRA & MAHINDRA",
     "type": "Long",
@@ -30846,7 +30822,7 @@
     "notes": "imported"
   },
   {
-    "id": 1042,
+    "id": 1041,
     "client": "RIMK1248",
     "script": "MAHINDRA & MAHINDRA",
     "type": "Long",
@@ -30876,7 +30852,7 @@
     "notes": "imported"
   },
   {
-    "id": 1043,
+    "id": 1042,
     "client": "RIMK1248",
     "script": "MAHINDRA & MAHINDRA",
     "type": "Long",
@@ -30906,7 +30882,7 @@
     "notes": "imported"
   },
   {
-    "id": 1044,
+    "id": 1043,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -30936,7 +30912,7 @@
     "notes": "imported"
   },
   {
-    "id": 1045,
+    "id": 1044,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -30966,7 +30942,7 @@
     "notes": "imported"
   },
   {
-    "id": 1046,
+    "id": 1045,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -30996,7 +30972,7 @@
     "notes": "imported"
   },
   {
-    "id": 1047,
+    "id": 1046,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -31026,7 +31002,7 @@
     "notes": "imported"
   },
   {
-    "id": 1048,
+    "id": 1047,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -31056,7 +31032,7 @@
     "notes": "imported"
   },
   {
-    "id": 1049,
+    "id": 1048,
     "client": "RIMK1248",
     "script": "MRPL",
     "type": "Long",
@@ -31084,7 +31060,7 @@
     "notes": "imported"
   },
   {
-    "id": 1050,
+    "id": 1049,
     "client": "RIMK1248",
     "script": "SHIPPING CORP OF INDIA LT",
     "type": "Long",
@@ -31114,7 +31090,7 @@
     "notes": "imported"
   },
   {
-    "id": 1051,
+    "id": 1050,
     "client": "RIMK1248",
     "script": "SHIPPING CORP OF INDIA LT",
     "type": "Long",
@@ -31132,19 +31108,19 @@
     "buy_stamp": 14.69,
     "buy_txn": 3.01,
     "buy_other": 0.1,
-    "sell_brokerage": 59.38,
+    "sell_brokerage": 59.39,
     "sell_stt": 39.58,
     "sell_gst": 10.92,
     "sell_stamp": 0.0,
     "sell_txn": 1.22,
     "sell_other": 0.04,
     "gross_pnl": -9370.5,
-    "net_pnl": -9771.2,
+    "net_pnl": -9771.21,
     "product": "DELIVERY",
     "notes": "imported"
   },
   {
-    "id": 1052,
+    "id": 1051,
     "client": "RIMK1248",
     "script": "CONTAINER CORP OF IND",
     "type": "Long",
@@ -31172,7 +31148,7 @@
     "notes": "imported"
   },
   {
-    "id": 1053,
+    "id": 1052,
     "client": "RIMK1248",
     "script": "CONTAINER CORP OF IND",
     "type": "Long",
@@ -31200,7 +31176,7 @@
     "notes": "imported"
   },
   {
-    "id": 1054,
+    "id": 1053,
     "client": "RIMK1248",
     "script": "NUVOCO VISTAS CORP",
     "type": "Long",
@@ -31230,7 +31206,7 @@
     "notes": "imported"
   },
   {
-    "id": 1055,
+    "id": 1054,
     "client": "RIMK1248",
     "script": "BSE",
     "type": "Long",
@@ -31260,7 +31236,7 @@
     "notes": "imported"
   },
   {
-    "id": 1056,
+    "id": 1055,
     "client": "RIMK1248",
     "script": "BSE",
     "type": "Long",
@@ -31290,7 +31266,7 @@
     "notes": "imported"
   },
   {
-    "id": 1057,
+    "id": 1056,
     "client": "RIMK1248",
     "script": "BSE",
     "type": "Long",
@@ -31320,7 +31296,7 @@
     "notes": "imported"
   },
   {
-    "id": 1058,
+    "id": 1057,
     "client": "RIMK1248",
     "script": "BSE",
     "type": "Long",
@@ -31350,7 +31326,7 @@
     "notes": "imported"
   },
   {
-    "id": 1059,
+    "id": 1058,
     "client": "RIMK1248",
     "script": "BALRAMPUR CHINI MILLS",
     "type": "Long",
@@ -31380,7 +31356,7 @@
     "notes": "imported"
   },
   {
-    "id": 1060,
+    "id": 1059,
     "client": "RIMK1248",
     "script": "BALRAMPUR CHINI MILLS",
     "type": "Long",
@@ -31410,7 +31386,7 @@
     "notes": "imported"
   },
   {
-    "id": 1061,
+    "id": 1060,
     "client": "RIMK1248",
     "script": "JSW ENERGY",
     "type": "Long",
@@ -31440,7 +31416,7 @@
     "notes": "imported"
   },
   {
-    "id": 1062,
+    "id": 1061,
     "client": "RIMK1248",
     "script": "HDFC AMC",
     "type": "Long",
@@ -31470,7 +31446,7 @@
     "notes": "imported"
   },
   {
-    "id": 1063,
+    "id": 1062,
     "client": "RIMK1248",
     "script": "GAIL (INDIA)",
     "type": "Long",
@@ -31500,7 +31476,7 @@
     "notes": "imported"
   },
   {
-    "id": 1064,
+    "id": 1063,
     "client": "RIMK1248",
     "script": "SHADOWFAX TECHNOLOGIES L",
     "type": "Long",
@@ -31530,7 +31506,7 @@
     "notes": "imported"
   },
   {
-    "id": 1065,
+    "id": 1064,
     "client": "RIMK1248",
     "script": "SHADOWFAX TECHNOLOGIES L",
     "type": "Long",
@@ -31560,7 +31536,7 @@
     "notes": "imported"
   },
   {
-    "id": 1066,
+    "id": 1065,
     "client": "RIMK1248",
     "script": "POWER FIN CORP",
     "type": "Long",
@@ -31590,7 +31566,7 @@
     "notes": "imported"
   },
   {
-    "id": 1067,
+    "id": 1066,
     "client": "RIMK1248",
     "script": "POWER FIN CORP",
     "type": "Long",
@@ -31620,7 +31596,7 @@
     "notes": "imported"
   },
   {
-    "id": 1068,
+    "id": 1067,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31650,7 +31626,7 @@
     "notes": "imported"
   },
   {
-    "id": 1069,
+    "id": 1068,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31680,7 +31656,7 @@
     "notes": "imported"
   },
   {
-    "id": 1070,
+    "id": 1069,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31710,7 +31686,7 @@
     "notes": "imported"
   },
   {
-    "id": 1071,
+    "id": 1070,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31740,7 +31716,7 @@
     "notes": "imported"
   },
   {
-    "id": 1072,
+    "id": 1071,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31770,7 +31746,7 @@
     "notes": "imported"
   },
   {
-    "id": 1073,
+    "id": 1072,
     "client": "RIMK1248",
     "script": "CYIENT",
     "type": "Long",
@@ -31800,7 +31776,7 @@
     "notes": "imported"
   },
   {
-    "id": 1074,
+    "id": 1073,
     "client": "RIMK1248",
     "script": "NATIONAL ALUMINIUM",
     "type": "Long",
@@ -31830,7 +31806,7 @@
     "notes": "imported"
   },
   {
-    "id": 1075,
+    "id": 1074,
     "client": "RIMK1248",
     "script": "NATIONAL ALUMINIUM",
     "type": "Long",
@@ -31860,7 +31836,7 @@
     "notes": "imported"
   },
   {
-    "id": 1076,
+    "id": 1075,
     "client": "RIMK1248",
     "script": "ASSET RECONSTRUC CO (I) L",
     "type": "Long",
@@ -31888,7 +31864,7 @@
     "notes": "imported"
   },
   {
-    "id": 1077,
+    "id": 1076,
     "client": "RIMK1248",
     "script": "ALKYL AMINES",
     "type": "Long",
@@ -31901,7 +31877,7 @@
     "sell_price": 1829.9,
     "sell_net_rate": 1824.76,
     "buy_brokerage": 81.88,
-    "buy_stt": 54.58,
+    "buy_stt": 54.59,
     "buy_gst": 15.05,
     "buy_stamp": 8.19,
     "buy_txn": 1.68,
@@ -31913,12 +31889,12 @@
     "sell_txn": 1.69,
     "sell_other": 0.05,
     "gross_pnl": 312.0,
-    "net_pnl": -3.56,
+    "net_pnl": -3.57,
     "product": "DELIVERY",
     "notes": "imported"
   },
   {
-    "id": 1078,
+    "id": 1077,
     "client": "RIMK1248",
     "script": "TATA COMMUNICATIONS",
     "type": "Long",
@@ -31948,7 +31924,7 @@
     "notes": "imported"
   },
   {
-    "id": 1079,
+    "id": 1078,
     "client": "RIMK1248",
     "script": "TATA COMMUNICATIONS",
     "type": "Long",
@@ -31978,7 +31954,7 @@
     "notes": "imported"
   },
   {
-    "id": 1080,
+    "id": 1079,
     "client": "RIMK1248",
     "script": "TATA COMMUNICATIONS",
     "type": "Long",
@@ -32006,7 +31982,7 @@
     "notes": "imported"
   },
   {
-    "id": 1081,
+    "id": 1080,
     "client": "RIMK1248",
     "script": "TATA COMMUNICATIONS",
     "type": "Long",
@@ -32034,7 +32010,7 @@
     "notes": "imported"
   },
   {
-    "id": 1082,
+    "id": 1081,
     "client": "RIMK1248",
     "script": "TATA COMMUNICATIONS",
     "type": "Long",
@@ -32062,7 +32038,7 @@
     "notes": "imported"
   },
   {
-    "id": 1083,
+    "id": 1082,
     "client": "RIMK1248",
     "script": "SHAILY ENGINEERING",
     "type": "Long",
@@ -32092,7 +32068,7 @@
     "notes": "imported"
   },
   {
-    "id": 1084,
+    "id": 1083,
     "client": "RIMK1248",
     "script": "SHAILY ENGINEERING",
     "type": "Long",
@@ -32120,7 +32096,7 @@
     "notes": "imported"
   },
   {
-    "id": 1085,
+    "id": 1084,
     "client": "RIMK1248",
     "script": "SHAILY ENGINEERING",
     "type": "Long",
@@ -32148,7 +32124,7 @@
     "notes": "imported"
   },
   {
-    "id": 1086,
+    "id": 1085,
     "client": "RIMK1248",
     "script": "TRIVENI TURBINE",
     "type": "Long",
@@ -32178,7 +32154,7 @@
     "notes": "imported"
   },
   {
-    "id": 1087,
+    "id": 1086,
     "client": "RIMK1248",
     "script": "ITC",
     "type": "Long",
@@ -32208,7 +32184,7 @@
     "notes": "imported"
   },
   {
-    "id": 1088,
+    "id": 1087,
     "client": "RIMK1248",
     "script": "ITC",
     "type": "Long",
@@ -32238,7 +32214,7 @@
     "notes": "imported"
   },
   {
-    "id": 1089,
+    "id": 1088,
     "client": "RIMK1248",
     "script": "ITC",
     "type": "Long",
@@ -32268,7 +32244,7 @@
     "notes": "imported"
   },
   {
-    "id": 1090,
+    "id": 1089,
     "client": "RIMK1248",
     "script": "PINE LABS",
     "type": "Long",
@@ -32298,7 +32274,7 @@
     "notes": "imported"
   },
   {
-    "id": 1091,
+    "id": 1090,
     "client": "RIMK1248",
     "script": "EMCURE PHARMACEUTICALS L",
     "type": "Long",
@@ -32328,7 +32304,7 @@
     "notes": "imported"
   },
   {
-    "id": 1092,
+    "id": 1091,
     "client": "RIMK1248",
     "script": "EMCURE PHARMACEUTICALS L",
     "type": "Long",
@@ -32358,7 +32334,7 @@
     "notes": "imported"
   },
   {
-    "id": 1093,
+    "id": 1092,
     "client": "RIMK1248",
     "script": "EMCURE PHARMACEUTICALS L",
     "type": "Long",
@@ -32388,7 +32364,7 @@
     "notes": "imported"
   },
   {
-    "id": 1094,
+    "id": 1093,
     "client": "RIMK1248",
     "script": "CHENNAI PETROLEUM CORP LT",
     "type": "Long",
@@ -32418,7 +32394,7 @@
     "notes": "imported"
   },
   {
-    "id": 1095,
+    "id": 1094,
     "client": "RIMK1248",
     "script": "CAPRI GLOBAL CAPITAL",
     "type": "Long",
@@ -32446,7 +32422,7 @@
     "notes": "imported"
   },
   {
-    "id": 1096,
+    "id": 1095,
     "client": "RIMK1248",
     "script": "CAPRI GLOBAL CAPITAL",
     "type": "Long",
@@ -32474,7 +32450,7 @@
     "notes": "imported"
   },
   {
-    "id": 1097,
+    "id": 1096,
     "client": "RIMK1248",
     "script": "FERTILIZERS & CHEMICALS TRAVAN",
     "type": "Long",
@@ -32504,7 +32480,7 @@
     "notes": "imported"
   },
   {
-    "id": 1098,
+    "id": 1097,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32534,7 +32510,7 @@
     "notes": "imported"
   },
   {
-    "id": 1099,
+    "id": 1098,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32564,7 +32540,7 @@
     "notes": "imported"
   },
   {
-    "id": 1100,
+    "id": 1099,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32594,7 +32570,7 @@
     "notes": "imported"
   },
   {
-    "id": 1101,
+    "id": 1100,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32624,7 +32600,7 @@
     "notes": "imported"
   },
   {
-    "id": 1102,
+    "id": 1101,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32654,7 +32630,7 @@
     "notes": "imported"
   },
   {
-    "id": 1103,
+    "id": 1102,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32684,7 +32660,7 @@
     "notes": "imported"
   },
   {
-    "id": 1104,
+    "id": 1103,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32712,7 +32688,7 @@
     "notes": "imported"
   },
   {
-    "id": 1105,
+    "id": 1104,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32740,7 +32716,7 @@
     "notes": "imported"
   },
   {
-    "id": 1106,
+    "id": 1105,
     "client": "RIMK1248",
     "script": "EMMVEE PHOTOVOLTAIC",
     "type": "Long",
@@ -32768,7 +32744,7 @@
     "notes": "imported"
   },
   {
-    "id": 1107,
+    "id": 1106,
     "client": "RIMK1248",
     "script": "TATA MOTORS",
     "type": "Long",
@@ -32798,7 +32774,7 @@
     "notes": "imported"
   },
   {
-    "id": 1108,
+    "id": 1107,
     "client": "RIMK1248",
     "script": "GE VERNOVA T&D INDIA",
     "type": "Long",
@@ -32828,7 +32804,7 @@
     "notes": "imported"
   },
   {
-    "id": 1109,
+    "id": 1108,
     "client": "RIMK1248",
     "script": "GE VERNOVA T&D INDIA",
     "type": "Long",
@@ -32858,7 +32834,7 @@
     "notes": "imported"
   },
   {
-    "id": 1110,
+    "id": 1109,
     "client": "RIMK1248",
     "script": "INDIAN RENEWABLE ENERGY",
     "type": "Long",
@@ -32888,7 +32864,7 @@
     "notes": "imported"
   },
   {
-    "id": 1111,
+    "id": 1110,
     "client": "RIMK1248",
     "script": "ELECON ENG.",
     "type": "Long",
@@ -32918,7 +32894,7 @@
     "notes": "imported"
   },
   {
-    "id": 1112,
+    "id": 1111,
     "client": "RIMK1248",
     "script": "POLY MEDICURE",
     "type": "Long",
@@ -32948,7 +32924,7 @@
     "notes": "imported"
   },
   {
-    "id": 1113,
+    "id": 1112,
     "client": "RIMK1248",
     "script": "ASHOK LEYLAND",
     "type": "Long",
@@ -32978,7 +32954,7 @@
     "notes": "imported"
   },
   {
-    "id": 1114,
+    "id": 1113,
     "client": "RIMK1248",
     "script": "ASHOK LEYLAND",
     "type": "Long",
@@ -33008,7 +32984,7 @@
     "notes": "imported"
   },
   {
-    "id": 1115,
+    "id": 1114,
     "client": "RIMK1248",
     "script": "ASHOK LEYLAND",
     "type": "Long",
@@ -33036,7 +33012,7 @@
     "notes": "imported"
   },
   {
-    "id": 1116,
+    "id": 1115,
     "client": "RIMK1248",
     "script": "AEGIS LOGISTICS",
     "type": "Long",
@@ -33066,7 +33042,7 @@
     "notes": "imported"
   },
   {
-    "id": 1117,
+    "id": 1116,
     "client": "RIMK1248",
     "script": "FRACTAL ANALYTICS",
     "type": "Long",
@@ -33096,7 +33072,7 @@
     "notes": "imported"
   },
   {
-    "id": 1118,
+    "id": 1117,
     "client": "RIMK1248",
     "script": "FRACTAL ANALYTICS",
     "type": "Long",
@@ -33126,7 +33102,7 @@
     "notes": "imported"
   },
   {
-    "id": 1119,
+    "id": 1118,
     "client": "RIMK1248",
     "script": "CANARA ROBECO AMC",
     "type": "Long",
@@ -33156,7 +33132,7 @@
     "notes": "imported"
   },
   {
-    "id": 1120,
+    "id": 1119,
     "client": "RIMK1248",
     "script": "CANARA ROBECO AMC",
     "type": "Long",
@@ -33184,7 +33160,7 @@
     "notes": "imported"
   },
   {
-    "id": 1121,
+    "id": 1120,
     "client": "RIMK1248",
     "script": "KALPATARU PROJECTS",
     "type": "Long",
@@ -33212,7 +33188,7 @@
     "notes": "imported"
   },
   {
-    "id": 1122,
+    "id": 1121,
     "client": "RIMK1248",
     "script": "FINOLEX CABLES",
     "type": "Long",
@@ -33240,7 +33216,7 @@
     "notes": "imported"
   },
   {
-    "id": 1123,
+    "id": 1122,
     "client": "RIMK1248",
     "script": "ITI",
     "type": "Long",
@@ -33270,7 +33246,7 @@
     "notes": "imported"
   },
   {
-    "id": 1124,
+    "id": 1123,
     "client": "RIMK1248",
     "script": "ITI",
     "type": "Long",
@@ -33298,7 +33274,7 @@
     "notes": "imported"
   },
   {
-    "id": 1125,
+    "id": 1124,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33328,7 +33304,7 @@
     "notes": "imported"
   },
   {
-    "id": 1126,
+    "id": 1125,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33358,7 +33334,7 @@
     "notes": "imported"
   },
   {
-    "id": 1127,
+    "id": 1126,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33388,7 +33364,7 @@
     "notes": "imported"
   },
   {
-    "id": 1128,
+    "id": 1127,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33418,7 +33394,7 @@
     "notes": "imported"
   },
   {
-    "id": 1129,
+    "id": 1128,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33448,7 +33424,7 @@
     "notes": "imported"
   },
   {
-    "id": 1130,
+    "id": 1129,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33476,7 +33452,7 @@
     "notes": "imported"
   },
   {
-    "id": 1131,
+    "id": 1130,
     "client": "RIMK1248",
     "script": "ZEN TECHNOLOGIES",
     "type": "Long",
@@ -33504,7 +33480,7 @@
     "notes": "imported"
   },
   {
-    "id": 1132,
+    "id": 1131,
     "client": "RIMK1248",
     "script": "BHEL",
     "type": "Long",
@@ -33534,7 +33510,7 @@
     "notes": "imported"
   },
   {
-    "id": 1133,
+    "id": 1132,
     "client": "RIMK1248",
     "script": "BHEL",
     "type": "Long",
@@ -33564,7 +33540,7 @@
     "notes": "imported"
   },
   {
-    "id": 1134,
+    "id": 1133,
     "client": "RIMK1248",
     "script": "SUMITOMO CHEM INDIA",
     "type": "Long",
@@ -33594,7 +33570,7 @@
     "notes": "imported"
   },
   {
-    "id": 1135,
+    "id": 1134,
     "client": "RIMK1248",
     "script": "SUMITOMO CHEM INDIA",
     "type": "Long",
@@ -33624,7 +33600,7 @@
     "notes": "imported"
   },
   {
-    "id": 1136,
+    "id": 1135,
     "client": "RIMK1248",
     "script": "PERSISTENT SYSTEMS",
     "type": "Long",
@@ -33654,7 +33630,7 @@
     "notes": "imported"
   },
   {
-    "id": 1137,
+    "id": 1136,
     "client": "RIMK1248",
     "script": "PERSISTENT SYSTEMS",
     "type": "Long",
@@ -33684,7 +33660,7 @@
     "notes": "imported"
   },
   {
-    "id": 1138,
+    "id": 1137,
     "client": "RIMK1248",
     "script": "BHARAT ELECTRONICS",
     "type": "Long",
@@ -33714,7 +33690,7 @@
     "notes": "imported"
   },
   {
-    "id": 1139,
+    "id": 1138,
     "client": "RIMK1248",
     "script": "BHARAT ELECTRONICS",
     "type": "Long",
@@ -33744,7 +33720,7 @@
     "notes": "imported"
   },
   {
-    "id": 1140,
+    "id": 1139,
     "client": "RIMK1248",
     "script": "DEEPAK NITRITE",
     "type": "Long",
@@ -33774,7 +33750,7 @@
     "notes": "imported"
   },
   {
-    "id": 1141,
+    "id": 1140,
     "client": "RIMK1248",
     "script": "CARTRADE TECH",
     "type": "Long",
@@ -33804,7 +33780,7 @@
     "notes": "imported"
   },
   {
-    "id": 1142,
+    "id": 1141,
     "client": "RIMK1248",
     "script": "CARTRADE TECH",
     "type": "Long",
@@ -33834,7 +33810,7 @@
     "notes": "imported"
   },
   {
-    "id": 1143,
+    "id": 1142,
     "client": "RIMK1248",
     "script": "CARTRADE TECH",
     "type": "Long",
@@ -33864,7 +33840,7 @@
     "notes": "imported"
   },
   {
-    "id": 1144,
+    "id": 1143,
     "client": "RIMK1248",
     "script": "CARTRADE TECH",
     "type": "Long",
@@ -33894,7 +33870,7 @@
     "notes": "imported"
   },
   {
-    "id": 1145,
+    "id": 1144,
     "client": "RIMK1248",
     "script": "HBL ENGINEERING",
     "type": "Long",
@@ -33924,7 +33900,7 @@
     "notes": "imported"
   },
   {
-    "id": 1146,
+    "id": 1145,
     "client": "RIMK1248",
     "script": "GALLANTT ISPAT",
     "type": "Long",
@@ -33954,7 +33930,7 @@
     "notes": "imported"
   },
   {
-    "id": 1147,
+    "id": 1146,
     "client": "RIMK1248",
     "script": "GALLANTT ISPAT",
     "type": "Long",
@@ -33984,7 +33960,7 @@
     "notes": "imported"
   },
   {
-    "id": 1148,
+    "id": 1147,
     "client": "RIMK1248",
     "script": "GALLANTT ISPAT",
     "type": "Long",
@@ -34014,7 +33990,7 @@
     "notes": "imported"
   },
   {
-    "id": 1149,
+    "id": 1148,
     "client": "RIMK1248",
     "script": "GALLANTT ISPAT",
     "type": "Long",
@@ -34044,7 +34020,7 @@
     "notes": "imported"
   },
   {
-    "id": 1150,
+    "id": 1149,
     "client": "RIMK1248",
     "script": "CUMMINS INDIA",
     "type": "Long",
@@ -34074,7 +34050,7 @@
     "notes": "imported"
   },
   {
-    "id": 1151,
+    "id": 1150,
     "client": "RIMK1248",
     "script": "NIPPON LIFE AMC",
     "type": "Long",
@@ -34104,7 +34080,7 @@
     "notes": "imported"
   },
   {
-    "id": 1152,
+    "id": 1151,
     "client": "RIMK1248",
     "script": "RAYMOND",
     "type": "Long",
@@ -34132,7 +34108,7 @@
     "notes": "imported"
   },
   {
-    "id": 1153,
+    "id": 1152,
     "client": "RIMK1248",
     "script": "RAYMOND",
     "type": "Long",
@@ -34160,7 +34136,7 @@
     "notes": "imported"
   },
   {
-    "id": 1154,
+    "id": 1153,
     "client": "RIMK1248",
     "script": "NATIONAL SECURITIES DEPOSITORY",
     "type": "Long",
@@ -34190,7 +34166,7 @@
     "notes": "imported"
   },
   {
-    "id": 1155,
+    "id": 1154,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34220,7 +34196,7 @@
     "notes": "imported"
   },
   {
-    "id": 1156,
+    "id": 1155,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34250,7 +34226,7 @@
     "notes": "imported"
   },
   {
-    "id": 1157,
+    "id": 1156,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34280,7 +34256,7 @@
     "notes": "imported"
   },
   {
-    "id": 1158,
+    "id": 1157,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34310,7 +34286,7 @@
     "notes": "imported"
   },
   {
-    "id": 1159,
+    "id": 1158,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34340,7 +34316,7 @@
     "notes": "imported"
   },
   {
-    "id": 1160,
+    "id": 1159,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34370,7 +34346,7 @@
     "notes": "imported"
   },
   {
-    "id": 1161,
+    "id": 1160,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34400,7 +34376,7 @@
     "notes": "imported"
   },
   {
-    "id": 1162,
+    "id": 1161,
     "client": "RIMK1248",
     "script": "EXIDE INDUSTRIES",
     "type": "Long",
@@ -34430,7 +34406,7 @@
     "notes": "imported"
   },
   {
-    "id": 1163,
+    "id": 1162,
     "client": "RIMK1248",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
@@ -34460,7 +34436,7 @@
     "notes": "imported"
   },
   {
-    "id": 1164,
+    "id": 1163,
     "client": "RIMK1248",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
@@ -34490,7 +34466,7 @@
     "notes": "imported"
   },
   {
-    "id": 1165,
+    "id": 1164,
     "client": "RIMK1248",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
@@ -34518,7 +34494,7 @@
     "notes": "imported"
   },
   {
-    "id": 1166,
+    "id": 1165,
     "client": "RIMK1248",
     "script": "LUPIN",
     "type": "Long",
@@ -34548,7 +34524,7 @@
     "notes": "imported"
   },
   {
-    "id": 1167,
+    "id": 1166,
     "client": "RIMK1248",
     "script": "LUPIN",
     "type": "Long",
@@ -34578,7 +34554,7 @@
     "notes": "imported"
   },
   {
-    "id": 1168,
+    "id": 1167,
     "client": "RIMK1248",
     "script": "CONCORD BIOTECH",
     "type": "Long",
@@ -34608,7 +34584,7 @@
     "notes": "imported"
   },
   {
-    "id": 1169,
+    "id": 1168,
     "client": "RIMK1248",
     "script": "MOTILAL OSWAL FIN",
     "type": "Long",
@@ -34638,7 +34614,7 @@
     "notes": "imported"
   },
   {
-    "id": 1170,
+    "id": 1169,
     "client": "RIMK1248",
     "script": "SOLAR INDUSTRIES (I)",
     "type": "Long",
@@ -34668,7 +34644,7 @@
     "notes": "imported"
   },
   {
-    "id": 1171,
+    "id": 1170,
     "client": "RIMK1248",
     "script": "SOLAR INDUSTRIES (I)",
     "type": "Long",
@@ -34698,7 +34674,7 @@
     "notes": "imported"
   },
   {
-    "id": 1172,
+    "id": 1171,
     "client": "RIMK1248",
     "script": "SOLAR INDUSTRIES (I)",
     "type": "Long",
@@ -34726,7 +34702,7 @@
     "notes": "imported"
   },
   {
-    "id": 1173,
+    "id": 1172,
     "client": "RIMK1248",
     "script": "SOLAR INDUSTRIES (I)",
     "type": "Long",
@@ -34754,7 +34730,7 @@
     "notes": "imported"
   },
   {
-    "id": 1174,
+    "id": 1173,
     "client": "RIMK1248",
     "script": "ICICI PRUDENTIAL AMC",
     "type": "Long",
@@ -34784,7 +34760,7 @@
     "notes": "imported"
   },
   {
-    "id": 1175,
+    "id": 1174,
     "client": "RIMK1248",
     "script": "ICICI PRUDENTIAL AMC",
     "type": "Long",
@@ -34814,7 +34790,7 @@
     "notes": "imported"
   },
   {
-    "id": 1176,
+    "id": 1175,
     "client": "RIMK1248",
     "script": "ICICI PRUDENTIAL AMC",
     "type": "Long",
@@ -34844,7 +34820,7 @@
     "notes": "imported"
   },
   {
-    "id": 1177,
+    "id": 1176,
     "client": "RIMK1248",
     "script": "DIVI S LABORATORIES",
     "type": "Long",
@@ -34874,7 +34850,7 @@
     "notes": "imported"
   },
   {
-    "id": 1178,
+    "id": 1177,
     "client": "RIMK1248",
     "script": "ADANI GREEN ENERGY",
     "type": "Long",
@@ -34904,7 +34880,7 @@
     "notes": "imported"
   },
   {
-    "id": 1179,
+    "id": 1178,
     "client": "RIMK1248",
     "script": "BIOCON",
     "type": "Long",
@@ -34932,7 +34908,7 @@
     "notes": "imported"
   },
   {
-    "id": 1180,
+    "id": 1179,
     "client": "RIMK1248",
     "script": "WAAREE ENERGIES",
     "type": "Long",
@@ -34960,7 +34936,7 @@
     "notes": "imported"
   },
   {
-    "id": 1181,
+    "id": 1180,
     "client": "RIMK1248",
     "script": "FSN E COMMERCE VENTURES",
     "type": "Long",
@@ -34990,7 +34966,7 @@
     "notes": "imported"
   },
   {
-    "id": 1182,
+    "id": 1181,
     "client": "RIMK1248",
     "script": "TD POWER SYSTEMS",
     "type": "Long",
@@ -35020,7 +34996,7 @@
     "notes": "imported"
   },
   {
-    "id": 1183,
+    "id": 1182,
     "client": "RIMK1248",
     "script": "TD POWER SYSTEMS",
     "type": "Long",
@@ -35050,7 +35026,7 @@
     "notes": "imported"
   },
   {
-    "id": 1184,
+    "id": 1183,
     "client": "RIMK1248",
     "script": "TD POWER SYSTEMS",
     "type": "Long",
@@ -35080,7 +35056,7 @@
     "notes": "imported"
   },
   {
-    "id": 1185,
+    "id": 1184,
     "client": "RIMK1248",
     "script": "TD POWER SYSTEMS",
     "type": "Long",
@@ -35110,7 +35086,7 @@
     "notes": "imported"
   },
   {
-    "id": 1186,
+    "id": 1185,
     "client": "RIMK1248",
     "script": "SUN TV NETWORK",
     "type": "Long",
@@ -35140,7 +35116,7 @@
     "notes": "imported"
   },
   {
-    "id": 1187,
+    "id": 1186,
     "client": "RIMK1248",
     "script": "SUN TV NETWORK",
     "type": "Long",
@@ -35170,7 +35146,7 @@
     "notes": "imported"
   },
   {
-    "id": 1188,
+    "id": 1187,
     "client": "RIMK1248",
     "script": "FORCE MOTORS",
     "type": "Long",
@@ -35200,7 +35176,7 @@
     "notes": "imported"
   },
   {
-    "id": 1189,
+    "id": 1188,
     "client": "RIMK1248",
     "script": "FORCE MOTORS",
     "type": "Long",
@@ -35230,7 +35206,7 @@
     "notes": "imported"
   },
   {
-    "id": 1190,
+    "id": 1189,
     "client": "RIMK1248",
     "script": "POLYCAB INDIA",
     "type": "Long",
@@ -35258,7 +35234,7 @@
     "notes": "imported"
   },
   {
-    "id": 1191,
+    "id": 1190,
     "client": "RIMK1248",
     "script": "POLYCAB INDIA",
     "type": "Long",
@@ -35286,7 +35262,7 @@
     "notes": "imported"
   },
   {
-    "id": 1192,
+    "id": 1191,
     "client": "RIMK1248",
     "script": "PG ELECTROPLAST",
     "type": "Long",
@@ -35316,7 +35292,7 @@
     "notes": "imported"
   },
   {
-    "id": 1193,
+    "id": 1192,
     "client": "RIMK1248",
     "script": "BERGER PAINTS (I)",
     "type": "Long",
@@ -35346,7 +35322,7 @@
     "notes": "imported"
   },
   {
-    "id": 1194,
+    "id": 1193,
     "client": "RIMK1248",
     "script": "TCS",
     "type": "Long",
@@ -35374,7 +35350,7 @@
     "notes": "imported"
   },
   {
-    "id": 1195,
+    "id": 1194,
     "client": "RIMK1248",
     "script": "THE NEW INDIA ASSU",
     "type": "Long",
@@ -35389,7 +35365,7 @@
     "buy_brokerage": 23.38,
     "buy_stt": 0.0,
     "buy_gst": 4.47,
-    "buy_stamp": 1.4,
+    "buy_stamp": 1.41,
     "buy_txn": 1.44,
     "buy_other": 0.04,
     "sell_brokerage": 23.65,
@@ -35399,12 +35375,12 @@
     "sell_txn": 1.45,
     "sell_other": 0.05,
     "gross_pnl": 535.0,
-    "net_pnl": 462.79,
+    "net_pnl": 462.78,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 1196,
+    "id": 1195,
     "client": "RIMK1248",
     "script": "THE NEW INDIA ASSU",
     "type": "Long",
@@ -35419,7 +35395,7 @@
     "buy_brokerage": 46.75,
     "buy_stt": 0.0,
     "buy_gst": 8.95,
-    "buy_stamp": 2.8,
+    "buy_stamp": 2.81,
     "buy_txn": 2.87,
     "buy_other": 0.09,
     "sell_brokerage": 24.02,
@@ -35429,12 +35405,12 @@
     "sell_txn": 1.48,
     "sell_other": 0.05,
     "gross_pnl": 1315.0,
-    "net_pnl": 1211.59,
+    "net_pnl": 1211.58,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 1197,
+    "id": 1196,
     "client": "RIMK1248",
     "script": "CAPLIN POINT LAB",
     "type": "Long",
@@ -35464,7 +35440,7 @@
     "notes": "imported"
   },
   {
-    "id": 1198,
+    "id": 1197,
     "client": "RIMK1248",
     "script": "CAPLIN POINT LAB",
     "type": "Long",
@@ -35494,7 +35470,7 @@
     "notes": "imported"
   },
   {
-    "id": 1199,
+    "id": 1198,
     "client": "RIMK1248",
     "script": "CANARA BANK",
     "type": "Long",
@@ -35524,7 +35500,7 @@
     "notes": "imported"
   },
   {
-    "id": 1200,
+    "id": 1199,
     "client": "RIMK1248",
     "script": "CANARA BANK",
     "type": "Long",
@@ -35554,7 +35530,7 @@
     "notes": "imported"
   },
   {
-    "id": 1201,
+    "id": 1200,
     "client": "RIMK1248",
     "script": "CITY UNION BANK",
     "type": "Long",
@@ -35567,7 +35543,7 @@
     "sell_price": 228.45,
     "sell_net_rate": 227.81,
     "buy_brokerage": 147.78,
-    "buy_stt": 98.5,
+    "buy_stt": 98.51,
     "buy_gst": 27.16,
     "buy_stamp": 14.78,
     "buy_txn": 3.02,
@@ -35579,12 +35555,12 @@
     "sell_txn": 3.86,
     "sell_other": 0.1,
     "gross_pnl": 4297.5,
-    "net_pnl": 3716.71,
+    "net_pnl": 3716.7,
     "product": "DELIVERY",
     "notes": "imported"
   },
   {
-    "id": 1202,
+    "id": 1201,
     "client": "RIMK1248",
     "script": "CITY UNION BANK",
     "type": "Long",
@@ -35614,7 +35590,7 @@
     "notes": "imported"
   },
   {
-    "id": 1203,
+    "id": 1202,
     "client": "RIMK1248",
     "script": "L&T FINANCE",
     "type": "Long",
@@ -35642,7 +35618,7 @@
     "notes": "imported"
   },
   {
-    "id": 1204,
+    "id": 1203,
     "client": "RIMK1248",
     "script": "L&T FINANCE",
     "type": "Long",
@@ -35670,7 +35646,7 @@
     "notes": "imported"
   },
   {
-    "id": 1205,
+    "id": 1204,
     "client": "RIMK1248",
     "script": "CUPID",
     "type": "Long",
@@ -35700,7 +35676,7 @@
     "notes": "imported"
   },
   {
-    "id": 1206,
+    "id": 1205,
     "client": "RIMK1248",
     "script": "ENGINEERS INDIA",
     "type": "Long",
@@ -35730,7 +35706,7 @@
     "notes": "imported"
   },
   {
-    "id": 1207,
+    "id": 1206,
     "client": "RIMK1248",
     "script": "ENGINEERS INDIA",
     "type": "Long",
@@ -35760,7 +35736,7 @@
     "notes": "imported"
   },
   {
-    "id": 1208,
+    "id": 1207,
     "client": "RIMK1248",
     "script": "ENGINEERS INDIA",
     "type": "Long",
@@ -35788,7 +35764,7 @@
     "notes": "imported"
   },
   {
-    "id": 1209,
+    "id": 1208,
     "client": "RIMK1248",
     "script": "POONAWALLA FINCORP",
     "type": "Long",
@@ -35818,7 +35794,7 @@
     "notes": "imported"
   },
   {
-    "id": 1210,
+    "id": 1209,
     "client": "RIMK1248",
     "script": "POONAWALLA FINCORP",
     "type": "Long",
@@ -35848,7 +35824,7 @@
     "notes": "imported"
   },
   {
-    "id": 1211,
+    "id": 1210,
     "client": "RIMK1248",
     "script": "POONAWALLA FINCORP",
     "type": "Long",
@@ -35878,7 +35854,7 @@
     "notes": "imported"
   },
   {
-    "id": 1212,
+    "id": 1211,
     "client": "RIMK1248",
     "script": "POONAWALLA FINCORP",
     "type": "Long",
@@ -35908,7 +35884,7 @@
     "notes": "imported"
   },
   {
-    "id": 1213,
+    "id": 1212,
     "client": "RIMK1248",
     "script": "POONAWALLA FINCORP",
     "type": "Long",
@@ -35938,7 +35914,7 @@
     "notes": "imported"
   },
   {
-    "id": 1214,
+    "id": 1213,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -35968,7 +35944,7 @@
     "notes": "imported"
   },
   {
-    "id": 1215,
+    "id": 1214,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -35998,7 +35974,7 @@
     "notes": "imported"
   },
   {
-    "id": 1216,
+    "id": 1215,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -36028,7 +36004,7 @@
     "notes": "imported"
   },
   {
-    "id": 1217,
+    "id": 1216,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -36056,7 +36032,7 @@
     "notes": "imported"
   },
   {
-    "id": 1218,
+    "id": 1217,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -36084,7 +36060,7 @@
     "notes": "imported"
   },
   {
-    "id": 1219,
+    "id": 1218,
     "client": "RIMK1248",
     "script": "GABRIEL INDIA",
     "type": "Long",
@@ -36112,7 +36088,7 @@
     "notes": "imported"
   },
   {
-    "id": 1220,
+    "id": 1219,
     "client": "RIMK1248",
     "script": "IIFL FINANCE",
     "type": "Long",
@@ -36142,7 +36118,7 @@
     "notes": "imported"
   },
   {
-    "id": 1221,
+    "id": 1220,
     "client": "RIMK1248",
     "script": "HINDUSTAN COPPER",
     "type": "Long",
@@ -36170,7 +36146,7 @@
     "notes": "imported"
   },
   {
-    "id": 1222,
+    "id": 1221,
     "client": "RIMK1248",
     "script": "HINDUSTAN COPPER",
     "type": "Long",
@@ -36198,7 +36174,7 @@
     "notes": "imported"
   },
   {
-    "id": 1223,
+    "id": 1222,
     "client": "RIMK1248",
     "script": "HINDUSTAN COPPER",
     "type": "Long",
@@ -36226,7 +36202,7 @@
     "notes": "imported"
   },
   {
-    "id": 1224,
+    "id": 1223,
     "client": "RIMK1248",
     "script": "NUVAMA WEALTH MANAGE",
     "type": "Long",
@@ -36256,7 +36232,7 @@
     "notes": "imported"
   },
   {
-    "id": 1225,
+    "id": 1224,
     "client": "RIMK1248",
     "script": "NUVAMA WEALTH MANAGE",
     "type": "Long",
@@ -36286,7 +36262,7 @@
     "notes": "imported"
   },
   {
-    "id": 1226,
+    "id": 1225,
     "client": "RIMK1248",
     "script": "NUVAMA WEALTH MANAGE",
     "type": "Long",
@@ -36314,7 +36290,7 @@
     "notes": "imported"
   },
   {
-    "id": 1227,
+    "id": 1226,
     "client": "RIMK1248",
     "script": "HEG ADVANCED MATERIAL",
     "type": "Long",
@@ -36344,7 +36320,7 @@
     "notes": "imported"
   },
   {
-    "id": 1228,
+    "id": 1227,
     "client": "RIMK1248",
     "script": "HEG ADVANCED MATERIAL",
     "type": "Long",
@@ -36372,7 +36348,7 @@
     "notes": "imported"
   },
   {
-    "id": 1229,
+    "id": 1228,
     "client": "RIMK1248",
     "script": "HEG ADVANCED MATERIAL",
     "type": "Long",
@@ -36400,7 +36376,7 @@
     "notes": "imported"
   },
   {
-    "id": 1230,
+    "id": 1229,
     "client": "RIMK1248",
     "script": "HEG ADVANCED MATERIAL",
     "type": "Long",
@@ -36428,7 +36404,7 @@
     "notes": "imported"
   },
   {
-    "id": 1231,
+    "id": 1230,
     "client": "RIMK1248",
     "script": "HFCL",
     "type": "Long",
@@ -36456,7 +36432,7 @@
     "notes": "imported"
   },
   {
-    "id": 1232,
+    "id": 1231,
     "client": "RIMK1248",
     "script": "ALLIED BLEND N DISTILS L",
     "type": "Long",
@@ -36486,7 +36462,7 @@
     "notes": "imported"
   },
   {
-    "id": 1233,
+    "id": 1232,
     "client": "RIMK1248",
     "script": "ION EXCHANGE (INDIA)",
     "type": "Long",
@@ -36516,7 +36492,7 @@
     "notes": "imported"
   },
   {
-    "id": 1234,
+    "id": 1233,
     "client": "RIMK1248",
     "script": "ION EXCHANGE (INDIA)",
     "type": "Long",
@@ -36546,7 +36522,7 @@
     "notes": "imported"
   },
   {
-    "id": 1235,
+    "id": 1234,
     "client": "RIMK1248",
     "script": "SAI LIFE SCIENCES",
     "type": "Long",
@@ -36574,7 +36550,7 @@
     "notes": "imported"
   },
   {
-    "id": 1236,
+    "id": 1235,
     "client": "RIMK1248",
     "script": "COFORGE",
     "type": "Long",
@@ -36604,7 +36580,7 @@
     "notes": "imported"
   },
   {
-    "id": 1237,
+    "id": 1236,
     "client": "RIMK1248",
     "script": "COFORGE",
     "type": "Long",
@@ -36634,7 +36610,7 @@
     "notes": "imported"
   },
   {
-    "id": 1238,
+    "id": 1237,
     "client": "RIMK1248",
     "script": "COFORGE",
     "type": "Long",
@@ -36664,7 +36640,7 @@
     "notes": "imported"
   },
   {
-    "id": 1239,
+    "id": 1238,
     "client": "RIMK1248",
     "script": "COFORGE",
     "type": "Long",
@@ -36694,7 +36670,7 @@
     "notes": "imported"
   },
   {
-    "id": 1240,
+    "id": 1239,
     "client": "RIMK1248",
     "script": "COFORGE",
     "type": "Long",
@@ -36724,7 +36700,7 @@
     "notes": "imported"
   },
   {
-    "id": 1241,
+    "id": 1240,
     "client": "RIMK1248",
     "script": "JUST DIAL",
     "type": "Long",
@@ -36754,7 +36730,7 @@
     "notes": "imported"
   },
   {
-    "id": 1242,
+    "id": 1241,
     "client": "RIMK1248",
     "script": "JUST DIAL",
     "type": "Long",
@@ -36782,7 +36758,7 @@
     "notes": "imported"
   },
   {
-    "id": 1243,
+    "id": 1242,
     "client": "RIMK1248",
     "script": "PCBL CHEMICAL",
     "type": "Long",
@@ -36812,7 +36788,7 @@
     "notes": "imported"
   },
   {
-    "id": 1244,
+    "id": 1243,
     "client": "RIMK1248",
     "script": "PCBL CHEMICAL",
     "type": "Long",
@@ -36842,7 +36818,7 @@
     "notes": "imported"
   },
   {
-    "id": 1245,
+    "id": 1244,
     "client": "RIMK1248",
     "script": "PCBL CHEMICAL",
     "type": "Long",
@@ -36872,7 +36848,7 @@
     "notes": "imported"
   },
   {
-    "id": 1246,
+    "id": 1245,
     "client": "RIMK1248",
     "script": "PCBL CHEMICAL",
     "type": "Long",
@@ -36902,7 +36878,7 @@
     "notes": "imported"
   },
   {
-    "id": 1247,
+    "id": 1246,
     "client": "RIMK1248",
     "script": "NEWGEN SOFTWARE",
     "type": "Long",
@@ -36932,7 +36908,7 @@
     "notes": "imported"
   },
   {
-    "id": 1248,
+    "id": 1247,
     "client": "RIMK1248",
     "script": "NEWGEN SOFTWARE",
     "type": "Long",
@@ -36960,7 +36936,7 @@
     "notes": "imported"
   },
   {
-    "id": 1249,
+    "id": 1248,
     "client": "RIMK1248",
     "script": "NEWGEN SOFTWARE",
     "type": "Long",
@@ -36988,7 +36964,7 @@
     "notes": "imported"
   },
   {
-    "id": 1250,
+    "id": 1249,
     "client": "RIMK1248",
     "script": "SBI FUNDS MANAGEMENT",
     "type": "Long",
@@ -37018,7 +36994,7 @@
     "notes": "imported"
   },
   {
-    "id": 1251,
+    "id": 1250,
     "client": "RIMK1248",
     "script": "SBI FUNDS MANAGEMENT",
     "type": "Long",
@@ -37046,7 +37022,7 @@
     "notes": "imported"
   },
   {
-    "id": 1252,
+    "id": 1251,
     "client": "RIMK1248",
     "script": "SBI FUNDS MANAGEMENT",
     "type": "Long",
@@ -37074,7 +37050,7 @@
     "notes": "imported"
   },
   {
-    "id": 1253,
+    "id": 1252,
     "client": "RIMK1248",
     "script": "SBI FUNDS MANAGEMENT",
     "type": "Long",
@@ -37102,7 +37078,7 @@
     "notes": "imported"
   },
   {
-    "id": 1254,
+    "id": 1253,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37132,7 +37108,7 @@
     "notes": "imported"
   },
   {
-    "id": 1255,
+    "id": 1254,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37162,7 +37138,7 @@
     "notes": "imported"
   },
   {
-    "id": 1256,
+    "id": 1255,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37192,7 +37168,7 @@
     "notes": "imported"
   },
   {
-    "id": 1257,
+    "id": 1256,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37222,7 +37198,7 @@
     "notes": "imported"
   },
   {
-    "id": 1258,
+    "id": 1257,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37252,7 +37228,7 @@
     "notes": "imported"
   },
   {
-    "id": 1259,
+    "id": 1258,
     "client": "RIMK1248",
     "script": "CLEAN MAX ENVIRO EN SOL L",
     "type": "Long",
@@ -37280,7 +37256,7 @@
     "notes": "imported"
   },
   {
-    "id": 1260,
+    "id": 1259,
     "client": "RIMK1248",
     "script": "BLACK BOX",
     "type": "Long",
@@ -37310,7 +37286,7 @@
     "notes": "imported"
   },
   {
-    "id": 1261,
+    "id": 1260,
     "client": "RIMK1248",
     "script": "THE SOUTH INDIAN BANK",
     "type": "Long",
@@ -37340,7 +37316,7 @@
     "notes": "imported"
   },
   {
-    "id": 1262,
+    "id": 1261,
     "client": "RIMK1248",
     "script": "CEMINDIA PROJECTS",
     "type": "Long",
@@ -37370,7 +37346,7 @@
     "notes": "imported"
   },
   {
-    "id": 1263,
+    "id": 1262,
     "client": "RIMK1248",
     "script": "CEMINDIA PROJECTS",
     "type": "Long",
@@ -37400,7 +37376,7 @@
     "notes": "imported"
   },
   {
-    "id": 1264,
+    "id": 1263,
     "client": "RIMK1248",
     "script": "CEMINDIA PROJECTS",
     "type": "Long",
@@ -37430,7 +37406,7 @@
     "notes": "imported"
   },
   {
-    "id": 1265,
+    "id": 1264,
     "client": "RIMK1248",
     "script": "CEMINDIA PROJECTS",
     "type": "Long",
@@ -37458,7 +37434,7 @@
     "notes": "imported"
   },
   {
-    "id": 1266,
+    "id": 1265,
     "client": "RIMK1248",
     "script": "CEMINDIA PROJECTS",
     "type": "Long",
@@ -37486,7 +37462,7 @@
     "notes": "imported"
   },
   {
-    "id": 1267,
+    "id": 1266,
     "client": "RIMK1248",
     "script": "AWL AGRI BUSINESS",
     "type": "Long",
@@ -37516,7 +37492,7 @@
     "notes": "imported"
   },
   {
-    "id": 1268,
+    "id": 1267,
     "client": "RIMK1248",
     "script": "APL APOLLO TUBES",
     "type": "Long",
@@ -37546,7 +37522,7 @@
     "notes": "imported"
   },
   {
-    "id": 1269,
+    "id": 1268,
     "client": "RIMK1248",
     "script": "APL APOLLO TUBES",
     "type": "Long",
@@ -37574,7 +37550,7 @@
     "notes": "imported"
   },
   {
-    "id": 1270,
+    "id": 1269,
     "client": "RIMK1248",
     "script": "RATNAMANI MET & TUB",
     "type": "Long",
@@ -37604,7 +37580,7 @@
     "notes": "imported"
   },
   {
-    "id": 1271,
+    "id": 1270,
     "client": "RIMK1248",
     "script": "NATIONAL STOCK EXCHANGE OF IND",
     "type": "Long",
@@ -37634,7 +37610,7 @@
     "notes": "imported"
   },
   {
-    "id": 1272,
+    "id": 1271,
     "client": "RIMK1248",
     "script": "NATIONAL STOCK EXCHANGE OF IND",
     "type": "Long",
@@ -37664,7 +37640,7 @@
     "notes": "imported"
   },
   {
-    "id": 1273,
+    "id": 1272,
     "client": "RIMK1248",
     "script": "KIRLOSKAR BROTHERS",
     "type": "Long",
@@ -37694,7 +37670,7 @@
     "notes": "imported"
   },
   {
-    "id": 1274,
+    "id": 1273,
     "client": "RIMK1248",
     "script": "KIRLOSKAR BROTHERS",
     "type": "Long",
@@ -37722,7 +37698,7 @@
     "notes": "imported"
   },
   {
-    "id": 1275,
+    "id": 1274,
     "client": "RIMK1248",
     "script": "KIRLOSKAR BROTHERS",
     "type": "Long",
@@ -37750,7 +37726,7 @@
     "notes": "imported"
   },
   {
-    "id": 1276,
+    "id": 1275,
     "client": "RIMK1248",
     "script": "ANGEL ONE",
     "type": "Long",
@@ -37780,7 +37756,7 @@
     "notes": "imported"
   },
   {
-    "id": 1277,
+    "id": 1276,
     "client": "RIMK1248",
     "script": "CENTRAL DEPO SER (I)",
     "type": "Long",
@@ -37810,7 +37786,7 @@
     "notes": "imported"
   },
   {
-    "id": 1278,
+    "id": 1277,
     "client": "RIMK1248",
     "script": "CENTRAL DEPO SER (I)",
     "type": "Long",
@@ -37840,7 +37816,7 @@
     "notes": "imported"
   },
   {
-    "id": 1279,
+    "id": 1278,
     "client": "RIMK1248",
     "script": "CENTRAL DEPO SER (I)",
     "type": "Long",
@@ -37870,7 +37846,7 @@
     "notes": "imported"
   },
   {
-    "id": 1280,
+    "id": 1279,
     "client": "RIMK1248",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -37900,7 +37876,7 @@
     "notes": "imported"
   },
   {
-    "id": 1281,
+    "id": 1280,
     "client": "RIMK1248",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -37930,7 +37906,7 @@
     "notes": "imported"
   },
   {
-    "id": 1282,
+    "id": 1281,
     "client": "RIMK1248",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -37960,7 +37936,7 @@
     "notes": "imported"
   },
   {
-    "id": 1283,
+    "id": 1282,
     "client": "RIMK1248",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -37990,7 +37966,7 @@
     "notes": "imported"
   },
   {
-    "id": 1284,
+    "id": 1283,
     "client": "RIMK1248",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -38020,7 +37996,7 @@
     "notes": "imported"
   },
   {
-    "id": 1285,
+    "id": 1284,
     "client": "RIMK1248",
     "script": "MARKSANS PHARMA",
     "type": "Long",
@@ -38050,7 +38026,7 @@
     "notes": "imported"
   },
   {
-    "id": 1286,
+    "id": 1285,
     "client": "RIMK1248",
     "script": "JIO FIN SERVICES",
     "type": "Long",
@@ -38080,7 +38056,7 @@
     "notes": "imported"
   },
   {
-    "id": 1287,
+    "id": 1286,
     "client": "RIMK1248",
     "script": "JIO FIN SERVICES",
     "type": "Long",
@@ -38110,7 +38086,7 @@
     "notes": "imported"
   },
   {
-    "id": 1288,
+    "id": 1287,
     "client": "RIMK1248",
     "script": "JIO FIN SERVICES",
     "type": "Long",
@@ -38140,7 +38116,7 @@
     "notes": "imported"
   },
   {
-    "id": 1289,
+    "id": 1288,
     "client": "RIMK1248",
     "script": "ETERNAL",
     "type": "Long",
@@ -38170,7 +38146,7 @@
     "notes": "imported"
   },
   {
-    "id": 1290,
+    "id": 1289,
     "client": "RIMK1248",
     "script": "AARTI INDUSTRIES",
     "type": "Long",
@@ -38200,7 +38176,7 @@
     "notes": "imported"
   },
   {
-    "id": 1291,
+    "id": 1290,
     "client": "RIMK1248",
     "script": "AARTI INDUSTRIES",
     "type": "Long",
@@ -38228,7 +38204,7 @@
     "notes": "imported"
   },
   {
-    "id": 1292,
+    "id": 1291,
     "client": "RIMK1248",
     "script": "MAHINDRA & MAHINDRA FINANCIAL",
     "type": "Long",
@@ -38258,7 +38234,7 @@
     "notes": "imported"
   },
   {
-    "id": 1293,
+    "id": 1292,
     "client": "RIMK1248",
     "script": "SAMVARDHANA MOTHERSON",
     "type": "Long",
@@ -38288,7 +38264,7 @@
     "notes": "imported"
   },
   {
-    "id": 1294,
+    "id": 1293,
     "client": "RIMK1248",
     "script": "R R KABEL",
     "type": "Long",
@@ -38318,7 +38294,7 @@
     "notes": "imported"
   },
   {
-    "id": 1295,
+    "id": 1294,
     "client": "RIMK1248",
     "script": "R R KABEL",
     "type": "Long",
@@ -38348,7 +38324,7 @@
     "notes": "imported"
   },
   {
-    "id": 1296,
+    "id": 1295,
     "client": "RIMK1248",
     "script": "R R KABEL",
     "type": "Long",
@@ -38378,7 +38354,7 @@
     "notes": "imported"
   },
   {
-    "id": 1297,
+    "id": 1296,
     "client": "RIMK1248",
     "script": "R R KABEL",
     "type": "Long",
@@ -38406,7 +38382,7 @@
     "notes": "imported"
   },
   {
-    "id": 1298,
+    "id": 1297,
     "client": "RIMK1248",
     "script": "NEULAND LAB",
     "type": "Long",
@@ -38436,7 +38412,7 @@
     "notes": "imported"
   },
   {
-    "id": 1299,
+    "id": 1298,
     "client": "RIMK1248",
     "script": "ADITYA INFOTECH",
     "type": "Long",
@@ -38464,7 +38440,7 @@
     "notes": "imported"
   },
   {
-    "id": 1300,
+    "id": 1299,
     "client": "RIMK1248",
     "script": "BIRLASOFT",
     "type": "Long",
@@ -38494,7 +38470,7 @@
     "notes": "imported"
   },
   {
-    "id": 1301,
+    "id": 1300,
     "client": "RIMK1248",
     "script": "MINDA CORPORATION",
     "type": "Long",
@@ -38524,7 +38500,7 @@
     "notes": "imported"
   },
   {
-    "id": 1302,
+    "id": 1301,
     "client": "RIMK1248",
     "script": "MINDA CORPORATION",
     "type": "Long",
@@ -38554,7 +38530,7 @@
     "notes": "imported"
   },
   {
-    "id": 1303,
+    "id": 1302,
     "client": "RIMK1248",
     "script": "NHPC",
     "type": "Long",
@@ -38584,7 +38560,7 @@
     "notes": "imported"
   },
   {
-    "id": 1304,
+    "id": 1303,
     "client": "RIMK1248",
     "script": "NHPC",
     "type": "Long",
@@ -38614,7 +38590,7 @@
     "notes": "imported"
   },
   {
-    "id": 1305,
+    "id": 1304,
     "client": "RIMK1248",
     "script": "TRENT",
     "type": "Long",
@@ -38644,7 +38620,7 @@
     "notes": "imported"
   },
   {
-    "id": 1306,
+    "id": 1305,
     "client": "RIMK1248",
     "script": "TRENT",
     "type": "Long",
@@ -38674,7 +38650,7 @@
     "notes": "imported"
   },
   {
-    "id": 1307,
+    "id": 1306,
     "client": "RIMK1248",
     "script": "TRENT",
     "type": "Long",
@@ -38704,7 +38680,7 @@
     "notes": "imported"
   },
   {
-    "id": 1308,
+    "id": 1307,
     "client": "RIMK1248",
     "script": "AVANTI FEEDS",
     "type": "Long",
@@ -38734,7 +38710,7 @@
     "notes": "imported"
   },
   {
-    "id": 1309,
+    "id": 1308,
     "client": "RIMK1248",
     "script": "AVANTI FEEDS",
     "type": "Long",
@@ -38762,7 +38738,7 @@
     "notes": "imported"
   },
   {
-    "id": 1310,
+    "id": 1309,
     "client": "RIMK1248",
     "script": "AVANTI FEEDS",
     "type": "Long",
@@ -38790,7 +38766,7 @@
     "notes": "imported"
   },
   {
-    "id": 1311,
+    "id": 1310,
     "client": "RIMK1248",
     "script": "AMARA RAJA ENERGY MOB",
     "type": "Long",
@@ -38820,7 +38796,7 @@
     "notes": "imported"
   },
   {
-    "id": 1312,
+    "id": 1311,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -38850,7 +38826,7 @@
     "notes": "imported"
   },
   {
-    "id": 1313,
+    "id": 1312,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -38880,7 +38856,7 @@
     "notes": "imported"
   },
   {
-    "id": 1314,
+    "id": 1313,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -38910,7 +38886,7 @@
     "notes": "imported"
   },
   {
-    "id": 1315,
+    "id": 1314,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -38940,7 +38916,7 @@
     "notes": "imported"
   },
   {
-    "id": 1316,
+    "id": 1315,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -38970,7 +38946,7 @@
     "notes": "imported"
   },
   {
-    "id": 1317,
+    "id": 1316,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -39000,7 +38976,7 @@
     "notes": "imported"
   },
   {
-    "id": 1318,
+    "id": 1317,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -39030,7 +39006,7 @@
     "notes": "imported"
   },
   {
-    "id": 1319,
+    "id": 1318,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -39060,7 +39036,7 @@
     "notes": "imported"
   },
   {
-    "id": 1320,
+    "id": 1319,
     "client": "RIMK1248",
     "script": "REDINGTON",
     "type": "Long",
@@ -39088,7 +39064,7 @@
     "notes": "imported"
   },
   {
-    "id": 1321,
+    "id": 1320,
     "client": "RIMK1248",
     "script": "KAYNES TECHNOLOGY IND",
     "type": "Long",
@@ -39118,7 +39094,7 @@
     "notes": "imported"
   },
   {
-    "id": 1322,
+    "id": 1321,
     "client": "RIMK1248",
     "script": "KAYNES TECHNOLOGY IND",
     "type": "Long",
@@ -39148,7 +39124,7 @@
     "notes": "imported"
   },
   {
-    "id": 1323,
+    "id": 1322,
     "client": "RIMK1248",
     "script": "JBM AUTO",
     "type": "Long",
@@ -39178,7 +39154,7 @@
     "notes": "imported"
   },
   {
-    "id": 1324,
+    "id": 1323,
     "client": "RIMK1248",
     "script": "ANUPAM RASAYAN INDIA",
     "type": "Long",
@@ -39208,7 +39184,7 @@
     "notes": "imported"
   },
   {
-    "id": 1325,
+    "id": 1324,
     "client": "RIMK1248",
     "script": "DIXON TECHNOLOGIES",
     "type": "Long",
@@ -39238,7 +39214,7 @@
     "notes": "imported"
   },
   {
-    "id": 1326,
+    "id": 1325,
     "client": "RIMK1248",
     "script": "DIXON TECHNOLOGIES",
     "type": "Long",
@@ -39268,7 +39244,7 @@
     "notes": "imported"
   },
   {
-    "id": 1327,
+    "id": 1326,
     "client": "RIMK1248",
     "script": "DIXON TECHNOLOGIES",
     "type": "Long",
@@ -39298,7 +39274,7 @@
     "notes": "imported"
   },
   {
-    "id": 1328,
+    "id": 1327,
     "client": "RIMK1248",
     "script": "DIXON TECHNOLOGIES",
     "type": "Long",
@@ -39328,7 +39304,7 @@
     "notes": "imported"
   },
   {
-    "id": 1329,
+    "id": 1328,
     "client": "RIMK1248",
     "script": "V2 RETAIL",
     "type": "Long",
@@ -39358,7 +39334,7 @@
     "notes": "imported"
   },
   {
-    "id": 1330,
+    "id": 1329,
     "client": "RIMK1248",
     "script": "V2 RETAIL",
     "type": "Long",
@@ -39388,7 +39364,7 @@
     "notes": "imported"
   },
   {
-    "id": 1331,
+    "id": 1330,
     "client": "RIMK1248",
     "script": "LAURUS LABS",
     "type": "Long",
@@ -39418,7 +39394,7 @@
     "notes": "imported"
   },
   {
-    "id": 1332,
+    "id": 1331,
     "client": "RIMK1248",
     "script": "LAURUS LABS",
     "type": "Long",
@@ -39446,7 +39422,7 @@
     "notes": "imported"
   },
   {
-    "id": 1333,
+    "id": 1332,
     "client": "RIMK1248",
     "script": "LAURUS LABS",
     "type": "Long",
@@ -39474,7 +39450,7 @@
     "notes": "imported"
   },
   {
-    "id": 1334,
+    "id": 1333,
     "client": "RIMK1248",
     "script": "V-GUARD IND",
     "type": "Long",
@@ -39504,7 +39480,7 @@
     "notes": "imported"
   },
   {
-    "id": 1335,
+    "id": 1334,
     "client": "RIMK1248",
     "script": "V-GUARD IND",
     "type": "Long",
@@ -39534,7 +39510,7 @@
     "notes": "imported"
   },
   {
-    "id": 1336,
+    "id": 1335,
     "client": "RIMK1248",
     "script": "V-GUARD IND",
     "type": "Long",
@@ -39564,7 +39540,7 @@
     "notes": "imported"
   },
   {
-    "id": 1337,
+    "id": 1336,
     "client": "RIMK1248",
     "script": "V-GUARD IND",
     "type": "Long",
@@ -39594,7 +39570,7 @@
     "notes": "imported"
   },
   {
-    "id": 1338,
+    "id": 1337,
     "client": "RIMK1248",
     "script": "V-GUARD IND",
     "type": "Long",
@@ -39624,7 +39600,7 @@
     "notes": "imported"
   },
   {
-    "id": 1339,
+    "id": 1338,
     "client": "RIMK1248",
     "script": "GENUS POWER INFRASTRU",
     "type": "Long",
@@ -39652,7 +39628,7 @@
     "notes": "imported"
   },
   {
-    "id": 1340,
+    "id": 1339,
     "client": "RIMK1248",
     "script": "LEMON TREE HOTELS",
     "type": "Long",
@@ -39680,7 +39656,7 @@
     "notes": "imported"
   },
   {
-    "id": 1341,
+    "id": 1340,
     "client": "RIMK1248",
     "script": "SAREGAMA INDIA",
     "type": "Long",
@@ -39710,7 +39686,7 @@
     "notes": "imported"
   },
   {
-    "id": 1342,
+    "id": 1341,
     "client": "RIMK1248",
     "script": "SAREGAMA INDIA",
     "type": "Long",
@@ -39740,7 +39716,7 @@
     "notes": "imported"
   },
   {
-    "id": 1343,
+    "id": 1342,
     "client": "RIMK1248",
     "script": "SAREGAMA INDIA",
     "type": "Long",
@@ -39770,7 +39746,7 @@
     "notes": "imported"
   },
   {
-    "id": 1344,
+    "id": 1343,
     "client": "RIMK1248",
     "script": "SAREGAMA INDIA",
     "type": "Long",
@@ -39800,22 +39776,22 @@
     "notes": "imported"
   },
   {
-    "id": 1345,
+    "id": 1344,
     "client": "RIMK1248",
     "script": "SAREGAMA INDIA",
     "type": "Long",
     "entry_date": "2026-11-05",
     "buy_qty": 50.0,
-    "buy_price": 629.35,
-    "buy_net_rate": 630.33,
+    "buy_price": 629.34,
+    "buy_net_rate": 630.04,
     "exit_date": "2026-11-05",
     "sell_qty": 50.0,
     "sell_price": 636.72,
     "sell_net_rate": 636.16,
-    "buy_brokerage": 37.14,
-    "buy_stt": 21.47,
-    "buy_gst": 6.86,
-    "buy_stamp": 3.51,
+    "buy_brokerage": 34.3,
+    "buy_stt": 18.63,
+    "buy_gst": 6.35,
+    "buy_stamp": 3.17,
     "buy_txn": 0.97,
     "buy_other": 0.03,
     "sell_brokerage": 15.92,
@@ -39824,43 +39800,43 @@
     "sell_stamp": 0.0,
     "sell_txn": 0.98,
     "sell_other": 0.03,
-    "gross_pnl": 368.5,
-    "net_pnl": 270.65,
+    "gross_pnl": 369.0,
+    "net_pnl": 277.68,
+    "product": "MTF",
+    "notes": "imported"
+  },
+  {
+    "id": 1345,
+    "client": "RIMK1248",
+    "script": "SAREGAMA INDIA",
+    "type": "Long",
+    "entry_date": "2026-11-05",
+    "buy_qty": 72.0,
+    "buy_price": 629.34,
+    "buy_net_rate": 630.04,
+    "exit_date": "2026-11-11",
+    "sell_qty": 72.0,
+    "sell_price": 641.63,
+    "sell_net_rate": 639.83,
+    "buy_brokerage": 83.7,
+    "buy_stt": 45.45,
+    "buy_gst": 15.5,
+    "buy_stamp": 7.74,
+    "buy_txn": 2.36,
+    "buy_other": 0.08,
+    "sell_brokerage": 69.3,
+    "sell_stt": 46.2,
+    "sell_gst": 12.74,
+    "sell_stamp": 0.0,
+    "sell_txn": 1.42,
+    "sell_other": 0.04,
+    "gross_pnl": 884.88,
+    "net_pnl": 600.35,
     "product": "MTF",
     "notes": "imported"
   },
   {
     "id": 1346,
-    "client": "RIMK1248",
-    "script": "SAREGAMA INDIA",
-    "type": "Long",
-    "entry_date": "2026-11-05",
-    "buy_qty": 97.0,
-    "buy_price": 629.35,
-    "buy_net_rate": 630.33,
-    "exit_date": "2026-11-11",
-    "sell_qty": 97.0,
-    "sell_price": 641.63,
-    "sell_net_rate": 639.83,
-    "buy_brokerage": 109.19,
-    "buy_stt": 63.12,
-    "buy_gst": 20.18,
-    "buy_stamp": 10.33,
-    "buy_txn": 2.84,
-    "buy_other": 0.09,
-    "sell_brokerage": 93.36,
-    "sell_stt": 62.24,
-    "sell_gst": 17.16,
-    "sell_stamp": 0.0,
-    "sell_txn": 1.91,
-    "sell_other": 0.06,
-    "gross_pnl": 1191.16,
-    "net_pnl": 810.68,
-    "product": "MTF",
-    "notes": "imported"
-  },
-  {
-    "id": 1347,
     "client": "RIMK1248",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -39890,7 +39866,7 @@
     "notes": "imported"
   },
   {
-    "id": 1348,
+    "id": 1347,
     "client": "RIMK1248",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -39918,7 +39894,7 @@
     "notes": "imported"
   },
   {
-    "id": 1349,
+    "id": 1348,
     "client": "RIMK1248",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -39946,7 +39922,7 @@
     "notes": "imported"
   },
   {
-    "id": 1350,
+    "id": 1349,
     "client": "RIMK1248",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -39974,7 +39950,7 @@
     "notes": "imported"
   },
   {
-    "id": 1351,
+    "id": 1350,
     "client": "RIMK1248",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -40002,7 +39978,7 @@
     "notes": "imported"
   },
   {
-    "id": 1352,
+    "id": 1351,
     "client": "RIMK1249",
     "script": "MAX HEALTHCARE INS",
     "type": "Long",
@@ -40032,7 +40008,7 @@
     "notes": "imported"
   },
   {
-    "id": 1353,
+    "id": 1352,
     "client": "RIMK1249",
     "script": "KARUR VYSYA BANK",
     "type": "Long",
@@ -40062,7 +40038,7 @@
     "notes": "imported"
   },
   {
-    "id": 1354,
+    "id": 1353,
     "client": "RIMK1249",
     "script": "KARUR VYSYA BANK",
     "type": "Long",
@@ -40092,7 +40068,7 @@
     "notes": "imported"
   },
   {
-    "id": 1355,
+    "id": 1354,
     "client": "RIMK1249",
     "script": "SUZLON ENERGY",
     "type": "Long",
@@ -40122,7 +40098,7 @@
     "notes": "imported"
   },
   {
-    "id": 1356,
+    "id": 1355,
     "client": "RIMK1249",
     "script": "SUN PHARMACEUTICAL IND L",
     "type": "Long",
@@ -40152,7 +40128,7 @@
     "notes": "imported"
   },
   {
-    "id": 1357,
+    "id": 1356,
     "client": "RIMK1249",
     "script": "GRASIM INDUSTRIES",
     "type": "Long",
@@ -40182,7 +40158,7 @@
     "notes": "imported"
   },
   {
-    "id": 1358,
+    "id": 1357,
     "client": "RIMK1249",
     "script": "WOCKHARDT",
     "type": "Long",
@@ -40197,7 +40173,7 @@
     "buy_brokerage": 184.75,
     "buy_stt": 123.17,
     "buy_gst": 33.96,
-    "buy_stamp": 18.48,
+    "buy_stamp": 18.47,
     "buy_txn": 3.78,
     "buy_other": 0.12,
     "sell_brokerage": 187.88,
@@ -40207,12 +40183,12 @@
     "sell_txn": 4.7,
     "sell_other": 0.12,
     "gross_pnl": 2081.95,
-    "net_pnl": 1365.05,
+    "net_pnl": 1365.06,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 1359,
+    "id": 1358,
     "client": "RIMK1249",
     "script": "MISHRA DHATU NIGAM",
     "type": "Long",
@@ -40242,7 +40218,7 @@
     "notes": "imported"
   },
   {
-    "id": 1360,
+    "id": 1359,
     "client": "RIMK1249",
     "script": "HONASA CONSUMER",
     "type": "Long",
@@ -40272,7 +40248,7 @@
     "notes": "imported"
   },
   {
-    "id": 1361,
+    "id": 1360,
     "client": "RIMK1249",
     "script": "NUVOCO VISTAS CORP",
     "type": "Long",
@@ -40302,7 +40278,7 @@
     "notes": "imported"
   },
   {
-    "id": 1362,
+    "id": 1361,
     "client": "RIMK1249",
     "script": "BSE",
     "type": "Long",
@@ -40332,7 +40308,7 @@
     "notes": "imported"
   },
   {
-    "id": 1363,
+    "id": 1362,
     "client": "RIMK1249",
     "script": "CARBORUNDUM UNIVERSAL",
     "type": "Long",
@@ -40362,7 +40338,7 @@
     "notes": "imported"
   },
   {
-    "id": 1364,
+    "id": 1363,
     "client": "RIMK1249",
     "script": "POLY MEDICURE",
     "type": "Long",
@@ -40392,7 +40368,7 @@
     "notes": "imported"
   },
   {
-    "id": 1365,
+    "id": 1364,
     "client": "RIMK1249",
     "script": "SUMITOMO CHEM INDIA",
     "type": "Long",
@@ -40422,7 +40398,7 @@
     "notes": "imported"
   },
   {
-    "id": 1366,
+    "id": 1365,
     "client": "RIMK1249",
     "script": "TITAN COMPANY",
     "type": "Long",
@@ -40452,7 +40428,7 @@
     "notes": "imported"
   },
   {
-    "id": 1367,
+    "id": 1366,
     "client": "RIMK1249",
     "script": "TITAN COMPANY",
     "type": "Long",
@@ -40482,7 +40458,7 @@
     "notes": "imported"
   },
   {
-    "id": 1368,
+    "id": 1367,
     "client": "RIMK1249",
     "script": "TITAN COMPANY",
     "type": "Long",
@@ -40510,13 +40486,13 @@
     "notes": "imported"
   },
   {
-    "id": 1369,
+    "id": 1368,
     "client": "RIMK1249",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-07-07",
     "buy_qty": 50.0,
-    "buy_price": 787.66,
+    "buy_price": 787.67,
     "buy_net_rate": 790.0,
     "exit_date": "2026-07-21",
     "sell_qty": 50.0,
@@ -40534,19 +40510,19 @@
     "sell_stamp": 0.0,
     "sell_txn": 1.46,
     "sell_other": 0.04,
-    "gross_pnl": -410.0,
-    "net_pnl": -636.08,
+    "gross_pnl": -410.5,
+    "net_pnl": -636.58,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 1370,
+    "id": 1369,
     "client": "RIMK1249",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
     "entry_date": "2026-07-07",
     "buy_qty": 150.0,
-    "buy_price": 787.66,
+    "buy_price": 787.67,
     "buy_net_rate": 790.0,
     "exit_date": "2026-07-21",
     "sell_qty": 150.0,
@@ -40564,13 +40540,13 @@
     "sell_stamp": 0.0,
     "sell_txn": 4.37,
     "sell_other": 0.12,
-    "gross_pnl": -1720.5,
-    "net_pnl": -2514.32,
+    "gross_pnl": -1722.0,
+    "net_pnl": -2515.82,
     "product": "MTF",
     "notes": "imported"
   },
   {
-    "id": 1371,
+    "id": 1370,
     "client": "RIMK1249",
     "script": "CITY UNION BANK",
     "type": "Long",
@@ -40600,7 +40576,7 @@
     "notes": "imported"
   },
   {
-    "id": 1372,
+    "id": 1371,
     "client": "RIMK1249",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -40630,7 +40606,7 @@
     "notes": "imported"
   },
   {
-    "id": 1373,
+    "id": 1372,
     "client": "RIMK1249",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -40660,14 +40636,14 @@
     "notes": "imported"
   },
   {
-    "id": 1374,
+    "id": 1373,
     "client": "RIMK1249",
     "script": "NEWGEN SOFTWARE",
     "type": "Long",
     "entry_date": "2026-06-17",
     "buy_qty": 180.0,
     "buy_price": 497.87,
-    "buy_net_rate": 499.33,
+    "buy_net_rate": 499.34,
     "exit_date": "2026-07-10",
     "sell_qty": 180.0,
     "sell_price": 516.7,
@@ -40690,7 +40666,7 @@
     "notes": "imported"
   },
   {
-    "id": 1375,
+    "id": 1374,
     "client": "RIMK1249",
     "script": "THE SOUTH INDIAN BANK",
     "type": "Long",
@@ -40720,7 +40696,7 @@
     "notes": "imported"
   },
   {
-    "id": 1376,
+    "id": 1375,
     "client": "RIMK1249",
     "script": "ANGEL ONE",
     "type": "Long",
@@ -40750,7 +40726,7 @@
     "notes": "imported"
   },
   {
-    "id": 1377,
+    "id": 1376,
     "client": "RIMK1249",
     "script": "CENTRAL DEPO SER (I)",
     "type": "Long",
@@ -40780,7 +40756,7 @@
     "notes": "imported"
   },
   {
-    "id": 1378,
+    "id": 1377,
     "client": "RIMK1249",
     "script": "MULTI COMMODITY EXCHANGE",
     "type": "Long",
@@ -40810,7 +40786,7 @@
     "notes": "imported"
   },
   {
-    "id": 1379,
+    "id": 1378,
     "client": "RIMK1252",
     "script": "WOCKHARDT",
     "type": "Long",
@@ -40840,7 +40816,7 @@
     "notes": "imported"
   },
   {
-    "id": 1380,
+    "id": 1379,
     "client": "RIMK1252",
     "script": "EQUITAS SMALL FIN BANK",
     "type": "Long",
@@ -40870,7 +40846,7 @@
     "notes": "imported"
   },
   {
-    "id": 1381,
+    "id": 1380,
     "client": "RIMK1252",
     "script": "PIRAMAL PHARMA",
     "type": "Long",
@@ -40900,7 +40876,7 @@
     "notes": "imported"
   },
   {
-    "id": 1382,
+    "id": 1381,
     "client": "RIMK1252",
     "script": "SHIPPING CORP OF INDIA LT",
     "type": "Long",
@@ -40928,7 +40904,7 @@
     "notes": "imported"
   },
   {
-    "id": 1383,
+    "id": 1382,
     "client": "RIMK1252",
     "script": "ALKYL AMINES",
     "type": "Long",
@@ -40958,7 +40934,7 @@
     "notes": "imported"
   },
   {
-    "id": 1384,
+    "id": 1383,
     "client": "RIMK1252",
     "script": "THE PHOENIX MILLS",
     "type": "Long",
@@ -40988,7 +40964,7 @@
     "notes": "imported"
   },
   {
-    "id": 1385,
+    "id": 1384,
     "client": "RIMK1252",
     "script": "GODREJ INDUSTRIES",
     "type": "Long",
@@ -41018,7 +40994,7 @@
     "notes": "imported"
   },
   {
-    "id": 1386,
+    "id": 1385,
     "client": "RIMK1252",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
@@ -41048,7 +41024,7 @@
     "notes": "imported"
   },
   {
-    "id": 1387,
+    "id": 1386,
     "client": "RIMK1252",
     "script": "INTELLECT DESIGN ARENA",
     "type": "Long",
@@ -41076,7 +41052,7 @@
     "notes": "imported"
   },
   {
-    "id": 1388,
+    "id": 1387,
     "client": "RIMK1252",
     "script": "SBI FUNDS MANAGEMENT",
     "type": "Long",
@@ -41104,7 +41080,7 @@
     "notes": "imported"
   },
   {
-    "id": 1389,
+    "id": 1388,
     "client": "RIMK1256",
     "script": "MAX HEALTHCARE INS",
     "type": "Long",
@@ -41134,7 +41110,7 @@
     "notes": "imported"
   },
   {
-    "id": 1390,
+    "id": 1389,
     "client": "RIMK1256",
     "script": "GRASIM INDUSTRIES",
     "type": "Long",
@@ -41164,7 +41140,7 @@
     "notes": "imported"
   },
   {
-    "id": 1391,
+    "id": 1390,
     "client": "RIMK1256",
     "script": "OLECTRA GREENTECH",
     "type": "Long",
@@ -41194,7 +41170,7 @@
     "notes": "imported"
   },
   {
-    "id": 1392,
+    "id": 1391,
     "client": "RIMK1256",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -41224,7 +41200,7 @@
     "notes": "imported"
   },
   {
-    "id": 1393,
+    "id": 1392,
     "client": "RIMK1256",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -41254,7 +41230,7 @@
     "notes": "imported"
   },
   {
-    "id": 1394,
+    "id": 1393,
     "client": "RIMK1256",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -41284,7 +41260,7 @@
     "notes": "imported"
   },
   {
-    "id": 1395,
+    "id": 1394,
     "client": "RIMK1256",
     "script": "DR. LAL PATH LABS",
     "type": "Long",
@@ -41314,7 +41290,7 @@
     "notes": "imported"
   },
   {
-    "id": 1396,
+    "id": 1395,
     "client": "RIMK1258",
     "script": "NATCO PHARMA",
     "type": "Long",
@@ -41342,7 +41318,7 @@
     "notes": "imported"
   },
   {
-    "id": 1397,
+    "id": 1396,
     "client": "SHU9BH",
     "script": "WOCKHARDT",
     "type": "Long",
@@ -41372,7 +41348,7 @@
     "notes": "imported"
   },
   {
-    "id": 1398,
+    "id": 1397,
     "client": "SHU9BH",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -41402,7 +41378,7 @@
     "notes": "imported"
   },
   {
-    "id": 1399,
+    "id": 1398,
     "client": "SHU9BH",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -41432,7 +41408,7 @@
     "notes": "imported"
   },
   {
-    "id": 1400,
+    "id": 1399,
     "client": "SHU9BH",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -41462,7 +41438,7 @@
     "notes": "imported"
   },
   {
-    "id": 1401,
+    "id": 1400,
     "client": "SHU9BH",
     "script": "EPACK PREFAB TECHN",
     "type": "Long",
@@ -41492,7 +41468,7 @@
     "notes": "imported"
   },
   {
-    "id": 1402,
+    "id": 1401,
     "client": "SHU9BH",
     "script": "NETWEB TECHNOLOGIES",
     "type": "Long",
@@ -41522,7 +41498,7 @@
     "notes": "imported"
   },
   {
-    "id": 1403,
+    "id": 1402,
     "client": "SHU9BH",
     "script": "CONTAINER CORP OF IND",
     "type": "Long",
@@ -41552,7 +41528,7 @@
     "notes": "imported"
   },
   {
-    "id": 1404,
+    "id": 1403,
     "client": "SHU9BH",
     "script": "VEDANTA ALUMINIUM METAL L",
     "type": "Long",
@@ -41582,7 +41558,7 @@
     "notes": "imported"
   },
   {
-    "id": 1405,
+    "id": 1404,
     "client": "SHU9BH",
     "script": "BHEL",
     "type": "Long",
@@ -41612,7 +41588,7 @@
     "notes": "imported"
   },
   {
-    "id": 1406,
+    "id": 1405,
     "client": "SHU9BH",
     "script": "TITAN COMPANY",
     "type": "Long",
@@ -41640,7 +41616,7 @@
     "notes": "imported"
   },
   {
-    "id": 1407,
+    "id": 1406,
     "client": "SHU9BH",
     "script": "DIVI S LABORATORIES",
     "type": "Long",
@@ -41670,7 +41646,7 @@
     "notes": "imported"
   },
   {
-    "id": 1408,
+    "id": 1407,
     "client": "SHU9BH",
     "script": "CUPID",
     "type": "Long",
@@ -41700,7 +41676,7 @@
     "notes": "imported"
   },
   {
-    "id": 1409,
+    "id": 1408,
     "client": "SHU9BH",
     "script": "CUPID",
     "type": "Long",
@@ -41730,7 +41706,7 @@
     "notes": "imported"
   },
   {
-    "id": 1410,
+    "id": 1409,
     "client": "SHU9BH",
     "script": "CAMS",
     "type": "Long",
@@ -41758,7 +41734,7 @@
     "notes": "imported"
   },
   {
-    "id": 1411,
+    "id": 1410,
     "client": "SHU9BH",
     "script": "MARKSANS PHARMA",
     "type": "Long",
