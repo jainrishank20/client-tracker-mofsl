@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-24",
+  "date": "2026-11-25",
   "open": {
     "RIMK1209": [
       "ACME SOLAR HOLDINGS",
@@ -37,6 +37,7 @@
       "GALLANTT ISPAT",
       "GE VERNOVA T&D INDIA",
       "GLAXOSMITHKLINE PHARMA LT",
+      "GRANULES INDIA",
       "GRAPHITE INDIA",
       "HATSUN AGRO PRODUCT",
       "HDFC LIFE INS",
@@ -106,7 +107,9 @@
       "WELSPUN CORP",
       "WHIRLPOOL INDIA",
       "WIPRO",
+      "WOCKHARDT",
       "ZAGGLE PREPA OCEAN SER L",
+      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
@@ -160,10 +163,12 @@
       "GABRIEL INDIA",
       "GALLANTT ISPAT",
       "GENUS POWER INFRASTRU",
+      "HDFC BANK",
       "HEG ADVANCED MATERIAL",
       "HFCL",
       "HINDUSTAN COPPER",
       "IFCI",
+      "INDIAN RENEWABLE ENERGY",
       "INTELLECT DESIGN ARENA",
       "ITI",
       "JUST DIAL",
@@ -172,7 +177,6 @@
       "L&T FINANCE",
       "LARSEN & TOUBRO",
       "LAURUS LABS",
-      "LEMON TREE HOTELS",
       "MAX HEALTHCARE INS",
       "MRPL",
       "NATCO PHARMA",
