@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-26",
+  "date": "2026-11-27",
   "open": {
     "RIMK1209": [
       "ACME SOLAR HOLDINGS",
@@ -16,7 +16,6 @@
       "BHARAT COKING COAL",
       "BIKAJI FOODS INTERN",
       "BLUE CLOUD SOFTECH SOLUTIONS L",
-      "BSE",
       "CANARA BANK",
       "CANARA ROBECO AMC",
       "CAPILLARY TECHNO INDIA L",
@@ -31,6 +30,7 @@
       "DR. REDDY S LABORATORIES",
       "EMMVEE PHOTOVOLTAIC",
       "ENGINEERS INDIA",
+      "ESDS SOFTWARE SOLUTION L",
       "EXIDE INDUSTRIES",
       "GABRIEL INDIA",
       "GAJA ALT ASSET MGT",
@@ -42,6 +42,7 @@
       "HDFC LIFE INS",
       "ICICI PRUDENTIAL AMC",
       "INDIAN OVERSEAS BANK",
+      "INDUSIND BANK",
       "INOX WIND",
       "INTELLECT DESIGN ARENA",
       "ITI",
@@ -79,7 +80,6 @@
       "OLECTRA GREENTECH",
       "ONE MOBIKWIK SYSTEMS",
       "ORIENT PAPER AND INDS",
-      "PIDILITE INDUSTRIES",
       "R R KABEL",
       "RAILTEL CORP OF IND",
       "RATNAMANI MET & TUB",
@@ -101,15 +101,14 @@
       "TONBO IMAGING INDIA",
       "TRANS & RECTI.",
       "UCO BANK",
+      "UNIMECH AEROSPACE N MFG L",
       "VIKRAM SOLAR",
       "VIYASH SCIENTIFIC",
       "WAAREE ENERGIES",
-      "WELSPUN CORP",
       "WHIRLPOOL INDIA",
       "WIPRO",
       "WOCKHARDT",
       "ZAGGLE PREPA OCEAN SER L",
-      "ZEN TECHNOLOGIES",
       "ZENSAR TECHNOLOGIES"
     ],
     "RIMK1215": [
@@ -151,6 +150,7 @@
       "ASSET RECONSTRUC CO (I) L",
       "AVANTI FEEDS",
       "AZAD ENGINEERING",
+      "BEML",
       "BIOCON",
       "BIRLASOFT",
       "CANARA ROBECO AMC",
@@ -189,6 +189,7 @@
       "ORIENT CABLES (INDIA)",
       "PARAS DEF AND SPCE TECH L",
       "POLYCAB INDIA",
+      "POONAWALLA FINCORP",
       "R R KABEL",
       "RAYMOND",
       "REDINGTON",
@@ -197,15 +198,15 @@
       "SBI FUNDS MANAGEMENT",
       "SHIPROCKET",
       "SOLAR INDUSTRIES (I)",
+      "STATE BANK OF INDIA",
       "SUN PHARMACEUTICAL IND L",
       "TATA CHEMICALS",
       "TATA COMMUNICATIONS",
       "TCS",
       "TEJAS NETWORKS",
+      "URBAN COMPANY",
       "WAAREE ENERGIES",
-      "WOCKHARDT",
-      "ZAGGLE PREPA OCEAN SER L",
-      "ZEN TECHNOLOGIES"
+      "ZAGGLE PREPA OCEAN SER L"
     ],
     "RIMK1249": [
       "TITAN COMPANY"
